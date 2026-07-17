@@ -223,9 +223,6 @@ export default function Account() {
           </div>
         )}
 
-        {/* Heart */}
-        <div style={{ textAlign: "center", fontSize: 28, color: HEART_PINK, marginBottom: 8 }}>♥</div>
-
         {/* Heading */}
         <h1 style={{
           textAlign: "center",
