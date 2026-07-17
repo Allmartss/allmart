@@ -40,7 +40,7 @@ Step 4: Set up SSH key login (disable password login)
 On YOUR local machine (not the server), generate a key pair if you
 don't have one:
 
-  ssh-keygen -t ed25519 -C "your@email.com"
+  ssh-keygen -t ed25519 -C "supportallmart@gmail.com"
   # press Enter to accept defaults
 
 Copy your public key to the server:
