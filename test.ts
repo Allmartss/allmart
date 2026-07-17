@@ -105,9 +105,9 @@ async function checkS3() {
   const secret = env("FILE_SECRET_ACCESS_KEY");
   const endpoint = env("FILE_ENDPOINT_URL");
   const region = env("FILE_REGION");
-  const bucket = env("FILE_BUCKET") ?? "Allnart";
+  const bucket = env("FILE_BUCKET");
 
-  if (!keyId || !secret || !endpoint || !region) {
+  if (!keyId || !secret || !endpoint || !region || !bucket) {
     skip("S3 HeadBucket", "FILE_* env vars not set");
     return;
   }
