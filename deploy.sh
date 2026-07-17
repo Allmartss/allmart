@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
-# deploy.sh — Full deploy: install, build, migrate, seed, then start.
+# deploy.sh — Full setup: install dependencies, build, push DB schema, and seed.
 # Run this on a fresh environment or after pulling new code.
+# After this completes, run start.sh to launch the server.
 #
 # Environment variables:
-#   PORT_API        — port the API server listens on  (default: 8080)
 #   STOREFRONT_PORT — port used when building the storefront (default: 18539)
 #   BASE_PATH       — URL base path for the storefront   (default: /)
 set -euo pipefail
 
-export PORT_API="${PORT_API:-8080}"
 export STOREFRONT_PORT="${STOREFRONT_PORT:-18539}"
 export BASE_PATH="${BASE_PATH:-/}"
 
@@ -21,27 +20,31 @@ echo "==> Installing dependencies..."
 pnpm install --frozen-lockfile
 
 # ---------------------------------------------------------------------------
-# 2. Build
+# 2. Build API server
 # ---------------------------------------------------------------------------
 echo "==> Building API server..."
 pnpm --filter @workspace/api-server run build
 
+# ---------------------------------------------------------------------------
+# 3. Build storefront
+# ---------------------------------------------------------------------------
 echo "==> Building storefront..."
 PORT="${STOREFRONT_PORT}" BASE_PATH="${BASE_PATH}" \
   pnpm --filter @workspace/storefront run build
 
 # ---------------------------------------------------------------------------
-# 3. Database — push schema then seed defaults
+# 4. Push database schema
 # ---------------------------------------------------------------------------
 echo "==> Pushing database schema..."
 pnpm --filter @workspace/db run push
 
+# ---------------------------------------------------------------------------
+# 5. Seed database (admin user + default settings — safe to re-run)
+# ---------------------------------------------------------------------------
 echo "==> Seeding database (admin user + default settings)..."
-# Seeds admin@allmart.com and default settings via upsert — safe to re-run.
 pnpm --filter @workspace/db run seed
 
 # ---------------------------------------------------------------------------
-# 4. Start
-# ---------------------------------------------------------------------------
-echo "==> Deploy complete. Starting server..."
-exec bash "${SCRIPT_DIR}/start.sh"
+echo ""
+echo "✓ Deploy complete."
+echo "  Run ./start.sh to launch the server."
