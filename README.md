@@ -2,11 +2,11 @@
 
 > AllMart — your one-click shop for everything. Browse thousands of products, buy instantly, and get it delivered fast. Built for America. 🇺🇸🛍️
 
-AI-powered e-commerce platform. pnpm monorepo, Node.js 24, TypeScript.
+AI-powered e-commerce platform — React + Vite storefront, Express 5 API, PostgreSQL, Stripe, Telegram bot, SMTP email. pnpm monorepo, Node.js 24, TypeScript.
 
 ---
 
-## Quick Start
+## Quick Start (Replit)
 
 ```bash
 pnpm install
@@ -14,6 +14,10 @@ pnpm --filter @workspace/db run push        # apply DB schema
 pnpm --filter @workspace/api-server run dev # API on port 8080
 pnpm --filter @workspace/storefront run dev # storefront on port 18539
 ```
+
+## Quick Start (local / outside Replit)
+
+See `local.txt` for the full guide including Cloudflare Pages, Vercel, and VPS deployment.
 
 ---
 
@@ -66,7 +70,7 @@ pnpm --filter @workspace/db run push             # push DB schema
 pnpm --filter @workspace/scripts run seed-admin  # seed/reset admin user
 pnpm --filter @workspace/scripts run seed-products # seed sample products
 pnpm --filter @workspace/scripts run backup      # dump DB to JSON
-npx tsx test.ts                                  # ping all services
+pnpm exec tsx test.ts                            # ping all services
 ```
 
 ---
@@ -92,10 +96,10 @@ npx tsx test.ts                                  # ping all services
 | `FILE_SECRET_ACCESS_KEY` | S3 secret access key |
 | `FILE_ENDPOINT_URL` | S3 endpoint (e.g. `https://<ref>.supabase.co/storage/v1/s3`) |
 | `FILE_REGION` | S3 region (e.g. `us-east-1`) |
-| `FILE_BUCKET` | S3 bucket name (default: `allmart`) |
+| `FILE_BUCKET` | S3 bucket name |
 | `APP_URL` | Public base URL for email links |
 
-> **File uploads** always save to the local `uploads/` folder. When `FILE_*` vars are set, uploads are also mirrored to S3 under the `Allnart/` prefix — and the stored image URL points to the S3 CDN for durability.
+> **File uploads** always save to the local `uploads/` folder first — upload always succeeds. When `FILE_*` vars are set, files are also mirrored to S3 under the `Allnart/` prefix in the background.
 
 ---
 
@@ -130,11 +134,10 @@ npx tsx test.ts                                  # ping all services
 
 ## File Storage
 
-Uploads always write to local disk (`uploads/`). When `FILE_*` S3 credentials are configured:
+Uploads always write to local disk (`uploads/`) first and respond immediately. When `FILE_*` S3 credentials are configured:
 
-- The file is also uploaded to S3 under the `Allnart/` prefix.
-- The S3 public URL is stored in the database as the canonical image URL.
-- S3 upload is **awaited** before returning success — so a stored URL is always reachable.
+- The file is also mirrored to S3 under the `Allnart/` prefix in the background.
+- Errors are logged but never block the upload response.
 
 ---
 
