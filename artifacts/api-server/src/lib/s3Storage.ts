@@ -37,13 +37,13 @@ function getS3Client(): S3Client {
 }
 
 /**
- * Derive the S3 bucket name from the endpoint URL.
- * Supabase S3 endpoint: https://<ref>.supabase.co/storage/v1/s3
- * In that case the bucket is passed separately — we use FILE_BUCKET env var
- * or fall back to "allmart" as the default bucket name.
+ * Derive the S3 bucket name from FILE_BUCKET env var.
+ * Throws if not set so misconfiguration is caught at upload time.
  */
 function getBucketName(): string {
-  return process.env.FILE_BUCKET ?? "allmart";
+  const bucket = process.env.FILE_BUCKET;
+  if (!bucket) throw new Error("FILE_BUCKET env var is required but not set.");
+  return bucket;
 }
 
 /**
