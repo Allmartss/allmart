@@ -74,7 +74,8 @@ Set these in **Replit → Secrets** (or in `.env` outside Replit):
 
 | Secret | Purpose |
 |---|---|
-| `DATABASE_URL` | Postgres connection string |
+| `SUPABASE_DB_URL` | Supabase Postgres connection string (checked first) |
+| `DATABASE_URL` | Postgres connection string (fallback if `SUPABASE_DB_URL` is not set) |
 | `SESSION_SECRET` | Cookie signing secret (32+ random chars) |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` | SMTP email (Gmail, Zoho, etc.) |
 | `RESEND_API_KEY` | Resend email fallback (optional if SMTP is set) |
@@ -87,8 +88,13 @@ Set these in **Replit → Secrets** (or in `.env` outside Replit):
 | `PRIVATE_OBJECT_DIR` | Storage prefix for private uploads (e.g. `uploads`) |
 | `PUBLIC_OBJECT_SEARCH_PATHS` | Storage prefix for public serving (e.g. `uploads`) |
 | `APP_URL` | Public base URL for email links (e.g. `https://allmart.replit.app`) |
+| `FILE_ACCESS_KEY_ID` | S3-compatible access key ID (Supabase / R2 / AWS) |
+| `FILE_SECRET_ACCESS_KEY` | S3-compatible secret access key |
+| `FILE_ENDPOINT_URL` | S3 endpoint URL (e.g. `https://<ref>.supabase.co/storage/v1/s3`) |
+| `FILE_REGION` | S3 region (e.g. `ap-southeast-1`) |
+| `FILE_BUCKET` | S3 bucket name (default: `allmart`) |
 
-> **Outside Replit:** replace `DEFAULT_OBJECT_STORAGE_BUCKET_ID` with `S3_*` or `R2_*` vars — see `local.txt` § Storage.
+> **File uploads always save to the local `uploads/` folder.** When the `FILE_*` vars are set, uploads are also mirrored to S3 (Supabase/R2/AWS) under the `Allmart/` prefix. This dual-write happens in the background and does not block the upload response.
 
 ---
 

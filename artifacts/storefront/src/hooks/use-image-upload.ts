@@ -37,8 +37,12 @@ export function useImageUpload() {
         xhr.send(file);
       });
 
+      // When S3 is configured the API returns a full https:// URL as objectPath.
+      // Otherwise it's a local path like /local-objects/<uuid>.
       const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
-      const servingUrl = `${base}/api/storage${objectPath}`;
+      const servingUrl = objectPath.startsWith("http")
+        ? objectPath
+        : `${base}/api/storage${objectPath}`;
       return { objectPath, servingUrl };
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Upload failed";

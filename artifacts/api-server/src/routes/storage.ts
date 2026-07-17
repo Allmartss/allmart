@@ -9,12 +9,12 @@ import {
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 import { ObjectPermission } from "../lib/objectAcl";
 import {
-  isLocalMode,
   ensureUploadsDir,
   newLocalObjectPath,
   LOCAL_OBJECT_PREFIX,
   LOCAL_UPLOADS_DIR,
 } from "../lib/localStorageFallback";
+import { isS3Configured, uploadToS3, getS3PublicUrl } from "../lib/s3Storage";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -53,29 +53,22 @@ router.post("/storage/uploads/request-url", async (req: Request, res: Response) 
   try {
     const { name, size, contentType } = parsed.data;
 
-    // ── Local disk fallback when object storage is not configured ──────────
-    if (isLocalMode()) {
-      ensureUploadsDir();
-      const objectPath = newLocalObjectPath();
-      const uuid = objectPath.replace(LOCAL_OBJECT_PREFIX, "");
-      const proto = req.headers["x-forwarded-proto"] ?? req.protocol;
-      const host  = req.headers["x-forwarded-host"]  ?? req.get("host") ?? "";
-      const base  = `${proto}://${host}`;
-      const uploadURL = `${base}/api/storage/local/${uuid}`;
-      res.json(
-        RequestUploadUrlResponse.parse({
-          uploadURL,
-          objectPath,
-          metadata: { name, size, contentType },
-        }),
-      );
-      return;
-    }
-
-    // ── Replit Object Storage ───────────────────────────────────────────────
-    const uploadURL = await objectStorageService.getObjectEntityUploadURL();
-    const objectPath = objectStorageService.normalizeObjectEntityPath(uploadURL);
-
+    // ── Always upload via local disk endpoint ─────────────────────────────
+    // When FILE_* S3 keys are set the PUT handler mirrors the file to S3
+    // and the objectPath is the durable S3 public URL (served from CDN).
+    // Without S3 keys the objectPath is a local-objects path served by this API.
+    ensureUploadsDir();
+    const localObjectPath = newLocalObjectPath();
+    const uuid = localObjectPath.replace(LOCAL_OBJECT_PREFIX, "");
+    const proto = req.headers["x-forwarded-proto"] ?? req.protocol;
+    const host  = req.headers["x-forwarded-host"]  ?? req.get("host") ?? "";
+    const base  = `${proto}://${host}`;
+    const uploadURL = `${base}/api/storage/local/${uuid}`;
+    // If S3 is configured, the canonical serving URL is the S3 public URL —
+    // it survives local disk wipes and is served from the CDN.
+    const objectPath = isS3Configured()
+      ? getS3PublicUrl(uuid)
+      : localObjectPath;
     res.json(
       RequestUploadUrlResponse.parse({
         uploadURL,
@@ -97,11 +90,6 @@ router.post("/storage/uploads/request-url", async (req: Request, res: Response) 
  * Hard body limit: 20 MB.
  */
 router.put("/storage/local/:uuid", (req: Request, res: Response) => {
-  if (!isLocalMode()) {
-    res.status(404).json({ error: "Not found" });
-    return;
-  }
-
   const diskPath = safeLocalPath(req.params.uuid);
   if (!diskPath) {
     res.status(400).json({ error: "Invalid upload identifier" });
@@ -123,7 +111,30 @@ router.put("/storage/local/:uuid", (req: Request, res: Response) => {
   });
 
   req.pipe(ws);
-  ws.on("finish", () => { if (!res.headersSent) res.status(200).json({ ok: true }); });
+  ws.on("finish", async () => {
+    if (res.headersSent) return;
+
+    // When S3 is configured the canonical objectPath returned to the client is
+    // the S3 public URL, so we MUST await the S3 upload before responding 200.
+    // A failure here returns 500 so the frontend never stores a broken URL.
+    if (isS3Configured()) {
+      try {
+        const buffer = await fs.promises.readFile(diskPath);
+        const contentType =
+          (req.headers["content-type"] as string | undefined) ??
+          "application/octet-stream";
+        await uploadToS3(req.params.uuid, buffer, contentType);
+      } catch (s3Err) {
+        req.log.error({ err: s3Err }, "S3 upload failed — rejecting upload");
+        if (!res.headersSent) {
+          res.status(500).json({ error: "Failed to store file in S3" });
+        }
+        return;
+      }
+    }
+
+    res.status(200).json({ ok: true });
+  });
   ws.on("error", (err) => {
     req.log.error({ err }, "Local upload write error");
     if (!res.headersSent) res.status(500).json({ error: "Upload failed" });
@@ -151,6 +162,8 @@ function serveLocalFile(req: Request, res: Response) {
 
 router.get("/storage/local/:uuid", serveLocalFile);
 router.get("/storage/objects/local-objects/:uuid", serveLocalFile);
+// Canonical alias: objectPath "/local-objects/<uuid>" → servingUrl "/api/storage/local-objects/<uuid>"
+router.get("/storage/local-objects/:uuid", serveLocalFile);
 
 /**
  * GET /storage/public-objects/*
