@@ -348,3 +348,211 @@ QUICK REFERENCE — USEFUL COMMANDS
   systemctl reload nginx            # reload Nginx without downtime
   certbot renew --dry-run           # test SSL auto-renewal
   pnpm --filter @workspace/db run push   # apply DB schema changes
+
+
+═══════════════════════════════════════════════════════════════
+PART 8 — VPS SECURITY HARDENING (do this before running anything)
+═══════════════════════════════════════════════════════════════
+
+Do these steps immediately after you get SSH access to your fresh VPS,
+before installing Node, Nginx, or AllMart.
+
+
+────────────────────────────────────────────────────────────────
+STEP A — Create a non-root user
+────────────────────────────────────────────────────────────────
+Running everything as root is dangerous. Create a regular user instead.
+
+  adduser allmart
+  # enter a strong password when prompted
+
+  usermod -aG sudo allmart
+  # gives the user sudo access when needed
+
+Switch to that user for all future work:
+  su - allmart
+  # or reconnect via SSH as: ssh allmart@YOUR_SERVER_IP
+
+
+────────────────────────────────────────────────────────────────
+STEP B — Set up SSH key login (disable password login)
+────────────────────────────────────────────────────────────────
+On YOUR local machine (not the server), generate a key pair if you don't
+have one:
+  ssh-keygen -t ed25519 -C "your@email.com"
+  # press Enter to accept defaults
+
+Copy your public key to the server:
+  ssh-copy-id allmart@YOUR_SERVER_IP
+  # enter the user password one last time
+
+Test that key login works (open a new terminal):
+  ssh allmart@YOUR_SERVER_IP
+  # should log in without asking for a password
+
+Now disable password authentication on the server:
+  sudo nano /etc/ssh/sshd_config
+
+  Find and set these lines (add them if missing):
+    PermitRootLogin no
+    PasswordAuthentication no
+    PubkeyAuthentication yes
+
+  Save the file, then restart SSH:
+    sudo systemctl restart sshd
+
+  IMPORTANT: keep your current SSH session open while testing the new
+  connection in a second terminal — if you lock yourself out you can
+  still fix it from the open session.
+
+
+────────────────────────────────────────────────────────────────
+STEP C — Configure the firewall (UFW)
+────────────────────────────────────────────────────────────────
+Only allow the ports AllMart actually needs.
+
+  sudo apt-get install -y ufw
+
+  sudo ufw default deny incoming
+  sudo ufw default allow outgoing
+
+  sudo ufw allow 22/tcp      # SSH
+  sudo ufw allow 80/tcp      # HTTP  (Nginx + Cloudflare)
+  sudo ufw allow 443/tcp     # HTTPS (Nginx + Cloudflare)
+
+  sudo ufw enable            # type "y" to confirm
+  sudo ufw status            # verify the rules
+
+NOTE: do NOT open port 8080 (AllMart's internal API port).
+Nginx proxies all traffic to it internally — it should never be
+exposed directly to the internet.
+
+If you use Cloudflare proxy (orange cloud), you can optionally
+restrict port 80/443 to Cloudflare's IP ranges only. See:
+  https://www.cloudflare.com/ips/
+
+
+────────────────────────────────────────────────────────────────
+STEP D — Enable automatic security updates
+────────────────────────────────────────────────────────────────
+Keep the OS patched automatically without manual intervention.
+
+  sudo apt-get install -y unattended-upgrades
+  sudo dpkg-reconfigure --priority=low unattended-upgrades
+  # select "Yes" when prompted
+
+Verify it is active:
+  sudo systemctl status unattended-upgrades
+
+
+────────────────────────────────────────────────────────────────
+STEP E — Install Fail2Ban (block brute-force attacks)
+────────────────────────────────────────────────────────────────
+Fail2Ban watches logs and bans IPs that repeatedly fail SSH login.
+
+  sudo apt-get install -y fail2ban
+
+  sudo nano /etc/fail2ban/jail.local
+
+  Paste this:
+
+    [sshd]
+    enabled   = true
+    port      = 22
+    maxretry  = 5
+    bantime   = 1h
+    findtime  = 10m
+
+  Save, then start the service:
+    sudo systemctl enable --now fail2ban
+    sudo fail2ban-client status sshd    # verify it is watching SSH
+
+
+────────────────────────────────────────────────────────────────
+STEP F — Secure shared memory
+────────────────────────────────────────────────────────────────
+Mount /run/shm read-only to prevent a class of privilege-escalation attacks.
+
+  sudo nano /etc/fstab
+
+  Add this line at the bottom:
+    tmpfs /run/shm tmpfs defaults,noexec,nosuid 0 0
+
+  Apply without rebooting:
+    sudo mount -o remount /run/shm
+
+
+────────────────────────────────────────────────────────────────
+STEP G — Harden Nginx
+────────────────────────────────────────────────────────────────
+Add these lines inside the http { } block in /etc/nginx/nginx.conf
+(before the include lines at the bottom):
+
+  sudo nano /etc/nginx/nginx.conf
+
+  Add inside http { }:
+
+    # Hide Nginx version from error pages and headers
+    server_tokens off;
+
+    # Prevent clickjacking
+    add_header X-Frame-Options SAMEORIGIN;
+
+    # Prevent MIME-type sniffing
+    add_header X-Content-Type-Options nosniff;
+
+    # Enable XSS filter in older browsers
+    add_header X-XSS-Protection "1; mode=block";
+
+    # Only send referrer on same origin
+    add_header Referrer-Policy "strict-origin-when-cross-origin";
+
+    # Limit request body size (matches AllMart's file upload limit)
+    client_max_body_size 50M;
+
+  Test and reload:
+    sudo nginx -t && sudo systemctl reload nginx
+
+
+────────────────────────────────────────────────────────────────
+STEP H — Protect the .env file
+────────────────────────────────────────────────────────────────
+The .env file contains your database password, session secret, and API keys.
+Restrict who can read it.
+
+  chmod 600 /opt/allmart/.env
+  chown allmart:allmart /opt/allmart/.env
+
+Only the allmart user (and root) can now read it.
+
+
+────────────────────────────────────────────────────────────────
+STEP I — Check for open ports (verify your setup)
+────────────────────────────────────────────────────────────────
+After everything is configured, confirm only expected ports are listening:
+
+  sudo ss -tlnp
+
+  You should see ONLY:
+    *:22    — SSH (sshd)
+    *:80    — HTTP (nginx)
+    *:443   — HTTPS (nginx)
+    127.0.0.1:8080 — AllMart API (local only, not exposed)
+
+  If port 8080 shows 0.0.0.0:8080 (all interfaces), something is wrong —
+  check your UFW rules and AllMart's PORT_API binding.
+
+
+────────────────────────────────────────────────────────────────
+HARDENING CHECKLIST (tick off before going live)
+────────────────────────────────────────────────────────────────
+  [ ] Non-root user created and used for all operations
+  [ ] SSH key login works; password login disabled; root login disabled
+  [ ] UFW firewall active — only ports 22, 80, 443 open
+  [ ] Port 8080 NOT exposed publicly
+  [ ] Automatic security updates enabled
+  [ ] Fail2Ban installed and watching SSH
+  [ ] /etc/nginx/nginx.conf hardened (server_tokens off, security headers)
+  [ ] .env file permissions set to 600
+  [ ] SSL certificate installed (certbot) and HTTPS working
+  [ ] Cloudflare SSL/TLS mode set to "Full (strict)"
