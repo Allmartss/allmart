@@ -219,7 +219,9 @@ export default function Account() {
         {/* Bag logo */}
         {!isForgot && (
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
-            <BagLogo />
+            <Link href="/" style={{ cursor: "pointer" }}>
+              <BagLogo />
+            </Link>
           </div>
         )}
 
