@@ -216,6 +216,13 @@ export default function Account() {
     >
       <div style={{ width: "100%", maxWidth: 420 }}>
 
+        {/* Bag logo */}
+        {!isForgot && (
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+            <BagLogo />
+          </div>
+        )}
+
         {/* Heart */}
         <div style={{ textAlign: "center", fontSize: 28, color: HEART_PINK, marginBottom: 8 }}>♥</div>
 
@@ -243,13 +250,6 @@ export default function Account() {
             ? "Login to continue your journey"
             : "Join AllMart today"}
         </p>
-
-        {/* Bag logo */}
-        {!isForgot && (
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}>
-            <BagLogo />
-          </div>
-        )}
 
         {/* Card */}
         <div style={{
