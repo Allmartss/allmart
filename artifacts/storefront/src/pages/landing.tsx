@@ -46,16 +46,16 @@ export default function Landing() {
           </div>
 
           <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 border border-white/20 px-4 py-1.5 text-sm font-medium text-white">
-            <Sparkles className="h-3.5 w-3.5" /> One Click. Everything You Need.
+            <Sparkles className="h-3.5 w-3.5" /> AI-Powered Shopping
           </span>
 
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-white leading-tight">
-            The one-click shop{" "}
-            <span className="italic text-white/80">for everyone.</span>
+            Your personal concierge for{" "}
+            <span className="italic text-white/80">everything.</span>
           </h1>
 
           <p className="text-base md:text-lg text-white/70 max-w-xl mx-auto">
-            From everyday essentials to hard-to-find favourites — buy anything in a single tap, delivered fast to your door.
+            Tell our AI what you're looking for and we'll find the perfect match.
           </p>
 
           {/* AI search */}
