@@ -1,0 +1,56 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main   # change to master if that is your default branch
+
+jobs:
+  deploy:
+    name: Pull & restart on VPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host:        ${{ secrets.VPS_HOST }}
+          username:    ${{ secrets.VPS_USER }}
+          key:         ${{ secrets.VPS_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /opt/allmart
+
+            echo "==> Pulling latest code..."
+            git pull origin main
+
+            echo "==> Running deploy (install + build + db migrate + seed)..."
+            bash deploy.sh
+
+            echo "==> Restarting service..."
+            sudo systemctl restart allmart
+
+            echo "==> Waiting for server to boot..."
+            sleep 5
+
+            echo "==> Health check..."
+            curl -fsS http://localhost:8080/api/healthz \
+              || { echo "Health check failed — rolling back"; sudo systemctl stop allmart; exit 1; }
+
+            echo "==> Deploy complete ✓"
+
+      - name: Notify Telegram (success)
+        if: success()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d text="✅ AllMart deployed — ${{ github.ref_name }} @ ${{ github.sha }}"
+
+      - name: Notify Telegram (failure)
+        if: failure()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d text="❌ AllMart deploy FAILED — ${{ github.ref_name }} — check Actions tab for details."
