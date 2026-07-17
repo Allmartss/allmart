@@ -15,15 +15,39 @@ export BASE_PATH="${BASE_PATH:-/}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # ---------------------------------------------------------------------------
-# Free the API port before starting
+# Kill all running AllMart services before starting
 # ---------------------------------------------------------------------------
+echo "==> Stopping any running AllMart services..."
+
+# Kill any node/pnpm processes that belong to this project
+if pgrep -f "api-server" &>/dev/null; then
+  echo "    Killing api-server processes..."
+  pkill -f "api-server" 2>/dev/null || true
+fi
+if pgrep -f "storefront" &>/dev/null; then
+  echo "    Killing storefront processes..."
+  pkill -f "storefront" 2>/dev/null || true
+fi
+# Catch any remaining pnpm/node dev or start processes in this directory
+pkill -f "pnpm.*@workspace" 2>/dev/null || true
+
+# Free the API port (belt-and-suspenders)
 echo "==> Freeing port ${PORT_API}..."
 if command -v fuser &>/dev/null; then
   fuser -k "${PORT_API}/tcp" 2>/dev/null || true
 elif command -v lsof &>/dev/null; then
   lsof -ti:"${PORT_API}" | xargs kill -9 2>/dev/null || true
 fi
-sleep 1
+
+# Free the storefront dev port if still bound
+if command -v fuser &>/dev/null; then
+  fuser -k "${STOREFRONT_PORT}/tcp" 2>/dev/null || true
+elif command -v lsof &>/dev/null; then
+  lsof -ti:"${STOREFRONT_PORT}" | xargs kill -9 2>/dev/null || true
+fi
+
+echo "==> All services stopped. Waiting for ports to clear..."
+sleep 2
 
 # ---------------------------------------------------------------------------
 # Build API server if the bundle is missing

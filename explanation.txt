@@ -1,146 +1,350 @@
-NowBuy — Setup, Storage & Database Guide
-=========================================
+AllMart — VPS Deployment & Cloudflare Domain Guide
+=====================================================
 
-## 1. Object Storage (local development)
-
-NowBuy uses Replit Object Storage to host uploaded images (payment screenshots,
-product images, etc.).  Three environment variables control it:
-
-  DEFAULT_OBJECT_STORAGE_BUCKET_ID   — the bucket ID assigned by Replit
-  PRIVATE_OBJECT_DIR                 — internal prefix for private files
-  PUBLIC_OBJECT_SEARCH_PATHS         — comma-separated prefix list for public serving
-
-To run locally (outside Replit) you need a Postgres DB and your own file storage:
-
-  1. Copy `.env.example` (or create a `.env`) with:
-
-       DATABASE_URL=postgres://user:pass@localhost:5432/nowbuy
-       SESSION_SECRET=any-random-string-32-chars-min
-
-  2. For images locally, you can swap the `useImageUpload` hook to upload to any
-     S3-compatible service.  The hook lives at:
-
-       artifacts/storefront/src/hooks/use-image-upload.ts
-
-  3. Install dependencies:
-
-       pnpm install
-
-  4. Push the DB schema:
-
-       pnpm --filter @workspace/db run push
-
-  5. Seed the admin user:
-
-       pnpm --filter @workspace/scripts run seed-admin
-
-  6. Start the dev server:
-
-       pnpm --filter @workspace/api-server run dev      # port 8080
-       pnpm --filter @workspace/storefront run dev       # port 18539
+This guide covers deploying AllMart on a fresh VPS (Ubuntu 22.04/24.04)
+and connecting it to a custom domain via Cloudflare.
 
 
-## 2. Telegram Bot Setup
+═══════════════════════════════════════════════════════════════
+PART 1 — SERVER PREPARATION
+═══════════════════════════════════════════════════════════════
 
-You need three secrets set in Replit (Settings → Secrets):
+Step 1: Create a VPS
+─────────────────────
+  • Any provider works (Hetzner, DigitalOcean, Vultr, Linode, etc.)
+  • Recommended minimum: 2 vCPU, 2 GB RAM, 20 GB SSD
+  • OS: Ubuntu 22.04 LTS or 24.04 LTS
+  • Open ports in your provider's firewall: 22 (SSH), 80 (HTTP), 443 (HTTPS)
 
-  TELEGRAM_BOT_TOKEN      — get from @BotFather (e.g. 7123456789:AAF...)
-  TELEGRAM_CHAT_ID        — your personal or group chat ID (e.g. -100123456789)
-  TELEGRAM_WEBHOOK_SECRET — any random string you choose (e.g. mysecret123)
-  TELEGRAM_BOT_NAME       — your bot's @username (e.g. @MyShopBot) — optional,
-                            used in command matching (e.g. /orders@MyShopBot)
+Step 2: SSH into the server
+────────────────────────────
+  ssh root@YOUR_SERVER_IP
 
-After setting secrets:
-  1. Deploy or run the app so it's reachable over HTTPS.
-  2. Go to Admin → Telegram bot → click "Register webhook".
-  3. Telegram will now push all bot messages to your server automatically.
+Step 3: Install Node.js 24
+───────────────────────────
+  curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
+  apt-get install -y nodejs
 
-Bot commands:
-  /orders         — last 5 orders
-  /pending        — orders awaiting payment screenshot verification
-  /notifications  — latest admin notifications
-  /help or /start — command reference
+  Verify:
+    node -v   # should print v24.x.x
+
+Step 4: Install pnpm
+─────────────────────
+  npm install -g pnpm
+  pnpm -v   # should print 9.x or later
+
+Step 5: Install PostgreSQL
+───────────────────────────
+  Option A — Use Supabase (recommended, no server config needed):
+    Create a free project at https://supabase.com
+    Copy the "Connection string" (URI format) from Project Settings → Database
+    Use it as SUPABASE_DB_URL / DATABASE_URL in your .env
+
+  Option B — Install PostgreSQL locally:
+    apt-get install -y postgresql postgresql-contrib
+    systemctl enable --now postgresql
+    sudo -u postgres psql -c "CREATE DATABASE allmart;"
+    sudo -u postgres psql -c "CREATE USER allmart WITH PASSWORD 'strongpassword';"
+    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE allmart TO allmart;"
+    # Connection string: postgres://allmart:strongpassword@localhost:5432/allmart
+
+Step 6: Install git
+────────────────────
+  apt-get install -y git
 
 
-## 3. Hourly Automatic Database Backup
+═══════════════════════════════════════════════════════════════
+PART 2 — DEPLOY THE APPLICATION
+═══════════════════════════════════════════════════════════════
 
-A backup script lives at:  scripts/src/backup.ts
+Step 7: Clone the repository
+─────────────────────────────
+  cd /opt
+  git clone https://github.com/YOUR_ORG/allmart.git
+  cd allmart
 
-It dumps all users (without password hashes), products, and orders to a JSON file.
+Step 8: Create the environment file
+─────────────────────────────────────
+  cp .env.example .env    # if .env.example exists
+  nano .env               # edit with your values
 
-### Run manually
+  Required variables:
+    DATABASE_URL=postgres://allmart:strongpassword@localhost:5432/allmart
+    # (or your Supabase connection string)
+    SUPABASE_DB_URL=postgres://...   # same as DATABASE_URL if using Supabase
+    SESSION_SECRET=<random 32+ char string>
+    PORT_API=8080
 
-  pnpm --filter @workspace/scripts run backup
+  Optional — S3-compatible file storage (images):
+    FILE_ENDPOINT_URL=https://...
+    FILE_BUCKET=your-bucket-name
+    FILE_ACCESS_KEY_ID=your-key
+    FILE_SECRET_ACCESS_KEY=your-secret
+    FILE_REGION=auto
 
-The output file is saved in:  ./backups/backup-<timestamp>.json
+  Optional — AI features:
+    GROQ_API_KEY=gsk_...
+    NVIDIA_API_KEY=nvapi-...
 
-### Schedule hourly backups (Linux / Replit shell)
+  Optional — Email (SMTP or Resend):
+    SMTP_HOST=smtp.example.com
+    SMTP_PORT=587
+    SMTP_USER=user@example.com
+    SMTP_PASSWORD=yourpassword
 
-Add a cron job in the Replit shell:
+  Optional — Telegram bot:
+    TELEGRAM_BOT_TOKEN=7123456789:AAF...
+    TELEGRAM_CHAT_ID=-100123456789
+    TELEGRAM_WEBHOOK_SECRET=any-random-string
 
+  Optional — Payments:
+    STRIPE_SECRET_KEY=sk_live_...
+    STRIPE_WEBHOOK_SECRET=whsec_...
+
+Step 9: Install dependencies
+──────────────────────────────
+  pnpm install
+
+Step 10: Push the database schema
+───────────────────────────────────
+  pnpm --filter @workspace/db run push
+
+  This applies all tables and columns to your database without destroying data.
+
+Step 11: Seed the admin user
+──────────────────────────────
+  pnpm --filter @workspace/scripts run seed-admin
+
+  Note the printed admin credentials — change the password after first login.
+
+Step 12: Build the application
+────────────────────────────────
+  pnpm --filter @workspace/api-server run build
+  pnpm --filter @workspace/storefront run build
+
+Step 13: Test the server manually
+───────────────────────────────────
+  bash start.sh
+
+  Visit http://YOUR_SERVER_IP:8080 in a browser to confirm it works.
+  Press Ctrl+C to stop after confirming.
+
+Step 14: Set up a systemd service (keeps the app running)
+───────────────────────────────────────────────────────────
+  Create the service file:
+    nano /etc/systemd/system/allmart.service
+
+  Paste this (adjust paths/user as needed):
+
+    [Unit]
+    Description=AllMart
+    After=network.target
+
+    [Service]
+    Type=simple
+    User=root
+    WorkingDirectory=/opt/allmart
+    EnvironmentFile=/opt/allmart/.env
+    ExecStart=/bin/bash /opt/allmart/start.sh
+    Restart=on-failure
+    RestartSec=10
+
+    [Install]
+    WantedBy=multi-user.target
+
+  Enable and start:
+    systemctl daemon-reload
+    systemctl enable allmart
+    systemctl start allmart
+    systemctl status allmart    # should show "active (running)"
+
+  View logs:
+    journalctl -u allmart -f
+
+
+═══════════════════════════════════════════════════════════════
+PART 3 — INSTALL NGINX AS REVERSE PROXY
+═══════════════════════════════════════════════════════════════
+
+AllMart's API server runs on port 8080.  Nginx sits in front on port 80/443
+and forwards requests to it, and also handles SSL termination.
+
+Step 15: Install Nginx
+───────────────────────
+  apt-get install -y nginx
+  systemctl enable --now nginx
+
+Step 16: Create an Nginx site config
+──────────────────────────────────────
+  nano /etc/nginx/sites-available/allmart
+
+  Paste:
+
+    server {
+        listen 80;
+        server_name yourdomain.com www.yourdomain.com;
+
+        client_max_body_size 50M;
+
+        location / {
+            proxy_pass         http://127.0.0.1:8080;
+            proxy_http_version 1.1;
+            proxy_set_header   Upgrade $http_upgrade;
+            proxy_set_header   Connection 'upgrade';
+            proxy_set_header   Host $host;
+            proxy_set_header   X-Real-IP $remote_addr;
+            proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header   X-Forwarded-Proto $scheme;
+            proxy_cache_bypass $http_upgrade;
+        }
+    }
+
+  Replace `yourdomain.com` with your actual domain.
+
+  Enable the site:
+    ln -s /etc/nginx/sites-available/allmart /etc/nginx/sites-enabled/
+    nginx -t                   # test config — must say "ok"
+    systemctl reload nginx
+
+
+═══════════════════════════════════════════════════════════════
+PART 4 — CLOUDFLARE DOMAIN SETUP
+═══════════════════════════════════════════════════════════════
+
+Step 17: Add your domain to Cloudflare
+────────────────────────────────────────
+  1. Sign up or log in at https://cloudflare.com
+  2. Click "Add a Site" and enter your domain name.
+  3. Choose the Free plan (sufficient for most use).
+  4. Cloudflare will scan your existing DNS records.
+
+Step 18: Update nameservers at your registrar
+──────────────────────────────────────────────
+  Cloudflare will show you two nameserver addresses, e.g.:
+    aria.ns.cloudflare.com
+    bob.ns.cloudflare.com
+
+  Go to your domain registrar (Namecheap, GoDaddy, Google Domains, etc.)
+  and replace the current nameservers with the Cloudflare ones.
+
+  Propagation typically takes 5–30 minutes (up to 48h in rare cases).
+
+Step 19: Add DNS records in Cloudflare
+────────────────────────────────────────
+  In the Cloudflare dashboard → DNS → Records, add:
+
+    Type   Name    Content              Proxy status
+    ────   ──────  ───────────────────  ────────────
+    A      @       YOUR_SERVER_IP       Proxied (orange cloud)
+    A      www     YOUR_SERVER_IP       Proxied (orange cloud)
+
+  "Proxied" means traffic routes through Cloudflare (CDN + DDoS protection).
+
+Step 20: Set SSL/TLS mode in Cloudflare
+────────────────────────────────────────
+  Cloudflare → SSL/TLS → Overview → set mode to "Full (strict)"
+
+  This requires a real certificate on your server (done in the next step).
+  If you skip the cert step, use "Full" (not strict) temporarily.
+
+Step 21: Install a free SSL certificate (Let's Encrypt)
+─────────────────────────────────────────────────────────
+  apt-get install -y certbot python3-certbot-nginx
+
+  Obtain a certificate:
+    certbot --nginx -d yourdomain.com -d www.yourdomain.com
+
+  Follow the prompts (enter email, agree to terms).
+  Certbot will automatically update your Nginx config for HTTPS.
+
+  Auto-renewal is set up automatically. Test it with:
+    certbot renew --dry-run
+
+Step 22: Reload Nginx
+──────────────────────
+  nginx -t && systemctl reload nginx
+
+  Your site should now be live at https://yourdomain.com
+
+
+═══════════════════════════════════════════════════════════════
+PART 5 — POST-DEPLOYMENT TASKS
+═══════════════════════════════════════════════════════════════
+
+Step 23: Register the Telegram webhook (if using Telegram bot)
+───────────────────────────────────────────────────────────────
+  1. Ensure TELEGRAM_BOT_TOKEN and TELEGRAM_WEBHOOK_SECRET are set in .env
+  2. Log in to AllMart admin panel → Telegram Bot → "Register webhook"
+  3. The webhook URL will be: https://yourdomain.com/api/telegram/webhook
+
+Step 24: Configure Stripe webhook (if using payments)
+───────────────────────────────────────────────────────
+  1. Go to https://dashboard.stripe.com/webhooks
+  2. Add endpoint: https://yourdomain.com/api/stripe/webhook
+  3. Select events: payment_intent.succeeded, checkout.session.completed
+  4. Copy the signing secret → add as STRIPE_WEBHOOK_SECRET in .env
+  5. Restart the service: systemctl restart allmart
+
+Step 25: Set up hourly database backups
+─────────────────────────────────────────
   crontab -e
 
-Then add this line (backs up every hour):
+  Add this line:
+    0 * * * * cd /opt/allmart && pnpm --filter @workspace/scripts run backup >> /tmp/backup.log 2>&1
 
-  0 * * * * cd /home/runner/workspace && pnpm --filter @workspace/scripts run backup >> /tmp/backup.log 2>&1
-
-To verify cron is running:
-
-  tail -f /tmp/backup.log
+  Verify:
+    tail -f /tmp/backup.log
 
 
-## 4. DB Schema Push (dev → prod / new DB)
+═══════════════════════════════════════════════════════════════
+PART 6 — UPDATES & MAINTENANCE
+═══════════════════════════════════════════════════════════════
 
-To apply the latest schema to any database:
+To update the application:
+───────────────────────────
+  cd /opt/allmart
+  git pull
+  pnpm install
+  pnpm --filter @workspace/db run push      # apply any new schema changes
+  pnpm --filter @workspace/api-server run build
+  pnpm --filter @workspace/storefront run build
+  systemctl restart allmart
 
-  DATABASE_URL=postgres://user:pass@host/dbname pnpm --filter @workspace/db run push
+To view live logs:
+───────────────────
+  journalctl -u allmart -f
 
-This uses Drizzle's push command which introspects the target DB and applies only
-the missing columns / tables without destroying existing data.
+To restart the service:
+────────────────────────
+  systemctl restart allmart
 
-WARNING: drizzle push is safe for additive changes (new columns, new tables).
-For destructive changes (dropping columns) always back up first.
-
-
-## 5. Rolling Back the DB by 1 Hour
-
-Replit's built-in Postgres does not expose point-in-time recovery.
-To "roll back" 1 hour:
-
-  1. Restore from the last hourly backup:
-
-       node -e "
-         const b = require('./backups/backup-<timestamp>.json');
-         console.log('Products:', b.products.length, 'Orders:', b.orders.length);
-       "
-
-  2. Use the backup JSON as a seed file:
-     Write a restore script at scripts/src/restore.ts that reads the JSON and
-     re-inserts rows (using INSERT … ON CONFLICT DO UPDATE).
-
-  3. For a full Postgres restore from pg_dump (if you use a self-hosted DB):
-
-       pg_restore -d nowbuy -U postgres backup.dump
+To stop the service:
+─────────────────────
+  systemctl stop allmart
 
 
-## 6. Pushing Dev DB to a New/Production DB
+═══════════════════════════════════════════════════════════════
+PART 7 — CLOUDFLARE PERFORMANCE TIPS (optional)
+═══════════════════════════════════════════════════════════════
 
-  1. Take a backup:
+• Speed → Optimization → enable "Auto Minify" (HTML, CSS, JS)
+• Caching → Configuration → set "Browser Cache TTL" to 1 day
+• Speed → Optimization → enable "Rocket Loader" (may conflict with some JS)
+• Security → Settings → set "Security Level" to Medium
+• Rules → Page Rules → cache static assets:
+    Pattern: yourdomain.com/assets/*
+    Setting: Cache Level = Cache Everything, Edge TTL = 1 month
 
-       pnpm --filter @workspace/scripts run backup
 
-  2. Export with pg_dump (if on self-hosted Postgres):
+═══════════════════════════════════════════════════════════════
+QUICK REFERENCE — USEFUL COMMANDS
+═══════════════════════════════════════════════════════════════
 
-       pg_dump $DATABASE_URL -Fc -f backup.dump
-
-  3. Push schema to new DB:
-
-       DATABASE_URL=<new-db-url> pnpm --filter @workspace/db run push
-
-  4. Import data:
-
-       pg_restore --no-owner -d <new-db-url> backup.dump
-
-  5. Run seed-admin to restore the admin user if needed:
-
-       DATABASE_URL=<new-db-url> pnpm --filter @workspace/scripts run seed-admin
+  systemctl status allmart          # check if the app is running
+  systemctl restart allmart         # restart after code changes
+  journalctl -u allmart -n 100      # last 100 log lines
+  journalctl -u allmart -f          # follow live logs
+  nginx -t                          # test Nginx config
+  systemctl reload nginx            # reload Nginx without downtime
+  certbot renew --dry-run           # test SSL auto-renewal
+  pnpm --filter @workspace/db run push   # apply DB schema changes
