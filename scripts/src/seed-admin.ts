@@ -2,7 +2,7 @@ import { db, usersTable } from "@workspace/db";
 import bcrypt from "bcryptjs";
 
 async function main() {
-  const email = "admin@allmart.com";
+  const email = "supportallmart@gmail.com";
   const hash = await bcrypt.hash("admin@allmart1234", 10);
 
   const existing = await db.select().from(usersTable);

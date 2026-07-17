@@ -104,7 +104,7 @@ npx tsx test.ts                                  # ping all services
 | Field | Value |
 |---|---|
 | URL | `/admin` |
-| Email | `admin@allmart.com` |
+| Email | `supportallmart@gmail.com` |
 | Password | `admin@allmart1234` |
 
 ---

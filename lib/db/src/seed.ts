@@ -26,7 +26,7 @@ async function upsertSetting(key: string, value: string) {
 async function seedUsers() {
   const users = [
     {
-      email: "admin@allmart.com",
+      email: "supportallmart@gmail.com",
       name: "Admin",
       password: "admin@allmart1234",
       role: "admin" as const,
