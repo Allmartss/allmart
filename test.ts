@@ -3,6 +3,9 @@
  * Run with: npx tsx test.ts
  */
 
+import { loadEnv } from "./lib/db/src/load-env.js";
+loadEnv(); // load .env before anything reads process.env
+
 import { S3Client, HeadBucketCommand } from "@aws-sdk/client-s3";
 import nodemailer from "nodemailer";
 import pg from "pg";
