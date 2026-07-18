@@ -82,7 +82,7 @@ export async function voiceChat(
     model: "gpt-audio", modalities: ["text", "audio"], audio: { voice, format: outputFormat },
     messages: [{ role: "user", content: [{ type: "input_audio", input_audio: { data: audioBase64, format: inputFormat } }] }],
   });
-  const message = response.choices[0]?.message as Record<string, unknown>;
+  const message = response.choices[0]?.message as unknown as Record<string, unknown>;
   const audio = message?.audio as Record<string, unknown> | undefined;
   const transcript = (audio?.transcript || message?.content || "") as string;
   const audioData = (audio?.data ?? "") as string;
@@ -109,6 +109,6 @@ export async function textToSpeech(
       { role: "user", content: `Repeat the following text verbatim: ${text}` },
     ],
   });
-  const audioData = ((response.choices[0]?.message as Record<string, unknown>)?.audio as Record<string, unknown>)?.data ?? "";
+  const audioData = ((response.choices[0]?.message as unknown as Record<string, unknown>)?.audio as Record<string, unknown>)?.data ?? "";
   return Buffer.from(audioData as string, "base64");
 }
