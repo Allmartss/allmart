@@ -182,15 +182,6 @@ export default function ProductDetail() {
           </button>
         </div>
 
-        {/* Available Colours + Ask AI to Buy */}
-        {product.colors && product.colors.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground shrink-0">Colours:</span>
-            {product.colors.map(c => (
-              <span key={c} className="rounded-full border border-border px-2.5 py-0.5 text-[11px] font-medium">{c}</span>
-            ))}
-          </div>
-        )}
         <button
           onClick={() => {
             sessionStorage.setItem("nb_prefill", `I'd like to buy the ${product.name}`);
