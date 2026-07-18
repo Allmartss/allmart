@@ -276,22 +276,22 @@ export default function ProductDetail() {
           </div>
         </div>
 
-        {/* Product name */}
-        <h1 className="text-2xl font-bold tracking-tight leading-tight">{product.name}</h1>
-
-        {/* Rating row */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-0.5">
-            {[1, 2, 3, 4, 5].map(s => (
-              <Star
-                key={s}
-                className={`h-4 w-4 ${s <= Math.round(product.rating) ? "fill-amber-400 text-amber-400" : "fill-muted text-muted"}`}
-              />
-            ))}
+        {/* Product name + rating — same line */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <h1 className="text-2xl font-bold tracking-tight leading-tight">{product.name}</h1>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-0.5">
+              {[1, 2, 3, 4, 5].map(s => (
+                <Star
+                  key={s}
+                  className={`h-3.5 w-3.5 ${s <= Math.round(product.rating) ? "fill-amber-400 text-amber-400" : "fill-muted text-muted"}`}
+                />
+              ))}
+            </div>
+            <span className="text-sm text-muted-foreground">
+              {product.rating.toFixed(1)} ({product.stock > 0 ? product.stock : 0} reviews)
+            </span>
           </div>
-          <span className="text-sm text-muted-foreground">
-            {product.rating.toFixed(1)} ({product.stock > 0 ? product.stock : 0} reviews)
-          </span>
         </div>
 
         {/* Description */}
