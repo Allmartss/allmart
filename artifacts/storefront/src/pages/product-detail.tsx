@@ -128,9 +128,9 @@ export default function ProductDetail() {
   const isSellingFast = product.stock < 30;
 
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <div className="min-h-screen bg-background pb-8">
 
-      {/* ── Delivery fee + stock — above the image ── */}
+      {/* ── Top bar: delivery fee + stock ── */}
       <div className="flex items-center justify-between px-4 py-2.5 bg-background border-b border-border/40">
         {(product as { shippingFee?: number | null }).shippingFee != null && (product as { shippingFee?: number | null }).shippingFee! > 0 ? (
           <p className="text-xs text-muted-foreground">
@@ -144,6 +144,54 @@ export default function ProductDetail() {
         ) : (
           <span className="text-xs font-medium text-muted-foreground">{product.stock} in stock</span>
         )}
+      </div>
+
+      {/* ── Price + qty + cart — at the top before the image ── */}
+      <div className="px-4 py-3 bg-background border-b border-border/40 space-y-2">
+        <div className="flex items-center gap-3">
+          {/* Price */}
+          <div className="flex flex-col leading-none">
+            <span className="text-2xl font-extrabold text-primary">{fmt(product.price)}</span>
+            {hasDiscount && (
+              <span className="text-xs text-muted-foreground line-through">{fmt(product.originalPrice as number)}</span>
+            )}
+          </div>
+
+          {/* Qty stepper */}
+          <div className="flex items-center gap-1 rounded-xl border border-border/60 bg-muted/40 px-2 py-1">
+            <button
+              onClick={() => setQty(q => Math.max(1, q - 1))}
+              className="h-7 w-7 rounded-lg flex items-center justify-center text-lg font-bold hover:bg-muted transition-colors"
+            >−</button>
+            <span className="min-w-[24px] text-center text-sm font-semibold">{qty}</span>
+            <button
+              onClick={() => setQty(q => q + 1)}
+              disabled={qty >= product.stock}
+              className="h-7 w-7 rounded-lg flex items-center justify-center text-lg font-bold hover:bg-muted transition-colors disabled:opacity-40"
+            >+</button>
+          </div>
+
+          {/* Add to Cart */}
+          <button
+            onClick={handleAddToCart}
+            disabled={isOutOfStock || addCartItem.isPending}
+            className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-primary/30 hover:bg-primary/90 transition-colors disabled:opacity-50"
+          >
+            <ShoppingCart className="h-4 w-4" />
+            {addCartItem.isPending ? "Adding…" : "Add to Cart"}
+          </button>
+        </div>
+
+        {/* Ask AI */}
+        <button
+          onClick={() => {
+            sessionStorage.setItem("nb_prefill", `I'd like to buy the ${product.name}`);
+            setLocation("/assistant");
+          }}
+          className="w-full flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-semibold text-primary hover:bg-primary/5 transition-colors"
+        >
+          <Sparkles className="h-3.5 w-3.5" /> Ask AI to help me buy this
+        </button>
       </div>
 
       {/* ── Hero image — full bleed ── */}
@@ -378,57 +426,8 @@ export default function ProductDetail() {
         </div>
       )}
 
-      {/* ── Sticky bottom bar: price + CTA ── */}
-      <div className="fixed bottom-0 inset-x-0 z-50 bg-background/95 backdrop-blur border-t border-border/50 px-4 py-3 safe-area-inset-bottom">
-
-        <div className="flex items-center gap-3">
-          {/* Price */}
-          <div className="flex flex-col leading-none">
-            <span className="text-2xl font-extrabold text-primary">{fmt(product.price)}</span>
-            {hasDiscount && (
-              <span className="text-xs text-muted-foreground line-through">{fmt(product.originalPrice as number)}</span>
-            )}
-          </div>
-
-          {/* Qty stepper */}
-          <div className="flex items-center gap-1 rounded-xl border border-border/60 bg-muted/40 px-2 py-1">
-            <button
-              onClick={() => setQty(q => Math.max(1, q - 1))}
-              className="h-7 w-7 rounded-lg flex items-center justify-center text-lg font-bold hover:bg-muted transition-colors"
-            >−</button>
-            <span className="min-w-[24px] text-center text-sm font-semibold">{qty}</span>
-            <button
-              onClick={() => setQty(q => q + 1)}
-              disabled={qty >= product.stock}
-              className="h-7 w-7 rounded-lg flex items-center justify-center text-lg font-bold hover:bg-muted transition-colors disabled:opacity-40"
-            >+</button>
-          </div>
-
-          {/* Add to Cart */}
-          <button
-            onClick={handleAddToCart}
-            disabled={isOutOfStock || addCartItem.isPending}
-            className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-primary/30 hover:bg-primary/90 transition-colors disabled:opacity-50"
-          >
-            <ShoppingCart className="h-4 w-4" />
-            {addCartItem.isPending ? "Adding…" : "Add to Cart"}
-          </button>
-        </div>
-
-        {/* Ask AI secondary action */}
-        <button
-          onClick={() => {
-            sessionStorage.setItem("nb_prefill", `I'd like to buy the ${product.name}`);
-            setLocation("/assistant");
-          }}
-          className="mt-2 w-full flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-semibold text-primary hover:bg-primary/5 transition-colors"
-        >
-          <Sparkles className="h-3.5 w-3.5" /> Ask AI to help me buy this
-        </button>
-      </div>
-
       {/* Share fab */}
-      <div className="fixed bottom-36 right-4 z-50">
+      <div className="fixed bottom-6 right-4 z-50">
         <div className="relative">
           <button
             onClick={() => setShareOpen(o => !o)}
