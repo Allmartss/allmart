@@ -130,6 +130,22 @@ export default function ProductDetail() {
   return (
     <div className="min-h-screen bg-background pb-32">
 
+      {/* ── Delivery fee + stock — above the image ── */}
+      <div className="flex items-center justify-between px-4 py-2.5 bg-background border-b border-border/40">
+        {(product as { shippingFee?: number | null }).shippingFee != null && (product as { shippingFee?: number | null }).shippingFee! > 0 ? (
+          <p className="text-xs text-muted-foreground">
+            Delivery fee: <span className="font-semibold text-foreground">{fmt((product as { shippingFee?: number | null }).shippingFee!)}</span>
+          </p>
+        ) : (
+          <p className="text-xs text-emerald-600 font-medium">✓ Free delivery</p>
+        )}
+        {isOutOfStock ? (
+          <span className="text-xs font-semibold text-destructive">Out of stock</span>
+        ) : (
+          <span className="text-xs font-medium text-muted-foreground">{product.stock} in stock</span>
+        )}
+      </div>
+
       {/* ── Hero image — full bleed ── */}
       <div className="relative w-full aspect-[4/3] bg-muted overflow-hidden">
         {activeImage ? (
@@ -364,23 +380,6 @@ export default function ProductDetail() {
 
       {/* ── Sticky bottom bar: price + CTA ── */}
       <div className="fixed bottom-0 inset-x-0 z-50 bg-background/95 backdrop-blur border-t border-border/50 px-4 py-3 safe-area-inset-bottom">
-
-        {/* Shipping note */}
-        <div className="flex items-center gap-1.5 mb-2">
-          {(product as { shippingFee?: number | null }).shippingFee != null && (product as { shippingFee?: number | null }).shippingFee! > 0 ? (
-            <p className="text-xs text-muted-foreground">
-              Delivery fee: <span className="font-semibold text-foreground">{fmt((product as { shippingFee?: number | null }).shippingFee!)}</span>
-            </p>
-          ) : (
-            <p className="text-xs text-emerald-600 font-medium">✓ Free delivery</p>
-          )}
-          {isOutOfStock && (
-            <span className="ml-auto text-xs font-semibold text-destructive">Out of stock</span>
-          )}
-          {!isOutOfStock && (
-            <span className="ml-auto text-xs font-medium text-muted-foreground">{product.stock} in stock</span>
-          )}
-        </div>
 
         <div className="flex items-center gap-3">
           {/* Price */}
