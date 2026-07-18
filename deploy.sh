@@ -14,6 +14,17 @@ export BASE_PATH="${BASE_PATH:-/}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # ---------------------------------------------------------------------------
+# 0. Load .env (local/Codespaces dev — Replit injects secrets automatically)
+# ---------------------------------------------------------------------------
+if [ -f "${SCRIPT_DIR}/.env" ]; then
+  echo "==> Loading .env..."
+  set -o allexport
+  # shellcheck disable=SC1091
+  source "${SCRIPT_DIR}/.env"
+  set +o allexport
+fi
+
+# ---------------------------------------------------------------------------
 # 1. Install dependencies
 # ---------------------------------------------------------------------------
 echo "==> Installing dependencies..."

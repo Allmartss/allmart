@@ -1,14 +1,32 @@
 import { useState } from "react";
 import { useRoute, useLocation, Link } from "wouter";
-import { useGetProduct, useAddCartItem, getGetCartQueryKey, useListProducts, useListCategories, useGetStorefrontSummary } from "@workspace/api-client-react";
+import { useGetProduct, useAddCartItem, getGetCartQueryKey, useListProducts, useListCategories } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft, Star, ShoppingCart, Sparkles, Package,
   ChevronLeft, ChevronRight, Share2, Users, Zap, BadgeCheck,
-  ShieldCheck,
+  ShieldCheck, LayoutGrid,
+  Watch, Mountain, Footprints, Heart, Laptop, Shirt, Dumbbell,
+  UtensilsCrossed, BookOpen, Gamepad2, HeartPulse, Plane, PawPrint,
+  Gem, Home as HomeIcon, Music2, Car,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+const CAT_ICONS: Record<string, React.ElementType> = {
+  accessories: Watch, outdoor: Mountain, shoes: Footprints,
+  beauty: Heart, electronics: Laptop, fashion: Shirt,
+  clothing: Shirt, sports: Dumbbell, food: UtensilsCrossed,
+  books: BookOpen, gaming: Gamepad2, health: HeartPulse,
+  travel: Plane, pets: PawPrint, jewelry: Gem,
+  home: HomeIcon, music: Music2, automotive: Car, cars: Car, toys: Gamepad2,
+};
+const CAT_GRADIENTS = [
+  "from-pink-500 to-rose-500", "from-orange-400 to-amber-500",
+  "from-emerald-400 to-teal-500", "from-blue-400 to-indigo-500",
+  "from-purple-500 to-violet-600", "from-cyan-400 to-sky-500",
+  "from-red-400 to-orange-500", "from-green-400 to-emerald-500",
+];
 
 export default function ProductDetail() {
   const [, params] = useRoute("/products/:slug");
@@ -22,6 +40,8 @@ export default function ProductDetail() {
   const rawParam = params?.slug ?? "";
   const id = Number(rawParam.match(/-(\d+)$/)?.[1] ?? rawParam);
   const { data: product, isLoading } = useGetProduct(id);
+  const { data: allProductsList } = useListProducts();
+  const { data: allCategoriesList } = useListCategories();
 
   const addCartItem = useAddCartItem({
     mutation: {
@@ -283,6 +303,64 @@ export default function ProductDetail() {
         </div>
 
       </div>
+
+      {/* ── New Arrivals ── */}
+      {(allProductsList ?? []).filter(p => p.id !== product?.id).length > 0 && (
+        <div className="px-4 pt-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-bold">New Arrivals</h2>
+            <Link href="/products?sort=new">
+              <span className="text-xs font-semibold text-primary hover:underline cursor-pointer">See all</span>
+            </Link>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+            {[...(allProductsList ?? [])]
+              .filter(p => p.id !== product?.id)
+              .sort((a, b) => b.id - a.id)
+              .slice(0, 8)
+              .map(p => {
+                const pSlug = p.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + p.id;
+                const pFmt = new Intl.NumberFormat("en-US", { style: "currency", currency: p.currency || "USD" }).format(p.price);
+                return (
+                  <Link key={p.id} href={`/products/${pSlug}`}>
+                    <div className="shrink-0 w-32 group cursor-pointer">
+                      <div className="overflow-hidden rounded-2xl bg-muted aspect-square mb-2">
+                        {p.imageUrl
+                          ? <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                          : <div className="h-full w-full flex items-center justify-center"><Package className="h-8 w-8 text-muted-foreground/30" /></div>
+                        }
+                      </div>
+                      <p className="text-xs font-semibold leading-tight line-clamp-2 mb-0.5">{p.name}</p>
+                      <p className="text-sm font-bold text-primary">{pFmt}</p>
+                    </div>
+                  </Link>
+                );
+              })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Shop by Category ── */}
+      {(allCategoriesList ?? []).length > 0 && (
+        <div className="px-4 pt-4 pb-4">
+          <h2 className="text-base font-bold mb-3">Shop by Category</h2>
+          <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+            {(allCategoriesList ?? []).map((cat, i) => {
+              const Icon = CAT_ICONS[cat.slug.toLowerCase().replace(/[^a-z]/g, "")] ?? LayoutGrid;
+              return (
+                <Link key={cat.slug} href={`/products?category=${cat.slug}`}>
+                  <button className="flex flex-col items-center gap-1.5 shrink-0 group">
+                    <span className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${CAT_GRADIENTS[i % CAT_GRADIENTS.length]} shadow-sm group-hover:opacity-90 transition-opacity`}>
+                      <Icon className="h-6 w-6 text-white" />
+                    </span>
+                    <span className="text-[10px] font-medium text-foreground/70 max-w-[56px] text-center leading-tight truncate">{cat.name}</span>
+                  </button>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Sticky bottom bar: price + CTA ── */}
       <div className="fixed bottom-0 inset-x-0 z-50 bg-background/95 backdrop-blur border-t border-border/50 px-4 py-3 safe-area-inset-bottom">
