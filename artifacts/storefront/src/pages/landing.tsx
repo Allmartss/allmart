@@ -7,7 +7,7 @@ import {
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, Search, Sparkles } from "lucide-react";
+import { ArrowRight, Search, Sparkles, Send } from "lucide-react";
 import { BagLogo } from "@/components/bag-logo";
 import { ProductCard } from "@/components/product-card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -184,20 +184,114 @@ export default function Landing() {
         </section>
       )}
 
-      {/* ── Sign-in nudge ─────────────────────────────────────────────────── */}
-      <section className="py-12 bg-primary/5 border-t border-border/40">
-        <div className="container max-w-screen-xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div>
-            <h3 className="text-xl font-bold">Ready to shop?</h3>
-            <p className="text-muted-foreground text-sm mt-1">Sign in to add items to your cart, track orders, and chat with AI.</p>
+      {/* ── Footer ────────────────────────────────────────────────────────── */}
+      <footer className="bg-[#0d0a1f] text-white mt-4">
+        <div className="container max-w-screen-xl mx-auto px-6 pt-10 pb-6">
+
+          {/* Top grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+
+            {/* Brand */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2.5">
+                <BagLogo size={36} />
+                <span className="text-lg font-bold">AllMart</span>
+              </div>
+              <p className="text-sm text-white/60 leading-relaxed">
+                AllMart is an all-in-one marketplace where a single account lets you buy and sell seamlessly connecting quality products, trusted sellers, and smooth shopping anytime, anywhere.
+              </p>
+              <Link href="/account">
+                <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline cursor-pointer">
+                  Meet the Founder <ArrowRight className="h-3.5 w-3.5" />
+                </span>
+              </Link>
+              {/* Social icons */}
+              <div className="flex items-center gap-2 pt-1">
+                {[
+                  { label: "TikTok", svg: <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.32 6.32 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.17 8.17 0 0 0 4.78 1.52V6.76a4.85 4.85 0 0 1-1.01-.07z"/></svg> },
+                  { label: "X", svg: <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> },
+                  { label: "Telegram", svg: <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg> },
+                  { label: "Instagram", svg: <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg> },
+                ].map(({ label, svg }) => (
+                  <button key={label} aria-label={label} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors">
+                    {svg}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Categories */}
+            <div>
+              <h4 className="font-semibold text-sm mb-4">Categories</h4>
+              <ul className="space-y-2.5 text-sm text-white/60">
+                {(categories ?? []).slice(0, 6).map(cat => (
+                  <li key={cat.slug}>
+                    <Link href={`/products?category=${cat.slug}`}>
+                      <span className="hover:text-white transition-colors cursor-pointer">{cat.name}</span>
+                    </Link>
+                  </li>
+                ))}
+                {isCategoriesLoading && ["Electronics","Fashion","Home & Living","Beauty","Gift Items"].map(n => (
+                  <li key={n} className="text-white/60">{n}</li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Quick Links */}
+            <div>
+              <h4 className="font-semibold text-sm mb-4">Quick Links</h4>
+              <ul className="space-y-2.5 text-sm text-white/60">
+                {[
+                  { label: "Shop", href: "/products" },
+                  { label: "My Orders", href: "/orders" },
+                  { label: "Become a Seller", href: "/account" },
+                  { label: "Help Center", href: "/support" },
+                  { label: "Returns & Refunds", href: "/support" },
+                ].map(({ label, href }) => (
+                  <li key={label}>
+                    <Link href={href}>
+                      <span className="hover:text-white transition-colors cursor-pointer">{label}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Stay Updated */}
+            <div>
+              <h4 className="font-semibold text-sm mb-1.5">Stay Updated</h4>
+              <p className="text-sm text-white/60 mb-4">Subscribe to get updates on new products and special offers.</p>
+              <div className="space-y-2">
+                <input
+                  type="email"
+                  placeholder="Enter your email"
+                  className="w-full rounded-lg bg-white/10 border border-white/15 px-4 py-2.5 text-sm text-white placeholder:text-white/40 outline-none focus:border-primary transition-colors"
+                />
+                <button className="w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
+                  <Send className="h-3.5 w-3.5" /> Subscribe
+                </button>
+              </div>
+            </div>
           </div>
-          <Link href="/account">
-            <Button size="lg" className="rounded-full gap-2 shrink-0">
-              Get started <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
+
+          {/* Bottom bar */}
+          <div className="border-t border-white/10 pt-5 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p className="text-xs text-white/40">Secure payments powered by trusted providers</p>
+            <div className="flex items-center gap-2">
+              {["Escrow","Master","Card","Paystack"].map(p => (
+                <span key={p} className="rounded-md border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold text-white/70">{p}</span>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 mt-4">
+            <p className="text-xs text-white/30">© 2026 AllMart. All rights reserved.</p>
+            <div className="flex items-center gap-4">
+              <Link href="/account"><span className="text-xs text-white/40 hover:text-white/70 cursor-pointer transition-colors">Privacy Policy</span></Link>
+              <Link href="/account"><span className="text-xs text-white/40 hover:text-white/70 cursor-pointer transition-colors">Terms</span></Link>
+            </div>
+          </div>
         </div>
-      </section>
+      </footer>
     </div>
   );
 }

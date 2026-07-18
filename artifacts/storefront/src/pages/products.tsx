@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { useLocation, useSearch } from "wouter";
-import { useListProducts, useListCategories } from "@workspace/api-client-react";
+import { useLocation, useSearch, Link } from "wouter";
+import { useListProducts, useListCategories, useGetStorefrontSummary } from "@workspace/api-client-react";
 import { ProductCard } from "@/components/product-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, X, Filter, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, X, Filter, ChevronDown, ChevronUp, ArrowRight } from "lucide-react";
 
 export default function Products() {
   const [, setLocation] = useLocation();
@@ -22,6 +22,7 @@ export default function Products() {
 
   const { data: products, isLoading: isProductsLoading } = useListProducts({ category: categoryParam, q: qParam });
   const { data: categories, isLoading: isCategoriesLoading } = useListCategories();
+  const { data: summary } = useGetStorefrontSummary();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,6 +155,48 @@ export default function Products() {
           )}
         </div>
       </div>
+
+      {/* ── New Arrivals ──────────────────────────────────────────────────── */}
+      {(summary?.featured ?? []).length > 0 && (
+        <div className="mt-12">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold tracking-tight">New Arrivals</h2>
+            <Link href="/products?sort=new">
+              <Button variant="ghost" size="sm" className="gap-1.5 text-sm group">
+                View all <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+          </div>
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 xl:grid-cols-6 gap-2">
+            {(summary?.featured ?? []).map(product => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Shop by Category ──────────────────────────────────────────────── */}
+      {(categories ?? []).length > 0 && (
+        <div className="mt-10 mb-4">
+          <h2 className="text-xl font-bold tracking-tight mb-4">Shop by Category</h2>
+          <div className="flex flex-wrap gap-2">
+            {(categories ?? []).map(cat => (
+              <button
+                key={cat.slug}
+                onClick={() => updateParams({ category: cat.slug === categoryParam ? null : cat.slug })}
+                className={`flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-all ${
+                  categoryParam === cat.slug
+                    ? "bg-primary text-white border-primary"
+                    : "bg-muted border-border/50 hover:border-primary/50 hover:bg-primary/5"
+                }`}
+              >
+                {cat.name}
+                <span className="text-[11px] opacity-60 bg-background/40 rounded-full px-1.5">{cat.productCount}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
