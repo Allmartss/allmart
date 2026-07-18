@@ -457,7 +457,7 @@ export default function Home() {
                   <span className="text-xs font-semibold text-primary hover:underline">See all</span>
                 </Link>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              <div className="grid grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-2">
                 {products.slice(0, 5).map(p => (
                   <ProductCard key={p.id} product={p} />
                 ))}

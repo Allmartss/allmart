@@ -117,7 +117,7 @@ export default function Landing() {
       <section className="pb-12 container max-w-screen-xl mx-auto px-6">
         <h2 className="text-xl font-bold tracking-tight mb-5">New arrivals</h2>
         {isSummaryLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+          <div className="grid grid-cols-4 md:grid-cols-5 xl:grid-cols-6 gap-2">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="space-y-3">
                 <Skeleton className="aspect-square rounded-xl" />
@@ -127,7 +127,7 @@ export default function Landing() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+          <div className="grid grid-cols-4 md:grid-cols-5 xl:grid-cols-6 gap-2">
             {summary?.featured?.map(product => (
               <ProductCard key={product.id} product={product} />
             ))}

@@ -35,7 +35,7 @@ export default function ShopLanding() {
       <div className="container max-w-screen-xl mx-auto py-12 px-6">
         <Skeleton className="h-10 w-64 mb-4" />
         <Skeleton className="h-5 w-96 mb-10" />
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2">
           {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="aspect-square rounded-xl" />)}
         </div>
       </div>
@@ -75,7 +75,7 @@ export default function ShopLanding() {
           <p className="text-muted-foreground">No products in this collection yet.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2">
           {data.products.map(product => (
             <ProductCard key={product.id} product={product} />
           ))}

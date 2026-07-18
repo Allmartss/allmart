@@ -385,7 +385,7 @@ export default function UserDashboard() {
             {[1, 2].map(i => (
               <div key={i} className="space-y-3">
                 <Skeleton className="h-5 w-32 rounded" />
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-4 md:grid-cols-4 gap-2">
                   {Array.from({ length: 4 }).map((_, j) => (
                     <div key={j} className="space-y-2">
                       <Skeleton className="aspect-square rounded-xl" />
@@ -410,7 +410,7 @@ export default function UserDashboard() {
                   <h2 className="text-base font-bold capitalize">{name}</h2>
                   <Link href={`/products?category=${slug}`}><span className="text-xs font-semibold text-primary hover:underline">See all</span></Link>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                <div className="grid grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-2">
                   {products.slice(0, 5).map(p => <ProductCard key={p.id} product={p} />)}
                 </div>
               </div>
