@@ -182,15 +182,23 @@ export default function ProductDetail() {
           </button>
         </div>
 
-        {/* Ask AI */}
+        {/* Available Colours + Ask AI to Buy */}
+        {product.colors && product.colors.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground shrink-0">Colours:</span>
+            {product.colors.map(c => (
+              <span key={c} className="rounded-full border border-border px-2.5 py-0.5 text-[11px] font-medium">{c}</span>
+            ))}
+          </div>
+        )}
         <button
           onClick={() => {
             sessionStorage.setItem("nb_prefill", `I'd like to buy the ${product.name}`);
             setLocation("/assistant");
           }}
-          className="w-full flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-semibold text-primary hover:bg-primary/5 transition-colors"
+          className="w-full flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-semibold text-primary bg-primary/5 hover:bg-primary/10 transition-colors"
         >
-          <Sparkles className="h-3.5 w-3.5" /> Ask AI to help me buy this
+          <Sparkles className="h-3.5 w-3.5" /> Ask AI to Buy
         </button>
       </div>
 
@@ -307,26 +315,29 @@ export default function ProductDetail() {
         {/* Description */}
         <p className="text-sm text-muted-foreground leading-relaxed">{product.description}</p>
 
-        {/* Tags */}
-        {product.tags && product.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {product.tags.map(tag => (
-              <span key={tag} className="rounded-full border border-border/50 bg-muted/50 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
+        {/* Tags + Available Colours — same row */}
+        {((product.tags && product.tags.length > 0) || (product.colors && product.colors.length > 0)) && (
+          <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
+            {/* Tags */}
+            {product.tags && product.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {product.tags.map(tag => (
+                  <span key={tag} className="rounded-full border border-border/50 bg-muted/50 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
 
-        {/* Colors */}
-        {product.colors && product.colors.length > 0 && (
-          <div>
-            <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Available colours</p>
-            <div className="flex flex-wrap gap-2">
-              {product.colors.map(c => (
-                <span key={c} className="rounded-full border border-border px-3 py-1 text-xs font-medium">{c}</span>
-              ))}
-            </div>
+            {/* Available Colours */}
+            {product.colors && product.colors.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground shrink-0">Available colours:</span>
+                {product.colors.map(c => (
+                  <span key={c} className="rounded-full border border-border px-2.5 py-1 text-[11px] font-medium">{c}</span>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
