@@ -17,7 +17,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # 1. Install dependencies
 # ---------------------------------------------------------------------------
 echo "==> Installing dependencies..."
-pnpm install --frozen-lockfile
+pnpm install
 
 # ---------------------------------------------------------------------------
 # 2. Build API server
