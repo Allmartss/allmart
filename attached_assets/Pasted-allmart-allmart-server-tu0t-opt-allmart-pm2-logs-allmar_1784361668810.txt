@@ -1,0 +1,185 @@
+allmart@allmart-server-tu0t:/opt/allmart$ pm2 logs allmart --lines 50
+[TAILING] Tailing last 50 lines for [allmart] process (change the value with --lines option)
+/home/allmart/.pm2/logs/allmart-error.log last 50 lines:
+0|allmart  | 
+0|allmart  | Node.js v24.18.0
+0|allmart  | $ node --enable-source-maps ./dist/index.mjs
+0|allmart  | /opt/allmart/artifacts/api-server/src/index.ts:7
+0|allmart  |   throw new Error(
+0|allmart  |         ^
+0|allmart  | 
+0|allmart  | Error: PORT environment variable is required but was not provided.
+0|allmart  |     at <anonymous> (/opt/allmart/artifacts/api-server/src/index.ts:7:9)
+0|allmart  |     at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+0|allmart  |     at async node:internal/modules/esm/loader:643:26
+0|allmart  |     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+0|allmart  | 
+0|allmart  | Node.js v24.18.0
+0|allmart  | $ node --enable-source-maps ./dist/index.mjs
+0|allmart  | /opt/allmart/artifacts/api-server/src/index.ts:7
+0|allmart  |   throw new Error(
+0|allmart  |         ^
+0|allmart  | 
+0|allmart  | Error: PORT environment variable is required but was not provided.
+0|allmart  |     at <anonymous> (/opt/allmart/artifacts/api-server/src/index.ts:7:9)
+0|allmart  |     at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+0|allmart  |     at async node:internal/modules/esm/loader:643:26
+0|allmart  |     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+0|allmart  | 
+0|allmart  | Node.js v24.18.0
+0|allmart  | $ node --enable-source-maps ./dist/index.mjs
+0|allmart  | /opt/allmart/artifacts/api-server/src/index.ts:7
+0|allmart  |   throw new Error(
+0|allmart  |         ^
+0|allmart  | 
+0|allmart  | Error: PORT environment variable is required but was not provided.
+0|allmart  |     at <anonymous> (/opt/allmart/artifacts/api-server/src/index.ts:7:9)
+0|allmart  |     at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+0|allmart  |     at async node:internal/modules/esm/loader:643:26
+0|allmart  |     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+0|allmart  | 
+0|allmart  | Node.js v24.18.0
+0|allmart  | $ node --enable-source-maps ./dist/index.mjs
+0|allmart  | /opt/allmart/artifacts/api-server/src/index.ts:7
+0|allmart  |   throw new Error(
+0|allmart  |         ^
+0|allmart  | 
+0|allmart  | Error: PORT environment variable is required but was not provided.
+0|allmart  |     at <anonymous> (/opt/allmart/artifacts/api-server/src/index.ts:7:9)
+0|allmart  |     at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+0|allmart  |     at async node:internal/modules/esm/loader:643:26
+0|allmart  |     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+0|allmart  | 
+0|allmart  | Node.js v24.18.0
+
+/home/allmart/.pm2/logs/allmart-out.log last 50 lines:
+0|allmart  | [ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/api-server@0.0.0 start: `node --enable-source-maps ./dist/index.mjs`
+0|allmart  | Exit status 1
+0|allmart  | /opt/allmart/artifacts/api-server:
+0|allmart  | [ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/api-server@0.0.0 start: `node --enable-source-maps ./dist/index.mjs`
+0|allmart  | Exit status 1
+0|allmart  | /opt/allmart/artifacts/api-server:
+0|allmart  | [ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/api-server@0.0.0 start: `node --enable-source-maps ./dist/index.mjs`
+0|allmart  | Exit status 1
+0|allmart  | /opt/allmart/artifacts/api-server:
+0|allmart  | [ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/api-server@0.0.0 start: `node --enable-source-maps ./dist/index.mjs`
+0|allmart  | Exit status 1
+0|allmart  | /opt/allmart/artifacts/api-server:
+0|allmart  | [ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/api-server@0.0.0 start: `node --enable-source-maps ./dist/index.mjs`
+0|allmart  | Exit status 1
+0|allmart  | /opt/allmart/artifacts/api-server:
+0|allmart  | [ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/api-server@0.0.0 start: `node --enable-source-maps ./dist/index.mjs`
+0|allmart  | Exit status 1
+0|allmart  | /opt/allmart/artifacts/api-server:
+0|allmart  | [ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/api-server@0.0.0 start: `node --enable-source-maps ./dist/index.mjs`
+0|allmart  | Exit status 1
+0|allmart  | /opt/allmart/artifacts/api-server:
+0|allmart  | [ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/api-server@0.0.0 start: `node --enable-source-maps ./dist/index.mjs`
+0|allmart  | Exit status 1
+0|allmart  | /opt/allmart/artifacts/api-server:
+0|allmart  | [ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/api-server@0.0.0 start: `node --enable-source-maps ./dist/index.mjs`
+0|allmart  | Exit status 1
+0|allmart  | /opt/allmart/artifacts/api-server:
+0|allmart  | [ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/api-server@0.0.0 start: `node --enable-source-maps ./dist/index.mjs`
+0|allmart  | Exit status 1
+0|allmart  | /opt/allmart/artifacts/api-server:
+0|allmart  | [ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/api-server@0.0.0 start: `node --enable-source-maps ./dist/index.mjs`
+0|allmart  | Exit status 1
+0|allmart  | /opt/allmart/artifacts/api-server:
+0|allmart  | [ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/api-server@0.0.0 start: `node --enable-source-maps ./dist/index.mjs`
+0|allmart  | Exit status 1
+0|allmart  | /opt/allmart/artifacts/api-server:
+0|allmart  | [ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/api-server@0.0.0 start: `node --enable-source-maps ./dist/index.mjs`
+0|allmart  | Exit status 1
+0|allmart  | /opt/allmart/artifacts/api-server:
+0|allmart  | [ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/api-server@0.0.0 start: `node --enable-source-maps ./dist/index.mjs`
+0|allmart  | Exit status 1
+0|allmart  | /opt/allmart/artifacts/api-server:
+0|allmart  | [ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/api-server@0.0.0 start: `node --enable-source-maps ./dist/index.mjs`
+0|allmart  | Exit status 1
+0|allmart  | /opt/allmart/artifacts/api-server:
+0|allmart  | [ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/api-server@0.0.0 start: `node --enable-source-maps ./dist/index.mjs`
+0|allmart  | Exit status 1
+0|allmart  | /opt/allmart/artifacts/api-server:
+0|allmart  | [ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/api-server@0.0.0 start: `node --enable-source-maps ./dist/index.mjs`
+0|allmart  | Exit status 1
+
+0|allmart  | $ node --enable-source-maps ./dist/index.mjs
+0|allmart  | /opt/allmart/artifacts/api-server/src/index.ts:7
+0|allmart  |   throw new Error(
+0|allmart  |         ^
+0|allmart  | Error: PORT environment variable is required but was not provided.
+0|allmart  |     at <anonymous> (/opt/allmart/artifacts/api-server/src/index.ts:7:9)
+0|allmart  |     at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+0|allmart  |     at async node:internal/modules/esm/loader:643:26
+0|allmart  |     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+0|allmart  | Node.js v24.18.0
+0|allmart  | /opt/allmart/artifacts/api-server:
+0|allmart  | [ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/api-server@0.0.0 start: `node --enable-source-maps ./dist/index.mjs`
+0|allmart  | Exit status 1
+0|allmart  | $ node --enable-source-maps ./dist/index.mjs
+0|allmart  | /opt/allmart/artifacts/api-server/src/index.ts:7
+0|allmart  |   throw new Error(
+0|allmart  |         ^
+0|allmart  | Error: PORT environment variable is required but was not provided.
+0|allmart  |     at <anonymous> (/opt/allmart/artifacts/api-server/src/index.ts:7:9)
+0|allmart  |     at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+0|allmart  |     at async node:internal/modules/esm/loader:643:26
+0|allmart  |     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+0|allmart  | Node.js v24.18.0
+0|allmart  | /opt/allmart/artifacts/api-server:
+0|allmart  | [ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/api-server@0.0.0 start: `node --enable-source-maps ./dist/index.mjs`
+0|allmart  | Exit status 1
+0|allmart  | $ node --enable-source-maps ./dist/index.mjs
+0|allmart  | /opt/allmart/artifacts/api-server/src/index.ts:7
+0|allmart  |   throw new Error(
+0|allmart  |         ^
+0|allmart  | Error: PORT environment variable is required but was not provided.
+0|allmart  |     at <anonymous> (/opt/allmart/artifacts/api-server/src/index.ts:7:9)
+0|allmart  |     at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+0|allmart  |     at async node:internal/modules/esm/loader:643:26
+0|allmart  |     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+0|allmart  | Node.js v24.18.0
+0|allmart  | /opt/allmart/artifacts/api-server:
+0|allmart  | [ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/api-server@0.0.0 start: `node --enable-source-maps ./dist/index.mjs`
+0|allmart  | Exit status 1
+0|allmart  | $ node --enable-source-maps ./dist/index.mjs
+0|allmart  | /opt/allmart/artifacts/api-server/src/index.ts:7
+0|allmart  |   throw new Error(
+0|allmart  |         ^
+0|allmart  | Error: PORT environment variable is required but was not provided.
+0|allmart  |     at <anonymous> (/opt/allmart/artifacts/api-server/src/index.ts:7:9)
+0|allmart  |     at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+0|allmart  |     at async node:internal/modules/esm/loader:643:26
+0|allmart  |     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+0|allmart  | Node.js v24.18.0
+0|allmart  | /opt/allmart/artifacts/api-server:
+0|allmart  | [ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/api-server@0.0.0 start: `node --enable-source-maps ./dist/index.mjs`
+0|allmart  | Exit status 1
+0|allmart  | $ node --enable-source-maps ./dist/index.mjs
+0|allmart  | /opt/allmart/artifacts/api-server/src/index.ts:7
+0|allmart  |   throw new Error(
+0|allmart  |         ^
+0|allmart  | Error: PORT environment variable is required but was not provided.
+0|allmart  |     at <anonymous> (/opt/allmart/artifacts/api-server/src/index.ts:7:9)
+0|allmart  |     at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+0|allmart  |     at async node:internal/modules/esm/loader:643:26
+0|allmart  |     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+0|allmart  | Node.js v24.18.0
+0|allmart  | /opt/allmart/artifacts/api-server:
+0|allmart  | [ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/api-server@0.0.0 start: `node --enable-source-maps ./dist/index.mjs`
+0|allmart  | Exit status 1
+0|allmart  | $ node --enable-source-maps ./dist/index.mjs
+0|allmart  | /opt/allmart/artifacts/api-server/src/index.ts:7
+0|allmart  |   throw new Error(
+0|allmart  |         ^
+0|allmart  | Error: PORT environment variable is required but was not provided.
+0|allmart  |     at <anonymous> (/opt/allmart/artifacts/api-server/src/index.ts:7:9)
+0|allmart  |     at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+0|allmart  |     at async node:internal/modules/esm/loader:643:26
+0|allmart  |     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+0|allmart  | Node.js v24.18.0
+0|allmart  | /opt/allmart/artifacts/api-server:
+0|allmart  | [ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/api-server@0.0.0 start: `node --enable-source-maps ./dist/index.mjs`
+0|allmart  | Exit status 1
+0|allmart  | $ node --enable-source-maps ./dist/index.mjs
