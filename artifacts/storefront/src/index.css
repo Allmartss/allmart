@@ -195,3 +195,33 @@
     pointer-events: none;
   }
 }
+
+/* ── Mega Sale card — sliding pink/blue/brown gradient ── */
+@keyframes megaSaleGradient {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes megaSaleShimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.mega-sale-card {
+  background: linear-gradient(
+    135deg,
+    #ec4899,  /* pink */
+    #3b82f6,  /* blue */
+    #78350f,  /* brown */
+    #db2777,  /* deep pink */
+    #1d4ed8,  /* deep blue */
+    #92400e,  /* warm brown */
+    #ec4899   /* back to pink */
+  );
+  background-size: 400% 400%;
+  animation: megaSaleGradient 6s ease infinite;
+}
+
+.mega-sale-shimmer {
+  animation: megaSaleShimmer 2.5s ease-in-out infinite;
+}

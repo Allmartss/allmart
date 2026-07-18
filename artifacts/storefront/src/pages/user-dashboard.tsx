@@ -284,18 +284,21 @@ export default function UserDashboard() {
       {/* ── Body ── */}
       <div className="px-4 py-4 space-y-5 pb-12 max-w-screen-xl mx-auto w-full">
 
-        {/* Mega Sale banner */}
-        <div className="relative overflow-hidden rounded-2xl bg-[#1e1150] px-5 py-4 flex items-center justify-between shadow-xl">
-          <div className="absolute -right-6 -top-6 h-36 w-36 rounded-full bg-primary/20 blur-2xl pointer-events-none" />
+        {/* Mega Sale banner — sliding pink/blue/brown gradient */}
+        <div
+          className="relative overflow-hidden rounded-2xl px-5 py-4 flex items-center justify-between shadow-xl mega-sale-card"
+        >
+          {/* animated shimmer overlay */}
+          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 mega-sale-shimmer pointer-events-none" />
           <div className="relative z-10 space-y-1.5">
-            <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold text-white/90">
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-semibold text-white/90">
               🔥 Limited Time
             </span>
             <p className="text-2xl font-extrabold text-white">Mega Sale</p>
-            <p className="text-sm text-white/70">Up to 60% Off</p>
+            <p className="text-sm text-white/80">Up to 60% Off</p>
             <button
               onClick={() => setLocation("/products")}
-              className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-1.5 text-xs font-bold text-primary hover:bg-white/90 transition-colors"
+              className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-1.5 text-xs font-bold text-pink-600 hover:bg-white/90 transition-colors"
             >
               Shop Now <ArrowRight className="h-3 w-3" />
             </button>

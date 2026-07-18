@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import {
   useGetStorefrontSummary,
   useListCategories,
+  useListProducts,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, Search, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowRight, Search, Sparkles } from "lucide-react";
 import { BagLogo } from "@/components/bag-logo";
 import { ProductCard } from "@/components/product-card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,10 +16,24 @@ import { FeaturedCarousel } from "@/components/featured-carousel";
 export default function Landing() {
   const [, setLocation] = useLocation();
   const [query, setQuery] = useState("");
-  const [catsExpanded, setCatsExpanded] = useState(false);
+  const [stickyVisible, setStickyVisible] = useState(false);
+  const heroSearchRef = useRef<HTMLDivElement>(null);
 
   const { data: summary, isLoading: isSummaryLoading } = useGetStorefrontSummary();
   const { data: categories, isLoading: isCategoriesLoading } = useListCategories();
+  const { data: allProducts, isLoading: isProductsLoading } = useListProducts();
+
+  // Show sticky search bar once hero search scrolls out of view
+  useEffect(() => {
+    const el = heroSearchRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => setStickyVisible(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   const handleAskAI = (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,19 +43,19 @@ export default function Landing() {
     setLocation("/account");
   };
 
-  const visibleCats = catsExpanded ? categories : categories?.slice(0, 6);
+  // Products NOT in the featured list, to show as "More products"
+  const featuredIds = new Set((summary?.featured ?? []).map(p => p.id));
+  const otherProducts = (allProducts ?? []).filter(p => !featuredIds.has(p.id));
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-4rem)]">
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="relative px-6 py-24 md:py-32 lg:py-40 overflow-hidden bg-primary rounded-b-[2.5rem]">
-        {/* subtle texture layer */}
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-primary/80 pointer-events-none" />
 
         <div className="container relative z-10 max-w-3xl mx-auto text-center space-y-6">
-          {/* Brand logo */}
           <div className="flex justify-center">
             <BagLogo size={72} />
           </div>
@@ -58,25 +73,27 @@ export default function Landing() {
             Tell our AI what you're looking for and we'll find the perfect match.
           </p>
 
-          {/* AI search */}
-          <form onSubmit={handleAskAI} className="relative max-w-2xl mx-auto mt-6 group">
-            <div className="absolute inset-0 bg-white/10 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-            <div className="relative flex items-center bg-white rounded-full p-2 shadow-xl">
-              <Search className="h-5 w-5 text-muted-foreground ml-4 shrink-0" />
-              <Input
-                type="text"
-                placeholder="Tell me what you need..."
-                className="flex-1 border-0 bg-transparent text-base shadow-none focus-visible:ring-0 px-3 h-12 placeholder:text-muted-foreground/60"
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-              />
-              <Button type="submit" size="lg" className="rounded-full h-11 px-6 font-semibold gap-2 shrink-0">
-                Ask AI <ArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </form>
+          {/* AI search — observed for sticky trigger */}
+          <div ref={heroSearchRef}>
+            <form onSubmit={handleAskAI} className="relative max-w-2xl mx-auto mt-6 group">
+              <div className="absolute inset-0 bg-white/10 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+              <div className="relative flex items-center bg-white rounded-full p-2 shadow-xl">
+                <Search className="h-5 w-5 text-muted-foreground ml-4 shrink-0" />
+                <Input
+                  type="text"
+                  placeholder="Tell me what you need..."
+                  className="flex-1 border-0 bg-transparent text-base shadow-none focus-visible:ring-0 px-3 h-12 placeholder:text-muted-foreground/60"
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                />
+                <Button type="submit" size="lg" className="rounded-full h-11 px-6 font-semibold gap-2 shrink-0">
+                  Ask AI <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </form>
+          </div>
 
-          {/* Trending — single scrollable line */}
+          {/* Trending */}
           {summary?.trendingSearches && summary.trendingSearches.length > 0 && (
             <div className="pt-1 flex items-center gap-1.5 overflow-x-auto scrollbar-none max-w-xl mx-auto">
               <span className="text-[10px] text-white/40 shrink-0 font-medium">Trending:</span>
@@ -97,6 +114,29 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ── Sticky search bar (appears after hero scrolls away) ────────────── */}
+      <div
+        className={`sticky top-14 z-40 border-b border-border/40 bg-background/95 backdrop-blur transition-all duration-300 ${
+          stickyVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0 pointer-events-none"
+        }`}
+      >
+        <div className="container max-w-2xl mx-auto px-4 py-2">
+          <form onSubmit={handleAskAI} className="flex items-center bg-muted rounded-full px-4 py-2 gap-3 border border-border/50">
+            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+            <input
+              type="text"
+              placeholder="Search with AI..."
+              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+            />
+            <button type="submit" className="flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-[11px] font-semibold text-white">
+              <Sparkles className="h-3 w-3" /> Ask AI
+            </button>
+          </form>
+        </div>
+      </div>
+
       {/* ── Featured Carousel ─────────────────────────────────────────────── */}
       <section className="pt-6 pb-10 container max-w-screen-xl mx-auto px-6">
         <div className="flex items-end justify-between mb-6">
@@ -114,20 +154,20 @@ export default function Landing() {
       </section>
 
       {/* ── New Arrivals ──────────────────────────────────────────────────── */}
-      <section className="pb-12 container max-w-screen-xl mx-auto px-6">
+      <section className="pb-6 container max-w-screen-xl mx-auto px-6">
         <h2 className="text-xl font-bold tracking-tight mb-5">New arrivals</h2>
         {isSummaryLoading ? (
-          <div className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="space-y-3">
-                <Skeleton className="aspect-[4/3] rounded-xl" />
+                <Skeleton className="aspect-square rounded-xl" />
                 <Skeleton className="h-3.5 w-2/3" />
                 <Skeleton className="h-3.5 w-1/2" />
               </div>
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
             {summary?.featured?.map(product => (
               <ProductCard key={product.id} product={product} />
             ))}
@@ -135,51 +175,61 @@ export default function Landing() {
         )}
       </section>
 
-      {/* ── Shop by Category ─────────────────────────────────────────────── */}
-      <section className="py-10 bg-muted/30 border-t border-border/40">
-        <div className="container max-w-screen-xl mx-auto px-6">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-xl font-bold tracking-tight">Shop by Category</h2>
-            <button
-              onClick={() => setCatsExpanded(e => !e)}
-              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
-            >
-              {catsExpanded
-                ? <><ChevronUp className="h-4 w-4" /> Show less</>
-                : <><ChevronDown className="h-4 w-4" /> All categories</>}
-            </button>
+      {/* ── Shop by Category — compact pills ─────────────────────────────── */}
+      <section className="pb-8 container max-w-screen-xl mx-auto px-6">
+        <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Shop by Category</h3>
+        {isCategoriesLoading ? (
+          <div className="flex flex-wrap gap-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-8 w-20 rounded-full" />
+            ))}
           </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {categories?.map(cat => (
+              <Link key={cat.slug} href="/account">
+                <div className="flex items-center gap-1.5 rounded-full bg-muted border border-border/50 px-3 py-1.5 hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer">
+                  <span className="font-medium text-xs hover:text-primary transition-colors">{cat.name}</span>
+                  <span className="text-[10px] text-muted-foreground bg-background/60 rounded-full px-1.5">
+                    {cat.productCount}
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
 
-          {isCategoriesLoading ? (
-            <div className="flex flex-wrap gap-2">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-9 w-24 rounded-full" />
+      {/* ── All Products ──────────────────────────────────────────────────── */}
+      {(otherProducts.length > 0 || isProductsLoading) && (
+        <section className="pb-12 container max-w-screen-xl mx-auto px-6">
+          <div className="flex items-end justify-between mb-5">
+            <h2 className="text-xl font-bold tracking-tight">All products</h2>
+            <Link href="/account">
+              <Button variant="ghost" className="gap-2 group text-sm">
+                View all <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+          </div>
+          {isProductsLoading ? (
+            <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="space-y-3">
+                  <Skeleton className="aspect-square rounded-xl" />
+                  <Skeleton className="h-3.5 w-2/3" />
+                  <Skeleton className="h-3.5 w-1/2" />
+                </div>
               ))}
             </div>
           ) : (
-            <div className="flex flex-wrap gap-2">
-              {visibleCats?.map(cat => (
-                <Link key={cat.slug} href="/account">
-                  <div className="group flex items-center gap-2 rounded-full bg-card border border-border/50 px-4 py-2 hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer">
-                    <span className="font-medium text-sm group-hover:text-primary transition-colors">{cat.name}</span>
-                    <span className="text-xs text-muted-foreground bg-muted rounded-full px-1.5 py-0.5">
-                      {cat.productCount}
-                    </span>
-                  </div>
-                </Link>
+            <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+              {otherProducts.map(product => (
+                <ProductCard key={product.id} product={product} />
               ))}
-              {!catsExpanded && (categories?.length ?? 0) > 6 && (
-                <button
-                  onClick={() => setCatsExpanded(true)}
-                  className="flex items-center gap-1 rounded-full border border-dashed border-border/60 px-4 py-2 text-sm text-muted-foreground hover:border-primary/50 hover:text-primary transition-all"
-                >
-                  +{(categories?.length ?? 0) - 6} more
-                </button>
-              )}
             </div>
           )}
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ── Sign-in nudge ─────────────────────────────────────────────────── */}
       <section className="py-12 bg-primary/5 border-t border-border/40">
