@@ -4,10 +4,26 @@ import {
   useGetStorefrontSummary,
   useListCategories,
   useListProducts,
+  useGetFlashSale,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, Search, Sparkles, Send } from "lucide-react";
+import { ArrowRight, Search, Sparkles, Send, Zap } from "lucide-react";
+
+function useCountdown(endsAt: string | null) {
+  const endMs = endsAt ? new Date(endsAt).getTime() : null;
+  const [left, setLeft] = useState(endMs ? Math.max(0, endMs - Date.now()) : 0);
+  useEffect(() => {
+    if (!endMs) { setLeft(0); return; }
+    setLeft(Math.max(0, endMs - Date.now()));
+    const id = setInterval(() => setLeft(Math.max(0, endMs - Date.now())), 1000);
+    return () => clearInterval(id);
+  }, [endMs]);
+  const h = Math.floor(left / 3600_000).toString().padStart(2, "0");
+  const m = Math.floor((left % 3600_000) / 60_000).toString().padStart(2, "0");
+  const s = Math.floor((left % 60_000) / 1_000).toString().padStart(2, "0");
+  return { h, m, s, expired: endMs !== null && left <= 0 };
+}
 import { BagLogo } from "@/components/bag-logo";
 import { ProductCard } from "@/components/product-card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,6 +38,11 @@ export default function Landing() {
   const { data: summary, isLoading: isSummaryLoading } = useGetStorefrontSummary();
   const { data: categories, isLoading: isCategoriesLoading } = useListCategories();
   const { data: allProducts, isLoading: isProductsLoading } = useListProducts();
+  const { data: flashSale } = useGetFlashSale();
+
+  const flashLive = !!flashSale?.enabled;
+  const { h, m, s, expired } = useCountdown(flashLive ? (flashSale!.endsAt ?? null) : null);
+  const showBanner = flashLive && !expired;
 
   // Show sticky search bar once hero search scrolls out of view
   useEffect(() => {
@@ -50,6 +71,31 @@ export default function Landing() {
   return (
     <div className="flex flex-col min-h-[calc(100vh-4rem)]">
 
+      {/* ── Flash Sale sticky countdown banner ── */}
+      {showBanner && (
+        <div className="sticky top-14 z-50 w-full bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 shadow-md">
+          <div className="flex items-center justify-center gap-3 px-4 py-2">
+            <Zap className="h-4 w-4 text-white fill-white shrink-0" />
+            <span className="text-sm font-bold text-white tracking-wide">FLASH SALE — Ends in</span>
+            <div className="flex items-center gap-1">
+              {[h, m, s].map((unit, i) => (
+                <span key={i} className="flex items-center gap-1">
+                  <span className="flex h-7 min-w-[28px] items-center justify-center rounded-md bg-white/20 text-white text-sm font-extrabold px-1.5 tabular-nums">
+                    {unit}
+                  </span>
+                  {i < 2 && <span className="text-white font-extrabold text-sm leading-none">:</span>}
+                </span>
+              ))}
+            </div>
+            <Link href="/products?sort=sale">
+              <span className="ml-1 rounded-full bg-white/20 border border-white/30 px-3 py-0.5 text-xs font-bold text-white hover:bg-white/30 transition-colors">
+                Shop now →
+              </span>
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="relative px-6 py-24 md:py-32 lg:py-40 overflow-hidden bg-primary rounded-b-[2.5rem]">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent pointer-events-none" />
@@ -65,7 +111,7 @@ export default function Landing() {
           </span>
 
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-white leading-tight">
-            Your personal concierge for{" "}
+            concierge for{" "}
             <span className="italic text-white/80">everything.</span>
           </h1>
 
