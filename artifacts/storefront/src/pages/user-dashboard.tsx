@@ -328,9 +328,8 @@ export default function UserDashboard() {
         {/* Popular Categories — gradient icon tiles, matches mobile */}
         {topCats.length > 0 && (
           <div>
-            <div className="flex items-center justify-between mb-3">
+            <div className="mb-3">
               <h5 className="text-base font-bold">Popular Categories</h5>
-              <Link href="/products"><span className="text-xs font-semibold text-primary hover:underline">See all</span></Link>
             </div>
             <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
               {topCats.map((cat, i) => {
@@ -353,11 +352,10 @@ export default function UserDashboard() {
         {/* Flash Sale */}
         {flashList.length > 0 && (
           <div>
-            <div className="flex items-center justify-between mb-2">
+            <div className="mb-2">
               <h2 className="text-base font-bold flex items-center gap-1.5">
                 <Zap className="h-4 w-4 text-yellow-400 fill-yellow-400" /> Flash Sale
               </h2>
-              <Link href="/products"><span className="text-xs font-semibold text-primary hover:underline">See all</span></Link>
             </div>
             <div className="mb-3"><Countdown /></div>
             <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
@@ -406,14 +404,10 @@ export default function UserDashboard() {
             <p className="text-sm mt-1">Add products via the admin panel.</p>
           </div>
         ) : (
-          <div className="space-y-6">
-            {categoryGroups.map(({ slug, name, products }) => (
+          <div className="space-y-4">
+            {categoryGroups.map(({ slug, products }) => (
               <div key={slug}>
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-base font-bold capitalize">{name}</h2>
-                  <Link href={`/products?category=${slug}`}><span className="text-xs font-semibold text-primary hover:underline">See all</span></Link>
-                </div>
-                <div className="grid grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                <div className="grid grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-1">
                   {products.slice(0, 5).map(p => <ProductCard key={p.id} product={p} />)}
                 </div>
               </div>

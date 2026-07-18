@@ -153,53 +153,6 @@ export default function Landing() {
         <FeaturedCarousel />
       </section>
 
-      {/* ── New Arrivals ──────────────────────────────────────────────────── */}
-      <section className="pb-6 container max-w-screen-xl mx-auto px-6">
-        <h2 className="text-xl font-bold tracking-tight mb-5">New arrivals</h2>
-        {isSummaryLoading ? (
-          <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="space-y-3">
-                <Skeleton className="aspect-square rounded-xl" />
-                <Skeleton className="h-3.5 w-2/3" />
-                <Skeleton className="h-3.5 w-1/2" />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
-            {summary?.featured?.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* ── Shop by Category — compact pills ─────────────────────────────── */}
-      <section className="pb-8 container max-w-screen-xl mx-auto px-6">
-        <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Shop by Category</h3>
-        {isCategoriesLoading ? (
-          <div className="flex flex-wrap gap-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-8 w-20 rounded-full" />
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {categories?.map(cat => (
-              <Link key={cat.slug} href="/account">
-                <div className="flex items-center gap-1.5 rounded-full bg-muted border border-border/50 px-3 py-1.5 hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer">
-                  <span className="font-medium text-xs hover:text-primary transition-colors">{cat.name}</span>
-                  <span className="text-[10px] text-muted-foreground bg-background/60 rounded-full px-1.5">
-                    {cat.productCount}
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
-
       {/* ── All Products ──────────────────────────────────────────────────── */}
       {(otherProducts.length > 0 || isProductsLoading) && (
         <section className="pb-12 container max-w-screen-xl mx-auto px-6">
