@@ -62,7 +62,7 @@ export function ProductCard({ product }: { product: Product }) {
   return (
     <Link href={`/products/${toSlug(product.name, product.id)}`}>
       <Card className="group h-full overflow-hidden border-border/50 bg-card hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 cursor-pointer flex flex-col relative">
-        <div className="relative aspect-square overflow-hidden bg-muted/30">
+        <div className="relative aspect-[4/3] overflow-hidden bg-muted/30">
           <img
             src={product.imageUrl}
             alt={product.name}
@@ -88,22 +88,18 @@ export function ProductCard({ product }: { product: Product }) {
           )}
         </div>
 
-        <CardContent className="p-3 flex-1 flex flex-col">
-          <Badge variant="outline" className="text-[10px] font-medium tracking-wider uppercase bg-transparent border-border/50 w-fit mb-1.5">
-            {product.category}
-          </Badge>
-          <h3 className="font-sans font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">
+        <CardContent className="p-2 flex-1 flex flex-col">
+          <h3 className="font-sans font-semibold text-xs line-clamp-1 group-hover:text-primary transition-colors">
             {product.name}
           </h3>
           {hasDiscount && (
-            <span className="text-xs text-muted-foreground line-through mt-0.5">
+            <span className="text-[10px] text-muted-foreground line-through mt-0.5">
               {fmt.format(product.originalPrice!)}
             </span>
           )}
-          <p className="text-xs text-muted-foreground line-clamp-2 mt-1 flex-1">{product.description}</p>
         </CardContent>
 
-        <CardFooter className="p-3 pt-0 flex items-center justify-between text-sm">
+        <CardFooter className="p-2 pt-0 flex items-center justify-between text-sm">
           <div className="flex items-center gap-1 text-amber-500 font-medium">
             <Star className="h-3.5 w-3.5 fill-current" />
             <span className="text-xs">{product.rating.toFixed(1)}</span>
