@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useRoute, useLocation, Link } from "wouter";
-import { useGetProduct, useAddCartItem, getGetCartQueryKey } from "@workspace/api-client-react";
+import { useGetProduct, useAddCartItem, getGetCartQueryKey, useListProducts, useListCategories, useGetStorefrontSummary } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import {

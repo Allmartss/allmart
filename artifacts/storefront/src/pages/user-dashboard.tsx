@@ -380,40 +380,35 @@ export default function UserDashboard() {
           </div>
         )}
 
-        {/* Category product rows */}
-        {isLoading ? (
-          <div className="space-y-6">
-            {[1, 2].map(i => (
-              <div key={i} className="space-y-3">
-                <Skeleton className="h-5 w-32 rounded" />
-                <div className="grid grid-cols-4 md:grid-cols-4 gap-2">
-                  {Array.from({ length: 4 }).map((_, j) => (
-                    <div key={j} className="space-y-2">
-                      <Skeleton className="aspect-square rounded-xl" />
-                      <Skeleton className="h-3 w-2/3" />
-                      <Skeleton className="h-3 w-1/2" />
-                    </div>
-                  ))}
+        {/* Best Selling — flat grid, no category grouping */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-bold">Best Selling</h2>
+            <Link href="/products">
+              <span className="text-xs font-semibold text-primary hover:underline cursor-pointer">See all</span>
+            </Link>
+          </div>
+          {isLoading ? (
+            <div className="grid grid-cols-4 gap-1">
+              {Array.from({ length: 8 }).map((_, j) => (
+                <div key={j} className="space-y-2">
+                  <Skeleton className="aspect-square rounded-xl" />
+                  <Skeleton className="h-3 w-2/3" />
+                  <Skeleton className="h-3 w-1/2" />
                 </div>
-              </div>
-            ))}
-          </div>
-        ) : categoryGroups.length === 0 ? (
-          <div className="text-center py-16 text-muted-foreground">
-            <p className="text-base font-medium">No products yet.</p>
-            <p className="text-sm mt-1">Add products via the admin panel.</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {categoryGroups.map(({ slug, products }) => (
-              <div key={slug}>
-                <div className="grid grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-1">
-                  {products.slice(0, 5).map(p => <ProductCard key={p.id} product={p} />)}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          ) : (allProducts ?? []).length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground">
+              <p className="text-base font-medium">No products yet.</p>
+              <p className="text-sm mt-1">Add products via the admin panel.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1">
+              {(allProducts ?? []).map(p => <ProductCard key={p.id} product={p} />)}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

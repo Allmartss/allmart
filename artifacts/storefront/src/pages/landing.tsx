@@ -188,8 +188,8 @@ export default function Landing() {
       <footer className="bg-[#0d0a1f] text-white mt-4">
         <div className="container max-w-screen-xl mx-auto px-6 pt-10 pb-6">
 
-          {/* Top grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+          {/* Top grid: Brand | [Categories + Quick Links] | Stay Updated */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-8">
 
             {/* Brand */}
             <div className="space-y-4">
@@ -220,41 +220,44 @@ export default function Landing() {
               </div>
             </div>
 
-            {/* Categories */}
-            <div>
-              <h4 className="font-semibold text-sm mb-4">Categories</h4>
-              <ul className="space-y-2.5 text-sm text-white/60">
-                {(categories ?? []).slice(0, 6).map(cat => (
-                  <li key={cat.slug}>
-                    <Link href={`/products?category=${cat.slug}`}>
-                      <span className="hover:text-white transition-colors cursor-pointer">{cat.name}</span>
-                    </Link>
-                  </li>
-                ))}
-                {isCategoriesLoading && ["Electronics","Fashion","Home & Living","Beauty","Gift Items"].map(n => (
-                  <li key={n} className="text-white/60">{n}</li>
-                ))}
-              </ul>
-            </div>
+            {/* Categories + Quick Links always side by side */}
+            <div className="grid grid-cols-2 gap-6">
+              {/* Categories */}
+              <div>
+                <h4 className="font-semibold text-sm mb-4">Categories</h4>
+                <ul className="space-y-2.5 text-sm text-white/60">
+                  {(categories ?? []).slice(0, 6).map(cat => (
+                    <li key={cat.slug}>
+                      <Link href={`/products?category=${cat.slug}`}>
+                        <span className="hover:text-white transition-colors cursor-pointer">{cat.name}</span>
+                      </Link>
+                    </li>
+                  ))}
+                  {isCategoriesLoading && ["Electronics","Fashion","Home & Living","Beauty","Gift Items"].map(n => (
+                    <li key={n} className="text-white/60">{n}</li>
+                  ))}
+                </ul>
+              </div>
 
-            {/* Quick Links */}
-            <div>
-              <h4 className="font-semibold text-sm mb-4">Quick Links</h4>
-              <ul className="space-y-2.5 text-sm text-white/60">
-                {[
-                  { label: "Shop", href: "/products" },
-                  { label: "My Orders", href: "/orders" },
-                  { label: "Become a Seller", href: "/account" },
-                  { label: "Help Center", href: "/support" },
-                  { label: "Returns & Refunds", href: "/support" },
-                ].map(({ label, href }) => (
-                  <li key={label}>
-                    <Link href={href}>
-                      <span className="hover:text-white transition-colors cursor-pointer">{label}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+              {/* Quick Links */}
+              <div>
+                <h4 className="font-semibold text-sm mb-4">Quick Links</h4>
+                <ul className="space-y-2.5 text-sm text-white/60">
+                  {[
+                    { label: "Shop", href: "/products" },
+                    { label: "My Orders", href: "/orders" },
+                    { label: "Become a Seller", href: "/account" },
+                    { label: "Help Center", href: "/support" },
+                    { label: "Returns & Refunds", href: "/support" },
+                  ].map(({ label, href }) => (
+                    <li key={label}>
+                      <Link href={href}>
+                        <span className="hover:text-white transition-colors cursor-pointer">{label}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
 
             {/* Stay Updated */}
