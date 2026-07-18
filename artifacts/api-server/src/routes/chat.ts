@@ -291,7 +291,7 @@ router.post("/chat/messages", async (req: Request, res: Response) => {
     let result: Awaited<ReturnType<typeof chatCompletion>>;
     try {
       result = await chatCompletion(
-        messages as import("openai").ChatCompletionMessageParam[],
+        messages as Parameters<typeof chatCompletion>[0],
         tools,
       );
     } catch (err) {

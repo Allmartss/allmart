@@ -85,7 +85,7 @@ router.post("/storage/uploads/request-url", async (req: Request, res: Response) 
  * Hard body limit: 20 MB.
  */
 router.put("/storage/local/:uuid", (req: Request, res: Response) => {
-  const diskPath = safeLocalPath(req.params.uuid);
+  const diskPath = safeLocalPath(req.params.uuid as string);
   if (!diskPath) {
     res.status(400).json({ error: "Invalid upload identifier" });
     return;
@@ -115,7 +115,7 @@ router.put("/storage/local/:uuid", (req: Request, res: Response) => {
     res.status(200).json({ ok: true });
 
     if (isS3Configured()) {
-      const uuid = req.params.uuid;
+      const uuid = req.params.uuid as string;
       const contentType =
         (req.headers["content-type"] as string | undefined) ??
         "application/octet-stream";
@@ -137,7 +137,7 @@ router.put("/storage/local/:uuid", (req: Request, res: Response) => {
  *   as a /local-objects/<uuid> path (set during request-url in local mode).
  */
 function serveLocalFile(req: Request, res: Response) {
-  const diskPath = safeLocalPath(req.params.uuid);
+  const diskPath = safeLocalPath(req.params.uuid as string);
   if (!diskPath) {
     res.status(400).json({ error: "Invalid file identifier" });
     return;

@@ -162,6 +162,7 @@ router.post(
             .where(eq(ordersTable.trackingCode, trackingCode));
           updated++;
         } else {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await db.insert(ordersTable).values({
             trackingCode,
             status,
@@ -176,10 +177,10 @@ router.post(
             cashbackDiscount,
             paymentVerified,
             paymentNote,
-            items,
+            items: items as any[],
             createdAt,
             sessionId: `imported-${trackingCode}`,
-          });
+          } as any);
           inserted++;
         }
       }
