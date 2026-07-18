@@ -182,15 +182,6 @@ export default function ProductDetail() {
           </button>
         </div>
 
-        <button
-          onClick={() => {
-            sessionStorage.setItem("nb_prefill", `I'd like to buy the ${product.name}`);
-            setLocation("/assistant");
-          }}
-          className="w-full flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-semibold text-primary bg-primary/5 hover:bg-primary/10 transition-colors"
-        >
-          <Sparkles className="h-3.5 w-3.5" /> Ask AI to Buy
-        </button>
       </div>
 
       {/* ── Hero image — full bleed ── */}
@@ -342,6 +333,17 @@ export default function ProductDetail() {
 
         {/* Divider */}
         <div className="border-t border-border/50" />
+
+        {/* Ask AI to Buy */}
+        <button
+          onClick={() => {
+            sessionStorage.setItem("nb_prefill", `I'd like to buy the ${product.name}`);
+            setLocation("/assistant");
+          }}
+          className="w-full flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-semibold text-primary bg-primary/5 hover:bg-primary/10 transition-colors"
+        >
+          <Sparkles className="h-3.5 w-3.5" /> Ask AI to Buy
+        </button>
 
         {/* Social proof bar */}
         <div className="rounded-2xl border border-border/50 bg-card px-4 py-3 flex items-center gap-3 flex-wrap">
