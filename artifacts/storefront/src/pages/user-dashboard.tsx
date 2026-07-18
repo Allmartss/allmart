@@ -14,6 +14,7 @@ import {
 } from "@workspace/api-client-react";
 import type { Product } from "@workspace/api-client-react";
 import { ProductCard } from "@/components/product-card";
+import { BagLogo } from "@/components/bag-logo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StaffSidebarTrigger } from "@/components/staff-sidebar";
 import {
@@ -203,27 +204,31 @@ export default function UserDashboard() {
   return (
     <div className="flex flex-col min-h-[100dvh] bg-background">
 
-      {/* ── Purple header (matches mobile exactly) ── */}
+      {/* ── Purple header ── */}
       <section className="bg-primary px-4 pb-4 pt-safe">
         <div className="flex items-center gap-3 pt-3 pb-3">
-          <ShopDrawer />
 
-          {/* Compact greeting + title */}
+          {/* App logo — left */}
+          <Link href="/home">
+            <span className="shrink-0 flex items-center">
+              <BagLogo size={34} />
+            </span>
+          </Link>
+
+          {/* App name — centre */}
           <div className="flex-1 min-w-0">
-            <p className="text-[11px] text-white/70 font-medium leading-none mb-0.5">
-              {greeting()}{firstName ? `, ${firstName}` : ""} 👋
-            </p>
-            <p className="text-sm font-bold text-white leading-tight truncate">
-              Find your perfect product
-            </p>
+            <p className="text-base font-extrabold text-white tracking-tight leading-none">AllMart</p>
+            <p className="text-[11px] text-white/60 leading-none mt-0.5">Shop Everything</p>
           </div>
 
-          {/* Right actions */}
+          {/* Right actions: brightness → cart → menu */}
           <div className="flex items-center gap-1.5 shrink-0">
+            {/* Brightness toggle */}
             <button onClick={toggleDark} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 hover:bg-white/25 transition-colors">
               {dark ? <Sun className="h-4 w-4 text-white" /> : <Moon className="h-4 w-4 text-white" />}
             </button>
 
+            {/* Cart */}
             <Link href="/cart">
               <button className="relative flex h-8 w-8 items-center justify-center rounded-full bg-white/15 hover:bg-white/25 transition-colors">
                 <ShoppingCart className="h-4 w-4 text-white" />
@@ -235,6 +240,7 @@ export default function UserDashboard() {
               </button>
             </Link>
 
+            {/* Bell / staff menu */}
             {isStaff ? (
               <StaffSidebarTrigger role={me!.role as "admin" | "pm"} name={me!.name} />
             ) : (
@@ -261,24 +267,30 @@ export default function UserDashboard() {
           </div>
         </div>
 
-        {/* Search bar */}
-        <form onSubmit={handleSearch}>
-          <div className="flex items-center bg-white/15 focus-within:bg-white/20 rounded-2xl px-4 py-2.5 gap-3 border border-white/20 transition-colors">
-            <Search className="h-4 w-4 text-white/50 shrink-0" />
-            <input
-              type="text"
-              placeholder="Search for products..."
-              className="flex-1 bg-transparent text-sm text-white placeholder:text-white/50 outline-none"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-            />
-            {query && (
-              <button type="submit" className="flex h-6 items-center gap-1 rounded-full bg-white/20 px-2.5 text-[11px] font-semibold text-white">
-                <Sparkles className="h-3 w-3" /> Ask
-              </button>
-            )}
-          </div>
-        </form>
+        {/* Search card with greeting */}
+        <div className="rounded-2xl bg-white/10 border border-white/20 px-4 pt-3 pb-2.5">
+          <p className="text-sm font-semibold text-white mb-2">
+            {greeting()}{firstName ? `, ${firstName}` : ""} 👋
+          </p>
+          <form onSubmit={handleSearch}>
+            <div className="flex items-center bg-white/15 focus-within:bg-white/25 rounded-xl px-3 py-2 gap-2.5 border border-white/10 transition-colors">
+              <Search className="h-4 w-4 text-white/50 shrink-0" />
+              <input
+                type="text"
+                placeholder="Search for products..."
+                className="flex-1 bg-transparent text-sm text-white placeholder:text-white/50 outline-none"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+              />
+              {query && (
+                <button type="submit" className="flex h-6 items-center gap-1 rounded-full bg-white/20 px-2.5 text-[11px] font-semibold text-white">
+                  <Sparkles className="h-3 w-3" /> Ask
+                </button>
+              )}
+            </div>
+          </form>
+          <p className="text-[11px] text-white/50 text-center mt-1.5">Find your perfect product <span className="font-semibold text-white/70">With AI</span></p>
+        </div>
       </section>
 
       {/* ── Body ── */}
