@@ -7,9 +7,13 @@ import { fileURLToPath } from "url";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { sessionMiddleware } from "./lib/session";
+import { ensureUploadsDir } from "./lib/localStorageFallback";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STATIC_DIR = path.resolve(__dirname, "../../storefront/dist/public");
+
+// Ensure local uploads directory exists at startup (no FILE_* keys needed)
+ensureUploadsDir();
 
 const app: Express = express();
 
