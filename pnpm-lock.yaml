@@ -175,7 +175,23 @@ overrides:
 importers:
 
   .:
+    dependencies:
+      '@aws-sdk/client-s3':
+        specifier: ^3.830.0
+        version: 3.1088.0
+      nodemailer:
+        specifier: ^6.10.1
+        version: 6.10.1
+      pg:
+        specifier: ^8.16.3
+        version: 8.20.0
     devDependencies:
+      '@types/nodemailer':
+        specifier: ^6.4.17
+        version: 6.4.24
+      '@types/pg':
+        specifier: ^8.11.14
+        version: 8.18.0
       adm-zip:
         specifier: ^0.5.17
         version: 0.5.17
