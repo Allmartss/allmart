@@ -10,7 +10,7 @@
  *   FILE_ENDPOINT_URL        — full endpoint URL (e.g. https://<ref>.supabase.co/storage/v1/s3)
  *   FILE_REGION              — AWS / Supabase region (e.g. us-east-1 or ap-southeast-1)
  */
-import { S3Client, PutObjectCommand, HeadBucketCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, HeadBucketCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { logger } from "./logger";
 
 const S3_FOLDER = "Allnart";
@@ -89,4 +89,25 @@ export async function uploadToS3(
   logger.info({ bucket, key }, "S3 upload complete");
 
   return getS3PublicUrl(uuid);
+}
+
+/**
+ * Check whether a file already exists in S3 under the Allnart/<uuid> key.
+ * Returns true if the object exists, false if not found (404), throws on other errors.
+ */
+export async function fileExistsInS3(uuid: string): Promise<boolean> {
+  const client = getS3Client();
+  const bucket = getBucketName();
+  const key = `${S3_FOLDER}/${uuid}`;
+
+  try {
+    await client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
+    return true;
+  } catch (err: unknown) {
+    const code = (err as { name?: string; $metadata?: { httpStatusCode?: number } });
+    if (code.name === "NotFound" || code.$metadata?.httpStatusCode === 404) {
+      return false;
+    }
+    throw err;
+  }
 }

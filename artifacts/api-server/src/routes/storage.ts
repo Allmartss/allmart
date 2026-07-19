@@ -14,7 +14,8 @@ import {
   LOCAL_OBJECT_PREFIX,
   LOCAL_UPLOADS_DIR,
 } from "../lib/localStorageFallback";
-import { isS3Configured, uploadToS3, getS3PublicUrl } from "../lib/s3Storage";
+import { isS3Configured, uploadToS3, getS3PublicUrl, fileExistsInS3 } from "../lib/s3Storage";
+import { requireRole } from "../lib/auth";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -247,6 +248,74 @@ router.get("/storage/objects/*path", async (req: Request, res: Response) => {
     }
     req.log.error({ err: error }, "Error serving object");
     res.status(500).json({ error: "Failed to serve object" });
+  }
+});
+
+/**
+ * POST /admin/storage/sync
+ *
+ * One-time sync: reads every file in the local Allnart/ folder and uploads
+ * any that are missing from S3. Already-present objects are skipped.
+ * Requires S3 to be configured and admin role.
+ *
+ * Response: { synced: number; skipped: number; errors: string[] }
+ */
+router.post("/admin/storage/sync", requireRole("admin"), async (req: Request, res: Response) => {
+  if (!isS3Configured()) {
+    res.status(400).json({ error: "S3 is not configured. Set FILE_ACCESS_KEY_ID, FILE_SECRET_ACCESS_KEY, FILE_ENDPOINT_URL, FILE_REGION, and FILE_BUCKET first." });
+    return;
+  }
+
+  let synced = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+
+  try {
+    ensureUploadsDir();
+
+    const files = fs.readdirSync(LOCAL_UPLOADS_DIR);
+    req.log.info({ total: files.length }, "Starting local→S3 sync");
+
+    for (const filename of files) {
+      // Only process UUID-named files (the format used by this app).
+      if (!isSafeUuid(filename)) {
+        skipped++;
+        continue;
+      }
+
+      try {
+        const alreadyExists = await fileExistsInS3(filename);
+        if (alreadyExists) {
+          skipped++;
+          continue;
+        }
+
+        const diskPath = path.join(LOCAL_UPLOADS_DIR, filename);
+        const buffer = fs.readFileSync(diskPath);
+
+        // Detect content type from the file's magic bytes (first 12 bytes).
+        const magic = buffer.slice(0, 12);
+        let contentType = "application/octet-stream";
+        if (magic[0] === 0xff && magic[1] === 0xd8) contentType = "image/jpeg";
+        else if (magic[0] === 0x89 && magic[1] === 0x50) contentType = "image/png";
+        else if (magic[0] === 0x47 && magic[1] === 0x49) contentType = "image/gif";
+        else if (magic[0] === 0x52 && magic[1] === 0x49) contentType = "image/webp";
+
+        await uploadToS3(filename, buffer, contentType);
+        synced++;
+        req.log.info({ filename }, "Synced file to S3");
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        errors.push(`${filename}: ${msg}`);
+        req.log.error({ filename, err }, "Failed to sync file to S3");
+      }
+    }
+
+    req.log.info({ synced, skipped, errors: errors.length }, "Sync complete");
+    res.json({ synced, skipped, errors });
+  } catch (err) {
+    req.log.error({ err }, "Storage sync failed");
+    res.status(500).json({ error: "Sync failed", detail: err instanceof Error ? err.message : String(err) });
   }
 });
 
