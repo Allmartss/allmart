@@ -13,7 +13,7 @@
 import { S3Client, PutObjectCommand, HeadBucketCommand } from "@aws-sdk/client-s3";
 import { logger } from "./logger";
 
-const S3_FOLDER = "Allnart";
+const S3_FOLDER = "Allmart";
 
 export function isS3Configured(): boolean {
   return !!(

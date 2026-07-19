@@ -19,9 +19,21 @@ export function useImageUpload() {
         contentType: file.type || "application/octet-stream",
       });
 
+      // Rewrite the upload URL to use the current page's origin so it goes
+      // through the Vite dev-server proxy (/api → localhost:8080) instead of
+      // hitting the API port directly (which is blocked in the Replit sandbox).
+      const resolvedUploadUrl = (() => {
+        try {
+          const parsed = new URL(uploadURL, window.location.href);
+          return `${window.location.origin}${parsed.pathname}${parsed.search}`;
+        } catch {
+          return uploadURL;
+        }
+      })();
+
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open("PUT", uploadURL);
+        xhr.open("PUT", resolvedUploadUrl);
         xhr.setRequestHeader(
           "Content-Type",
           file.type || "application/octet-stream",
