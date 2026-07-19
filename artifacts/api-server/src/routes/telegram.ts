@@ -104,12 +104,12 @@ router.post(
       res.status(503).json({ error: "Telegram not configured" });
       return;
     }
-    const domain = process.env.REPLIT_DOMAINS?.split(",")[0]?.trim();
-    if (!domain) {
-      res.status(500).json({ error: "REPLIT_DOMAINS not set" });
+    const appUrl = process.env.APP_URL?.trim().replace(/\/$/, "");
+    if (!appUrl) {
+      res.status(500).json({ error: "APP_URL is not set. Add APP_URL=https://yourdomain.com to your .env file." });
       return;
     }
-    const webhookUrl = `https://${domain}/api/telegram/webhook`;
+    const webhookUrl = `${appUrl}/api/telegram/webhook`;
     try {
       const result = await setWebhook(webhookUrl);
       logger.info({ webhookUrl, result }, "Telegram webhook set");

@@ -19,6 +19,7 @@ import {
   Wifi,
   FolderOpen,
   UploadCloud,
+  Settings2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -35,12 +36,20 @@ interface ServiceCheck {
   configured: boolean;
 }
 
+interface EnvInfo {
+  PORT: string | null;
+  PORT_API: string | null;
+  APP_URL: string | null;
+  ADMIN_EMAIL: string | null;
+}
+
 interface HealthReport {
   checks: ServiceCheck[];
   summary: { ok: number; fail: number; skip: number };
   durationMs: number;
   checkedAt: string;
   adminEmail: string | null;
+  envInfo: EnvInfo;
 }
 
 // ── Icon map ──────────────────────────────────────────────────────────────────
@@ -370,6 +379,73 @@ function ServiceCard({ check, adminEmail }: { check: ServiceCheck; adminEmail: s
   );
 }
 
+// ── Env config info card ──────────────────────────────────────────────────────
+
+function EnvInfoCard({ envInfo }: { envInfo: EnvInfo }) {
+  const rows: { label: string; key: keyof EnvInfo; sensitive?: boolean }[] = [
+    { label: "PORT",        key: "PORT" },
+    { label: "PORT_API",    key: "PORT_API" },
+    { label: "APP_URL",     key: "APP_URL" },
+    { label: "ADMIN_EMAIL", key: "ADMIN_EMAIL" },
+  ];
+
+  const missing = rows.filter((r) => !envInfo[r.key]).length;
+
+  return (
+    <div className={`rounded-xl border p-4 space-y-3 ${
+      missing > 0
+        ? "border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-950/20"
+        : "border-border/50 bg-muted/20"
+    }`}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div className={`rounded-lg p-1.5 ${
+            missing > 0
+              ? "bg-amber-100 text-amber-600 dark:bg-amber-900 dark:text-amber-300"
+              : "bg-muted text-muted-foreground"
+          }`}>
+            <Settings2 className="h-4 w-4" />
+          </div>
+          <span className="font-semibold text-sm">Environment config</span>
+        </div>
+        {missing > 0 ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-300">
+            {missing} not set
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+            <CheckCircle2 className="h-3.5 w-3.5" /> All set
+          </span>
+        )}
+      </div>
+
+      <table className="w-full text-xs">
+        <tbody className="divide-y divide-border/40">
+          {rows.map(({ label, key }) => {
+            const val = envInfo[key];
+            return (
+              <tr key={key}>
+                <td className="py-1.5 pr-4 font-mono text-muted-foreground w-36 shrink-0">
+                  {label}
+                </td>
+                <td className="py-1.5">
+                  {val ? (
+                    <span className="font-mono text-foreground break-all">{val}</span>
+                  ) : (
+                    <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3 shrink-0" /> not set
+                    </span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // ── Summary bar ───────────────────────────────────────────────────────────────
 
 function SummaryBar({ report }: { report: HealthReport }) {
@@ -491,6 +567,7 @@ export function AdminHealthWatch() {
       {report && (
         <>
           <SummaryBar report={report} />
+          {report.envInfo && <EnvInfoCard envInfo={report.envInfo} />}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {report.checks.map((check) => (
               <ServiceCard key={check.key} check={check} adminEmail={report.adminEmail} />

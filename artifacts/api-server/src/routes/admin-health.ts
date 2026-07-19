@@ -312,6 +312,12 @@ router.get("/admin/health-watch", requireRole("admin"), async (req: Request, res
       durationMs: Date.now() - t0,
       checkedAt: new Date().toISOString(),
       adminEmail: process.env.ADMIN_EMAIL ?? null,
+      envInfo: {
+        PORT: process.env.PORT ?? null,
+        PORT_API: process.env.PORT_API ?? null,
+        APP_URL: process.env.APP_URL ?? null,
+        ADMIN_EMAIL: process.env.ADMIN_EMAIL ?? null,
+      },
     });
   } catch (err) {
     logger.error({ err }, "Health watch failed");
