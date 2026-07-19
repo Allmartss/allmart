@@ -197,29 +197,49 @@ export default function UserDashboard() {
   return (
     <div className="flex flex-col min-h-[100dvh] bg-background">
 
-      {/* ── Purple header ── */}
-      <section className="bg-primary px-4 pb-4 pt-safe">
+      {/* ── Header — white in light mode, black in dark mode ── */}
+      <section className="bg-white dark:bg-black px-4 pb-4 pt-safe border-b border-border/40">
         <div className="flex items-center gap-3 pt-3 pb-3">
 
-          {/* App logo — left */}
-          <Link href="/home">
-            <span className="shrink-0 flex items-center">
-              <BagLogo size={34} />
-            </span>
+          {/* Left: user initial avatar — opens profile dropdown */}
+          {isStaff ? (
+            <StaffSidebarTrigger role={me!.role as "admin" | "pm"} name={me!.name} />
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-white font-bold text-sm shrink-0 hover:opacity-90 transition-opacity ring-2 ring-primary/20">
+                  {me ? ((me as any).name?.charAt(0)?.toUpperCase() ?? "A") : "A"}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-44">
+                <DropdownMenuItem asChild><Link href="/profile"       className="flex items-center gap-2 cursor-pointer"><UserCog   className="h-4 w-4" /> Profile</Link></DropdownMenuItem>
+                <DropdownMenuItem asChild><Link href="/orders"        className="flex items-center gap-2 cursor-pointer"><Package   className="h-4 w-4" /> My Orders</Link></DropdownMenuItem>
+                <DropdownMenuItem asChild><Link href="/referral"      className="flex items-center gap-2 cursor-pointer"><Users     className="h-4 w-4" /> Referrals</Link></DropdownMenuItem>
+                <DropdownMenuItem asChild><Link href="/security"      className="flex items-center gap-2 cursor-pointer"><Lock      className="h-4 w-4" /> Security</Link></DropdownMenuItem>
+                <DropdownMenuItem asChild><Link href="/notifications" className="flex items-center gap-2 cursor-pointer"><Bell      className="h-4 w-4" /> Notifications</Link></DropdownMenuItem>
+                <DropdownMenuItem asChild><Link href="/support"       className="flex items-center gap-2 cursor-pointer"><LifeBuoy  className="h-4 w-4" /> Support</Link></DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive gap-2 cursor-pointer">
+                  <LogOut className="h-4 w-4" /> Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {/* AllMart logo — centre-left */}
+          <Link href="/home" className="flex items-center gap-2 flex-1 min-w-0">
+            <BagLogo size={30} />
+            <div>
+              <p className="text-base font-extrabold text-foreground tracking-tight leading-none">AllMart</p>
+              <p className="text-[11px] text-muted-foreground leading-none mt-0.5">Shop Everything</p>
+            </div>
           </Link>
 
-          {/* App name — centre */}
-          <div className="flex-1 min-w-0">
-            <p className="text-base font-extrabold text-white tracking-tight leading-none">AllMart</p>
-            <p className="text-[11px] text-white/60 leading-none mt-0.5">Shop Everything</p>
-          </div>
-
-          {/* Right actions: cart → menu */}
+          {/* Right: cart */}
           <div className="flex items-center gap-1.5 shrink-0">
-            {/* Cart */}
             <Link href="/cart">
-              <button className="relative flex h-8 w-8 items-center justify-center rounded-full bg-white/15 hover:bg-white/25 transition-colors">
-                <ShoppingCart className="h-4 w-4 text-white" />
+              <button className="relative flex h-8 w-8 items-center justify-center rounded-full bg-muted hover:bg-muted/70 transition-colors">
+                <ShoppingCart className="h-4 w-4 text-foreground" />
                 {cartCount > 0 && (
                   <span className="absolute -right-0.5 -top-0.5 flex h-[14px] w-[14px] items-center justify-center rounded-full bg-orange-400 text-[9px] font-bold text-white">
                     {cartCount > 9 ? "9+" : cartCount}
@@ -227,57 +247,32 @@ export default function UserDashboard() {
                 )}
               </button>
             </Link>
-
-            {/* Bell / staff menu */}
-            {isStaff ? (
-              <StaffSidebarTrigger role={me!.role as "admin" | "pm"} name={me!.name} />
-            ) : (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 hover:bg-white/25 transition-colors">
-                    <Bell className="h-4 w-4 text-white" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-44">
-                  <DropdownMenuItem asChild><Link href="/profile"       className="flex items-center gap-2 cursor-pointer"><UserCog   className="h-4 w-4" /> Profile</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/orders"        className="flex items-center gap-2 cursor-pointer"><Package   className="h-4 w-4" /> My Orders</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/referral"      className="flex items-center gap-2 cursor-pointer"><Users     className="h-4 w-4" /> Referrals</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/security"      className="flex items-center gap-2 cursor-pointer"><Lock      className="h-4 w-4" /> Security</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/notifications" className="flex items-center gap-2 cursor-pointer"><Bell      className="h-4 w-4" /> Notifications</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/support"       className="flex items-center gap-2 cursor-pointer"><LifeBuoy  className="h-4 w-4" /> Support</Link></DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive gap-2 cursor-pointer">
-                    <LogOut className="h-4 w-4" /> Sign out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
           </div>
         </div>
 
-        {/* Search card with greeting */}
-        <div className="rounded-2xl bg-white/10 border border-white/20 px-4 pt-3 pb-2.5">
-          <p className="text-sm font-semibold text-white mb-2">
-            {greeting()}{firstName ? `, ${firstName}` : ""} 👋
+        {/* Search card with greeting — no name */}
+        <div className="rounded-2xl bg-muted/50 border border-border px-4 pt-3 pb-2.5">
+          <p className="text-sm font-semibold text-foreground mb-2">
+            {greeting()} 👋
           </p>
           <form onSubmit={handleSearch}>
-            <div className="flex items-center bg-white/15 focus-within:bg-white/25 rounded-xl px-3 py-2 gap-2.5 border border-white/10 transition-colors">
-              <Search className="h-4 w-4 text-white/50 shrink-0" />
+            <div className="flex items-center bg-background focus-within:bg-background/80 rounded-xl px-3 py-2 gap-2.5 border border-border transition-colors">
+              <Search className="h-4 w-4 text-muted-foreground shrink-0" />
               <input
                 type="text"
                 placeholder="Search for products..."
-                className="flex-1 bg-transparent text-sm text-white placeholder:text-white/50 outline-none"
+                className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
                 value={query}
                 onChange={e => setQuery(e.target.value)}
               />
               {query && (
-                <button type="submit" className="flex h-6 items-center gap-1 rounded-full bg-white/20 px-2.5 text-[11px] font-semibold text-white">
+                <button type="submit" className="flex h-6 items-center gap-1 rounded-full bg-primary/15 px-2.5 text-[11px] font-semibold text-primary">
                   <Sparkles className="h-3 w-3" /> Ask
                 </button>
               )}
             </div>
           </form>
-          <p className="text-[11px] text-white/50 text-center mt-1.5">Find your perfect product <span className="font-semibold text-white/70">With AI</span></p>
+          <p className="text-[11px] text-muted-foreground text-center mt-1.5">Find your perfect product <span className="font-semibold text-foreground/60">With AI</span></p>
         </div>
       </section>
 
