@@ -26,6 +26,7 @@ function useCountdown(endsAt: string | null) {
 }
 import { BagLogo } from "@/components/bag-logo";
 import { ProductCard } from "@/components/product-card";
+import { SaleCard } from "@/components/sale-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FeaturedCarousel } from "@/components/featured-carousel";
 
@@ -203,27 +204,27 @@ export default function Landing() {
       {(otherProducts.length > 0 || isProductsLoading) && (
         <section className="pb-12 container max-w-screen-xl mx-auto px-6">
           <div className="flex items-end justify-between mb-5">
-            <h2 className="text-xl font-bold tracking-tight">All products</h2>
-            <Link href="/account">
+            <h2 className="text-xl font-bold tracking-tight">Best Selling</h2>
+            <Link href="/products">
               <Button variant="ghost" className="gap-2 group text-sm">
                 View all <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
           </div>
           {isProductsLoading ? (
-            <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
-              {Array.from({ length: 8 }).map((_, i) => (
+            <div className="grid grid-cols-3 gap-2.5">
+              {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="space-y-3">
-                  <Skeleton className="aspect-square rounded-xl" />
-                  <Skeleton className="h-3.5 w-2/3" />
-                  <Skeleton className="h-3.5 w-1/2" />
+                  <Skeleton className="aspect-square rounded-2xl" />
+                  <Skeleton className="h-3 w-2/3" />
+                  <Skeleton className="h-3 w-1/2" />
                 </div>
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
-              {otherProducts.map(product => (
-                <ProductCard key={product.id} product={product} />
+            <div className="grid grid-cols-3 gap-2.5">
+              {otherProducts.slice(0, 9).map(product => (
+                <SaleCard key={product.id} product={product} variant="grid" />
               ))}
             </div>
           )}

@@ -14,6 +14,7 @@ import {
 } from "@workspace/api-client-react";
 import type { Product } from "@workspace/api-client-react";
 import { ProductCard } from "@/components/product-card";
+import { SaleCard } from "@/components/sale-card";
 import { BagLogo } from "@/components/bag-logo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StaffSidebarTrigger } from "@/components/staff-sidebar";
@@ -364,35 +365,24 @@ export default function UserDashboard() {
         {/* Flash Sale */}
         {flashList.length > 0 && (
           <div>
-            <div className="mb-2">
+            <div className="flex items-center justify-between mb-2">
               <h2 className="text-base font-bold flex items-center gap-1.5">
                 <Zap className="h-4 w-4 text-yellow-400 fill-yellow-400" /> Flash Sale
               </h2>
+              <Link href="/products?sort=sale">
+                <span className="text-xs font-semibold text-primary hover:underline">See all</span>
+              </Link>
             </div>
             <div className="mb-3"><Countdown /></div>
-            <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+            <div className="flex gap-2.5 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
               {flashList.map(p => (
-                <Link key={p.id} href={`/products/${p.id}`}>
-                  <div className="relative shrink-0 w-36 group cursor-pointer">
-                    <span className="absolute top-2 left-2 z-10 rounded bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                      -{discountPct(p)}%
-                    </span>
-                    <div className="overflow-hidden rounded-2xl bg-muted aspect-square mb-2">
-                      {p.imageUrl
-                        ? <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                        : <div className="h-full w-full flex items-center justify-center text-muted-foreground"><ShoppingCart className="h-8 w-8" /></div>
-                      }
-                    </div>
-                    <p className="text-xs font-semibold leading-tight line-clamp-2 mb-0.5">{p.name}</p>
-                    <p className="text-sm font-bold text-primary">{fmt(p)}</p>
-                  </div>
-                </Link>
+                <SaleCard key={p.id} product={p} variant="scroll" width={136} />
               ))}
             </div>
           </div>
         )}
 
-        {/* Best Selling — flat grid, no category grouping */}
+        {/* Best Selling — single flat grid, no category grouping */}
         <div>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-base font-bold">Best Selling</h2>
@@ -401,7 +391,7 @@ export default function UserDashboard() {
             </Link>
           </div>
           {isLoading ? (
-            <div className="grid grid-cols-4 gap-1">
+            <div className="grid grid-cols-4 gap-2">
               {Array.from({ length: 8 }).map((_, j) => (
                 <div key={j} className="space-y-2">
                   <Skeleton className="aspect-square rounded-xl" />
@@ -416,8 +406,8 @@ export default function UserDashboard() {
               <p className="text-sm mt-1">Add products via the admin panel.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1">
-              {(allProducts ?? []).map(p => <ProductCard key={p.id} product={p} />)}
+            <div className="grid grid-cols-4 gap-2">
+              {(allProducts ?? []).map(p => <SaleCard key={p.id} product={p} variant="grid" />)}
             </div>
           )}
         </div>

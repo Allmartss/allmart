@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useRoute, useLocation, Link } from "wouter";
+import { SaleCard } from "@/components/sale-card";
 import { useGetProduct, useAddCartItem, getGetCartQueryKey, useListProducts, useListCategories } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -381,29 +382,14 @@ export default function ProductDetail() {
               <span className="text-xs font-semibold text-primary hover:underline cursor-pointer">See all</span>
             </Link>
           </div>
-          <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+          <div className="flex gap-2.5 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
             {[...(allProductsList ?? [])]
               .filter(p => p.id !== product?.id)
               .sort((a, b) => b.id - a.id)
-              .slice(0, 8)
-              .map(p => {
-                const pSlug = p.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + p.id;
-                const pFmt = new Intl.NumberFormat("en-US", { style: "currency", currency: p.currency || "USD" }).format(p.price);
-                return (
-                  <Link key={p.id} href={`/products/${pSlug}`}>
-                    <div className="shrink-0 w-32 group cursor-pointer">
-                      <div className="overflow-hidden rounded-2xl bg-muted aspect-square mb-2">
-                        {p.imageUrl
-                          ? <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                          : <div className="h-full w-full flex items-center justify-center"><Package className="h-8 w-8 text-muted-foreground/30" /></div>
-                        }
-                      </div>
-                      <p className="text-xs font-semibold leading-tight line-clamp-2 mb-0.5">{p.name}</p>
-                      <p className="text-sm font-bold text-primary">{pFmt}</p>
-                    </div>
-                  </Link>
-                );
-              })}
+              .slice(0, 10)
+              .map(p => (
+                <SaleCard key={p.id} product={p} variant="scroll" width={130} />
+              ))}
           </div>
         </div>
       )}
