@@ -89,25 +89,36 @@ function checkApiSelf(): ServiceCheck {
 }
 
 async function checkStorefront(): Promise<ServiceCheck> {
+  // Nginx sits on port 80 and proxies / → storefront process.
+  // We ping localhost:80 so the check goes through nginx, confirming both
+  // nginx and the storefront process are alive.
+  // Override with PORT_STOREFRONT for a direct process-level check (bypasses nginx).
+  const directPort = process.env.PORT_STOREFRONT;
+  const target = directPort
+    ? `http://localhost:${directPort}`
+    : "http://localhost:80";
+
   const base: Omit<ServiceCheck, "status" | "detail"> = {
-    service: "Storefront (React / Vite)",
+    service: "Storefront (nginx → React)",
     key: "storefront",
-    envVars: ["APP_URL"],
-    configured: !!process.env.APP_URL,
+    envVars: directPort ? ["PORT_STOREFRONT"] : [],
+    configured: true, // always attempt — nginx:80 is expected on every VPS deploy
   };
-  const appUrl = process.env.APP_URL?.trim().replace(/\/$/, "");
-  if (!appUrl) return { ...base, status: "skip", detail: "APP_URL not set — cannot ping storefront" };
 
   const t0 = Date.now();
   try {
-    const r = await fetch(`${appUrl}/`, { signal: AbortSignal.timeout(8000) });
+    const r = await fetch(`${target}/`, { signal: AbortSignal.timeout(8000) });
     const ms = Date.now() - t0;
     if (r.status < 400) {
-      return { ...base, status: "ok", detail: `${appUrl} → HTTP ${r.status} (${ms} ms)` };
+      return { ...base, status: "ok", detail: `${target} → HTTP ${r.status} (${ms} ms)` };
     }
-    return { ...base, status: "fail", detail: `${appUrl} → HTTP ${r.status} (${ms} ms)` };
+    return { ...base, status: "fail", detail: `${target} → HTTP ${r.status} (${ms} ms)` };
   } catch (err) {
-    return { ...base, status: "fail", detail: err instanceof Error ? err.message : String(err) };
+    return {
+      ...base,
+      status: "fail",
+      detail: `${target}: ${err instanceof Error ? err.message : String(err)}`,
+    };
   }
 }
 
