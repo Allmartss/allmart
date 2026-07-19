@@ -132,25 +132,52 @@ async function checkS3() {
 async function checkSmtp() {
   section("SMTP");
   const host = env("SMTP_HOST");
-  const port = Number(env("SMTP_PORT") ?? "587");
   const user = env("SMTP_USER");
   const pass = env("SMTP_PASSWORD");
   if (!host || !user || !pass) {
-    skip("SMTP verify", "SMTP_* env vars not set");
+    skip("SMTP verify", "SMTP_HOST / SMTP_USER / SMTP_PASSWORD not set");
     return;
   }
-  const transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: { user, pass },
-  });
-  try {
-    await transporter.verify();
-    ok("SMTP connection + auth", `${host}:${port}`);
-  } catch (e) {
-    fail("SMTP connection", e);
+
+  const configuredPort = Number(env("SMTP_PORT") ?? "587");
+  // Try the configured port first; if it fails (often blocked on VPS), also try 465
+  const portsToTry = configuredPort === 465
+    ? [465]
+    : [configuredPort, ...(configuredPort !== 465 ? [465] : [])];
+
+  let lastErr: unknown;
+  for (const port of portsToTry) {
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: { user, pass },
+      connectionTimeout: 8_000,
+      greetingTimeout: 5_000,
+    });
+    try {
+      await transporter.verify();
+      ok("SMTP connection + auth", `${host}:${port}`);
+      if (port !== configuredPort) {
+        console.log(`         ${c.yellow}⚠  Port ${configuredPort} was unreachable — port ${port} works.`);
+        console.log(`            Set  SMTP_PORT=${port}  in your .env and restart the server.${c.reset}`);
+      }
+      return;
+    } catch (e) {
+      lastErr = e;
+      if (port !== portsToTry[portsToTry.length - 1]!) {
+        console.log(`         ${c.dim}port ${port} unreachable — retrying on port 465 (SSL)…${c.reset}`);
+      }
+    }
   }
+
+  fail(`SMTP  (tried ports: ${portsToTry.join(", ")})`, lastErr);
+  console.log(`\n         ${c.yellow}Troubleshooting hints:`);
+  console.log(`           • Gmail: use an App Password, not your login password.`);
+  console.log(`             Create one at  https://myaccount.google.com/apppasswords`);
+  console.log(`           • VPS: most providers block outbound port 587 by default.`);
+  console.log(`             Try  SMTP_PORT=465  (SSL) or open port 587 in your firewall.`);
+  console.log(`           • Alternative: use Resend (RESEND_API_KEY) — no port issues.${c.reset}\n`);
 }
 
 async function checkStripe() {

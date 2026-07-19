@@ -122,22 +122,29 @@ async function checkSmtp(): Promise<ServiceCheck> {
   if (!SMTP_HOST || !SMTP_USER || !SMTP_PASSWORD)
     return { ...base, status: "skip", detail: "SMTP_HOST / SMTP_USER / SMTP_PASSWORD not set" };
 
-  const port = Number(SMTP_PORT ?? "587");
-  const transporter = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port,
-    secure: port === 465,
-    auth: { user: SMTP_USER, pass: SMTP_PASSWORD },
-    connectionTimeout: 8000,
-    greetingTimeout: 5000,
-  });
-  try {
-    await transporter.verify();
-    return { ...base, status: "ok", detail: `${SMTP_HOST}:${port} — auth OK` };
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return { ...base, status: "fail", detail: msg };
+  const configuredPort = Number(SMTP_PORT ?? "587");
+  // Try configured port first; fall back to 465 (SSL) if blocked by VPS firewall
+  const portsToTry = configuredPort === 465 ? [465] : [configuredPort, 465];
+
+  let lastErr = "";
+  for (const port of portsToTry) {
+    const transporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port,
+      secure: port === 465,
+      auth: { user: SMTP_USER, pass: SMTP_PASSWORD },
+      connectionTimeout: 8000,
+      greetingTimeout: 5000,
+    });
+    try {
+      await transporter.verify();
+      const note = port !== configuredPort ? ` (port ${configuredPort} blocked — set SMTP_PORT=${port})` : "";
+      return { ...base, status: "ok", detail: `${SMTP_HOST}:${port} — auth OK${note}` };
+    } catch (err) {
+      lastErr = err instanceof Error ? err.message : String(err);
+    }
   }
+  return { ...base, status: "fail", detail: `Tried ports ${portsToTry.join(" & ")}: ${lastErr}` };
 }
 
 async function checkResend(): Promise<ServiceCheck> {

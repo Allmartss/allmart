@@ -26,25 +26,36 @@ export async function sendEmail(payload: EmailPayload): Promise<void> {
   const { to, subject, html, from = FROM } = payload;
   const toArr = Array.isArray(to) ? to : [to];
 
-  // --- SMTP (primary) — fall through to Resend on failure ---
+  // --- SMTP (primary) — try configured port, then 465 as fallback, then Resend ---
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD) {
-    try {
-      const smtpPort = Number(process.env.SMTP_PORT ?? "587");
+    const configuredPort = Number(process.env.SMTP_PORT ?? "587");
+    // Port 587 (STARTTLS) is commonly blocked by VPS providers. Try 465 (SSL) automatically.
+    const portsToTry = configuredPort === 465 ? [465] : [configuredPort, 465];
+
+    let smtpSent = false;
+    for (const port of portsToTry) {
       const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
-        port: smtpPort,
-        secure: smtpPort === 465,
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASSWORD,
-        },
+        port,
+        secure: port === 465,
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
+        connectionTimeout: 8_000,
+        greetingTimeout: 5_000,
       });
-      await transporter.sendMail({ from, to: toArr.join(", "), subject, html });
-      logger.info({ to: toArr, subject, host: process.env.SMTP_HOST }, "Email sent via SMTP");
-      return;
-    } catch (smtpErr) {
-      logger.warn({ err: smtpErr, to: toArr, subject }, "SMTP send failed — falling back to Resend");
+      try {
+        await transporter.sendMail({ from, to: toArr.join(", "), subject, html });
+        logger.info({ to: toArr, subject, host: process.env.SMTP_HOST, port }, "Email sent via SMTP");
+        smtpSent = true;
+        break;
+      } catch (smtpErr) {
+        if (port !== portsToTry[portsToTry.length - 1]) {
+          logger.warn({ port, err: smtpErr }, `SMTP port ${port} failed, retrying on port 465`);
+        } else {
+          logger.warn({ err: smtpErr, to: toArr, subject }, "SMTP send failed on all ports — falling back to Resend");
+        }
+      }
     }
+    if (smtpSent) return;
   }
 
   // --- Resend fallback ---
