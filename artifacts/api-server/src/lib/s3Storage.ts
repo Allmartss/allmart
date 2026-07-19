@@ -2,7 +2,7 @@
  * S3-compatible storage (Supabase / R2 / AWS S3).
  *
  * Activated when the FILE_* env vars are present.
- * Files are stored under the "Allmart/" prefix inside the configured bucket.
+ * Files are stored under the "Allnart/" prefix inside the configured bucket.
  *
  * Env vars:
  *   FILE_ACCESS_KEY_ID       — S3 access key id
@@ -13,7 +13,7 @@
 import { S3Client, PutObjectCommand, HeadBucketCommand } from "@aws-sdk/client-s3";
 import { logger } from "./logger";
 
-const S3_FOLDER = "Allmart";
+const S3_FOLDER = "Allnart";
 
 export function isS3Configured(): boolean {
   return !!(
@@ -48,8 +48,8 @@ function getBucketName(): string {
 
 /**
  * Build the public URL for an object.
- * For Supabase: https://<ref>.supabase.co/storage/v1/object/public/<bucket>/Allmart/<uuid>
- * For generic S3 / R2 with path-style: <endpoint>/<bucket>/Allmart/<uuid>
+ * For Supabase: https://<ref>.supabase.co/storage/v1/object/public/<bucket>/Allnart/<uuid>
+ * For generic S3 / R2 with path-style: <endpoint>/<bucket>/Allnart/<uuid>
  */
 export function getS3PublicUrl(uuid: string): string {
   const endpoint = process.env.FILE_ENDPOINT_URL!.replace(/\/$/, "");
@@ -66,7 +66,7 @@ export function getS3PublicUrl(uuid: string): string {
 }
 
 /**
- * Upload a file to S3 under the Allmart/<uuid> key.
+ * Upload a file to S3 under the Allnart/<uuid> key.
  * Returns the public URL of the uploaded file.
  */
 export async function uploadToS3(

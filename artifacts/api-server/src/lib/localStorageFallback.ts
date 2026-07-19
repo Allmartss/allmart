@@ -1,15 +1,14 @@
 /**
- * Local disk fallback for file uploads when Replit Object Storage env vars
- * (PRIVATE_OBJECT_DIR / PUBLIC_OBJECT_SEARCH_PATHS) are not configured.
+ * Local disk fallback for file uploads when S3 env vars are not configured.
  *
- * Files are stored in <project-root>/uploads/ and served via
+ * Files are stored in <project-root>/Allnart/ and served via
  * GET /api/storage/local/:uuid
  */
 import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 
-export const LOCAL_UPLOADS_DIR = path.resolve(process.cwd(), "uploads");
+export const LOCAL_UPLOADS_DIR = path.resolve(process.cwd(), "Allnart");
 export const LOCAL_OBJECT_PREFIX = "/local-objects/";
 
 /** Returns true when object storage env vars are absent. */

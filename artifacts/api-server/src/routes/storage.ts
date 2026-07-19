@@ -53,17 +53,27 @@ router.post("/storage/uploads/request-url", async (req: Request, res: Response) 
   try {
     const { name, size, contentType } = parsed.data;
 
-    // ── Always upload via local disk endpoint ─────────────────────────────
-    // Local disk is the canonical store — upload always succeeds when disk
-    // write succeeds. S3 is mirrored in the background (fire-and-forget).
+    // Always write to local disk first; if S3 is configured it mirrors in the
+    // background after the PUT completes.
     ensureUploadsDir();
     const localObjectPath = newLocalObjectPath();
     const uuid = localObjectPath.replace(LOCAL_OBJECT_PREFIX, "");
+
+    // uploadURL always points at our local PUT endpoint (browser uploads here).
+    // We rewrite it to the current origin on the client side so it goes through
+    // the Vite proxy correctly in dev.
     const proto = req.headers["x-forwarded-proto"] ?? req.protocol;
     const host  = req.headers["x-forwarded-host"]  ?? req.get("host") ?? "";
     const base  = `${proto}://${host}`;
     const uploadURL = `${base}/api/storage/local/${uuid}`;
-    const objectPath = localObjectPath;
+
+    // objectPath is what gets stored in the DB and used as the final image URL.
+    // When S3 is configured, store the S3 public URL directly so images are
+    // always served from S3 after upload. Otherwise store the local path.
+    const objectPath = isS3Configured()
+      ? getS3PublicUrl(uuid)
+      : localObjectPath;
+
     res.json(
       RequestUploadUrlResponse.parse({
         uploadURL,
