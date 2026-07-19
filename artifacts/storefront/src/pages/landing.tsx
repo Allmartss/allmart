@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
+import { X } from "lucide-react";
 import {
   useGetStorefrontSummary,
   useListCategories,
@@ -34,6 +35,7 @@ export default function Landing() {
   const [, setLocation] = useLocation();
   const [query, setQuery] = useState("");
   const [stickyVisible, setStickyVisible] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
   const heroSearchRef = useRef<HTMLDivElement>(null);
 
   const { data: summary, isLoading: isSummaryLoading } = useGetStorefrontSummary();
@@ -73,23 +75,40 @@ export default function Landing() {
     <div className="flex flex-col min-h-[calc(100vh-4rem)]">
 
       {/* ── Flash Sale sticky countdown banner ── */}
-      {showBanner && (
+      {showBanner && !bannerDismissed && (
         <div className="sticky top-14 z-50 w-full bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 shadow-md">
-          <div className="flex items-center justify-center gap-3 px-4 py-2">
-            <Zap className="h-4 w-4 text-white fill-white shrink-0" />
-            <span className="text-sm font-bold text-white tracking-wide">FLASH SALE — Ends in</span>
-            <div className="flex items-center gap-1">
-              {[h, m, s].map((unit, i) => (
-                <span key={i} className="flex items-center gap-1">
-                  <span className="flex h-7 min-w-[28px] items-center justify-center rounded-md bg-white/20 text-white text-sm font-extrabold px-1.5 tabular-nums">
-                    {unit}
+          <div className="flex items-center gap-2 px-3 py-2">
+            {/* Close button — left on mobile */}
+            <button
+              onClick={() => setBannerDismissed(true)}
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/20 hover:bg-white/35 transition-colors"
+              aria-label="Dismiss"
+            >
+              <X className="h-3.5 w-3.5 text-white" />
+            </button>
+
+            {/* Centre content */}
+            <div className="flex flex-1 items-center justify-center gap-2 flex-wrap min-w-0">
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Zap className="h-3.5 w-3.5 text-white fill-white" />
+                <span className="text-xs font-bold text-white tracking-wide whitespace-nowrap">FLASH SALE</span>
+                <span className="text-[11px] text-white/80 whitespace-nowrap">Ends in</span>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                {[h, m, s].map((unit, i) => (
+                  <span key={i} className="flex items-center gap-1">
+                    <span className="flex h-6 min-w-[24px] items-center justify-center rounded bg-white/20 text-white text-xs font-extrabold px-1 tabular-nums">
+                      {unit}
+                    </span>
+                    {i < 2 && <span className="text-white font-extrabold text-xs leading-none">:</span>}
                   </span>
-                  {i < 2 && <span className="text-white font-extrabold text-sm leading-none">:</span>}
-                </span>
-              ))}
+                ))}
+              </div>
             </div>
+
+            {/* Shop now — right */}
             <Link href="/products?sort=sale">
-              <span className="ml-1 rounded-full bg-white/20 border border-white/30 px-3 py-0.5 text-xs font-bold text-white hover:bg-white/30 transition-colors">
+              <span className="shrink-0 rounded-full bg-white/20 border border-white/30 px-3 py-1 text-[11px] font-bold text-white hover:bg-white/30 transition-colors whitespace-nowrap">
                 Shop now →
               </span>
             </Link>
