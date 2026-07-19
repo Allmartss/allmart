@@ -207,7 +207,7 @@ export default function Home() {
   const saleProducts = flashSale?.products ?? [];
 
   return (
-    <div className="flex flex-col min-h-[100dvh] bg-[#0D0B1A] dark:bg-[#0D0B1A] light:bg-[#F8F7FF]">
+    <div className="flex flex-col min-h-[100dvh] bg-[#F4F3FF] dark:bg-[#0D0B1A]">
 
       {/* ── Header — black bar, actions only ────────────────────────────────── */}
       <section className="bg-[#0B0A14] px-4 pb-4 pt-safe">
@@ -327,7 +327,7 @@ export default function Home() {
         {categoryGroups.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-bold">Popular Categories</h2>
+              <h2 className="text-base font-bold text-foreground">Popular Categories</h2>
               <Link href="/products">
                 <span className="text-xs font-semibold text-primary hover:underline">See all</span>
               </Link>
@@ -429,7 +429,7 @@ export default function Home() {
         {/* Best Selling — flat grid, 4 per row, SaleCard style */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-bold text-white">Best Selling</h2>
+            <h2 className="text-base font-bold text-foreground">Best Selling</h2>
             <Link href="/products">
               <span className="text-xs font-semibold text-primary hover:underline">See all</span>
             </Link>
