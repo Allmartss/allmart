@@ -18,6 +18,7 @@ import {
   Gem, Home as HomeIcon, Music2, Car,
 } from "lucide-react";
 import { ProductCard } from "@/components/product-card";
+import { SaleCard } from "@/components/sale-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StaffSidebarTrigger } from "@/components/staff-sidebar";
 import { NotificationsBell } from "@/components/notifications-bell";
@@ -425,29 +426,37 @@ export default function Home() {
           </div>
         )}
 
-        {/* Category product rows */}
-        {categoryGroups.length === 0 && !isProductsLoading ? (
-          <div className="text-center py-16 text-muted-foreground">
-            <p className="text-base font-medium">No products yet.</p>
-            <p className="text-sm mt-1">Add some products in the admin panel to get started.</p>
+        {/* Best Selling — flat grid, 4 per row, SaleCard style */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-bold text-white">Best Selling</h2>
+            <Link href="/products">
+              <span className="text-xs font-semibold text-primary hover:underline">See all</span>
+            </Link>
           </div>
-        ) : (
-          categoryGroups.map(({ slug, name, products }) => (
-            <div key={slug} className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="text-base font-bold capitalize">{name}</h2>
-                <Link href={`/products?category=${slug}`}>
-                  <span className="text-xs font-semibold text-primary hover:underline">See all</span>
-                </Link>
-              </div>
-              <div className="grid grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                {products.slice(0, 5).map(p => (
-                  <ProductCard key={p.id} product={p} />
-                ))}
-              </div>
+          {isProductsLoading ? (
+            <div className="grid grid-cols-4 gap-2">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="aspect-square rounded-2xl" />
+                  <Skeleton className="h-3 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              ))}
             </div>
-          ))
-        )}
+          ) : (allProducts ?? []).length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground">
+              <p className="text-base font-medium">No products yet.</p>
+              <p className="text-sm mt-1">Add some products in the admin panel to get started.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-4 gap-2">
+              {(allProducts ?? []).map(p => (
+                <SaleCard key={p.id} product={p} variant="grid" />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
