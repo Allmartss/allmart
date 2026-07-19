@@ -8,8 +8,11 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { S3Client, HeadBucketCommand } from "@aws-sdk/client-s3";
 import nodemailer from "nodemailer";
 import pg from "pg";
+import fs from "fs";
 import { requireRole } from "../lib/auth";
 import { logger } from "../lib/logger";
+import { LOCAL_UPLOADS_DIR } from "../lib/localStorageFallback";
+import { sendEmail } from "./email";
 
 const router: IRouter = Router();
 
@@ -234,13 +237,49 @@ async function checkNvidia(): Promise<ServiceCheck> {
   }
 }
 
-// ── Route ─────────────────────────────────────────────────────────────────────
+function checkLocalStorage(): ServiceCheck {
+  let fileCount = 0;
+  let totalBytes = 0;
+
+  try {
+    if (fs.existsSync(LOCAL_UPLOADS_DIR)) {
+      const files = fs.readdirSync(LOCAL_UPLOADS_DIR);
+      fileCount = files.length;
+      for (const f of files) {
+        try {
+          const stat = fs.statSync(`${LOCAL_UPLOADS_DIR}/${f}`);
+          totalBytes += stat.size;
+        } catch { /* skip unreadable */ }
+      }
+    }
+  } catch { /* folder missing */ }
+
+  const mb = (totalBytes / 1024 / 1024).toFixed(2);
+  const s3Ready = !!(
+    process.env.FILE_ACCESS_KEY_ID &&
+    process.env.FILE_SECRET_ACCESS_KEY &&
+    process.env.FILE_ENDPOINT_URL &&
+    process.env.FILE_REGION &&
+    process.env.FILE_BUCKET
+  );
+
+  return {
+    service: "Local storage (Allnart/)",
+    key: "local-storage",
+    status: "ok",
+    detail: `${fileCount} file${fileCount !== 1 ? "s" : ""} · ${mb} MB on disk${s3Ready ? " · S3 sync available" : " · S3 not configured"}`,
+    envVars: [],
+    configured: true,
+  };
+}
+
+// ── Routes ────────────────────────────────────────────────────────────────────
 
 router.get("/admin/health-watch", requireRole("admin"), async (req: Request, res: Response) => {
   const t0 = Date.now();
 
   try {
-    const results = await Promise.allSettled([
+    const [dbR, smtpR, resendR, s3R, stripeR, telegramR, groqR, nvidiaR] = await Promise.allSettled([
       checkDatabase(),
       checkSmtp(),
       checkResend(),
@@ -251,11 +290,15 @@ router.get("/admin/health-watch", requireRole("admin"), async (req: Request, res
       checkNvidia(),
     ]);
 
-    const checks: ServiceCheck[] = results.map((r) =>
-      r.status === "fulfilled"
-        ? r.value
-        : { service: "Unknown", key: "unknown", status: "fail" as CheckStatus, detail: String((r as PromiseRejectedResult).reason), envVars: [], configured: false },
-    );
+    const settled = [dbR, smtpR, resendR, s3R, stripeR, telegramR, groqR, nvidiaR];
+    const checks: ServiceCheck[] = [
+      ...settled.map((r) =>
+        r.status === "fulfilled"
+          ? r.value
+          : { service: "Unknown", key: "unknown", status: "fail" as CheckStatus, detail: String((r as PromiseRejectedResult).reason), envVars: [], configured: false },
+      ),
+      checkLocalStorage(),
+    ];
 
     const summary = {
       ok: checks.filter((c) => c.status === "ok").length,
@@ -263,10 +306,42 @@ router.get("/admin/health-watch", requireRole("admin"), async (req: Request, res
       skip: checks.filter((c) => c.status === "skip").length,
     };
 
-    res.json({ checks, summary, durationMs: Date.now() - t0, checkedAt: new Date().toISOString() });
+    res.json({
+      checks,
+      summary,
+      durationMs: Date.now() - t0,
+      checkedAt: new Date().toISOString(),
+      adminEmail: process.env.ADMIN_EMAIL ?? null,
+    });
   } catch (err) {
     logger.error({ err }, "Health watch failed");
     res.status(500).json({ error: "Health check failed", detail: String(err) });
+  }
+});
+
+/**
+ * POST /admin/email/ping
+ * Sends a test email to ADMIN_EMAIL env var. Admin-only.
+ */
+router.post("/admin/email/ping", requireRole("admin"), async (req: Request, res: Response) => {
+  const to = process.env.ADMIN_EMAIL;
+  if (!to) {
+    res.status(400).json({ error: "ADMIN_EMAIL is not set in your environment." });
+    return;
+  }
+  try {
+    await sendEmail({
+      to,
+      subject: "AllMart — Admin email ping",
+      html: `<div style="font-family:sans-serif;padding:24px;max-width:480px">
+        <h2 style="color:#1a56e8;margin:0 0 12px">AllMart</h2>
+        <p>✅ This is a health-watch ping from your AllMart admin panel.</p>
+        <p style="color:#555;font-size:13px">Sent at: ${new Date().toISOString()}<br>Server: ${process.env.APP_URL ?? "unknown"}</p>
+      </div>`,
+    });
+    res.json({ ok: true, to });
+  } catch (err) {
+    res.status(500).json({ error: "Email failed", detail: err instanceof Error ? err.message : String(err) });
   }
 });
 

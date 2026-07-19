@@ -17,6 +17,8 @@ import {
   TestTube2,
   Loader2,
   Wifi,
+  FolderOpen,
+  UploadCloud,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -38,6 +40,7 @@ interface HealthReport {
   summary: { ok: number; fail: number; skip: number };
   durationMs: number;
   checkedAt: string;
+  adminEmail: string | null;
 }
 
 // ── Icon map ──────────────────────────────────────────────────────────────────
@@ -51,6 +54,7 @@ const SERVICE_ICONS: Record<string, React.ElementType> = {
   telegram: Bot,
   groq: Cpu,
   nvidia: Zap,
+  "local-storage": FolderOpen,
 };
 
 // ── Status badge ──────────────────────────────────────────────────────────────
@@ -75,9 +79,68 @@ function StatusBadge({ status }: { status: CheckStatus }) {
   );
 }
 
-// ── SMTP test email ───────────────────────────────────────────────────────────
+// ── Admin email ping button ───────────────────────────────────────────────────
 
-function SmtpTestButton({ smtpOk }: { smtpOk: boolean }) {
+function AdminEmailPingButton({ adminEmail }: { adminEmail: string | null }) {
+  const [state, setState] = useState<"idle" | "sending" | "ok" | "fail">("idle");
+  const [err, setErr] = useState("");
+
+  async function ping() {
+    setState("sending");
+    setErr("");
+    try {
+      const r = await fetch("/api/admin/email/ping", { method: "POST", credentials: "include" });
+      const data = (await r.json()) as { ok?: boolean; to?: string; error?: string; detail?: string };
+      if (r.ok && data.ok) {
+        setState("ok");
+        setTimeout(() => setState("idle"), 6000);
+      } else {
+        setErr(data.detail ?? data.error ?? `HTTP ${r.status}`);
+        setState("fail");
+      }
+    } catch (e) {
+      setErr(String(e));
+      setState("fail");
+    }
+  }
+
+  if (!adminEmail) return (
+    <p className="mt-2 text-xs text-muted-foreground flex items-center gap-1.5">
+      <TestTube2 className="h-3.5 w-3.5" />
+      Set <code className="bg-muted px-1 rounded">ADMIN_EMAIL</code> in your <code className="bg-muted px-1 rounded">.env</code> to enable one-click ping.
+    </p>
+  );
+
+  return (
+    <div className="mt-3 border-t border-border/40 pt-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+          <TestTube2 className="h-3.5 w-3.5" />
+          Ping <span className="font-mono font-medium text-foreground">{adminEmail}</span>
+        </p>
+        <Button size="sm" variant="outline" onClick={ping} disabled={state === "sending"} className="gap-1.5 shrink-0 h-7 text-xs">
+          {state === "sending" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+          {state === "sending" ? "Sending…" : "Send ping"}
+        </Button>
+      </div>
+      {state === "ok" && (
+        <p className="flex items-center gap-1.5 text-xs text-emerald-600">
+          <CheckCircle2 className="h-3.5 w-3.5" /> Ping sent to {adminEmail} ✓
+        </p>
+      )}
+      {state === "fail" && (
+        <p className="flex items-start gap-1.5 text-xs text-rose-600">
+          <XCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+          <span className="break-all">{err}</span>
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ── SMTP custom test email ────────────────────────────────────────────────────
+
+function SmtpCustomTestButton({ smtpOk }: { smtpOk: boolean }) {
   const [to, setTo] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "ok" | "fail">("idle");
   const [err, setErr] = useState("");
@@ -108,18 +171,16 @@ function SmtpTestButton({ smtpOk }: { smtpOk: boolean }) {
   }
 
   return (
-    <div className="mt-3 border-t border-border/40 pt-3 space-y-2">
-      <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-        <TestTube2 className="h-3.5 w-3.5" />
-        Send a test email
-        {!smtpOk && <span className="text-amber-500">(SMTP is failing — test will use Resend fallback if set)</span>}
+    <div className="space-y-2">
+      <p className="text-xs text-muted-foreground">
+        Or send to any address{!smtpOk && <span className="text-amber-500"> (will try Resend fallback)</span>}:
       </p>
       <div className="flex gap-2">
         <input
           type="email"
           value={to}
           onChange={(e) => setTo(e.target.value)}
-          placeholder="recipient@example.com"
+          placeholder="anyone@example.com"
           className="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           onKeyDown={(e) => e.key === "Enter" && send()}
         />
@@ -130,13 +191,83 @@ function SmtpTestButton({ smtpOk }: { smtpOk: boolean }) {
       </div>
       {state === "ok" && (
         <p className="flex items-center gap-1.5 text-xs text-emerald-600">
-          <CheckCircle2 className="h-3.5 w-3.5" /> Test email sent to {to}
+          <CheckCircle2 className="h-3.5 w-3.5" /> Sent to {to}
         </p>
       )}
       {state === "fail" && (
         <p className="flex items-start gap-1.5 text-xs text-rose-600">
           <XCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
           <span className="break-all">{err}</span>
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ── Local storage sync button ─────────────────────────────────────────────────
+
+function LocalStorageSyncButton() {
+  const [state, setState] = useState<"idle" | "syncing" | "ok" | "fail">("idle");
+  const [result, setResult] = useState<{ synced: number; skipped: number; errors: string[] } | null>(null);
+  const [err, setErr] = useState("");
+
+  async function runSync() {
+    setState("syncing");
+    setResult(null);
+    setErr("");
+    try {
+      const r = await fetch("/api/admin/storage/sync", { method: "POST", credentials: "include" });
+      const data = (await r.json()) as { synced?: number; skipped?: number; errors?: string[]; error?: string; detail?: string };
+      if (r.ok && data.synced !== undefined) {
+        setResult({ synced: data.synced, skipped: data.skipped ?? 0, errors: data.errors ?? [] });
+        setState("ok");
+      } else {
+        setErr(data.detail ?? data.error ?? `HTTP ${r.status}`);
+        setState("fail");
+      }
+    } catch (e) {
+      setErr(String(e));
+      setState("fail");
+    }
+  }
+
+  return (
+    <div className="mt-3 border-t border-border/40 pt-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+          <UploadCloud className="h-3.5 w-3.5" />
+          Sync local files → S3
+        </p>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={runSync}
+          disabled={state === "syncing"}
+          className="gap-1.5 shrink-0 h-7 text-xs"
+        >
+          {state === "syncing" ? <Loader2 className="h-3 w-3 animate-spin" /> : <UploadCloud className="h-3 w-3" />}
+          {state === "syncing" ? "Syncing…" : "Sync now"}
+        </Button>
+      </div>
+      {state === "ok" && result && (
+        <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300 space-y-1">
+          <p className="font-semibold flex items-center gap-1.5">
+            <CheckCircle2 className="h-3.5 w-3.5" /> Sync complete
+          </p>
+          <p>
+            <span className="font-medium">{result.synced}</span> uploaded · <span className="font-medium">{result.skipped}</span> skipped (already in S3)
+          </p>
+          {result.errors.length > 0 && (
+            <p className="text-amber-600 dark:text-amber-400">
+              {result.errors.length} error{result.errors.length !== 1 ? "s" : ""}: {result.errors[0]}
+            </p>
+          )}
+        </div>
+      )}
+      {state === "fail" && (
+        <p className="flex items-start gap-1.5 text-xs text-rose-600">
+          <XCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+          <span className="break-all">{err || "S3 not configured — set FILE_* env vars first."}</span>
         </p>
       )}
     </div>
@@ -177,9 +308,10 @@ function SmtpFixTips({ detail }: { detail: string }) {
 
 // ── Service card ──────────────────────────────────────────────────────────────
 
-function ServiceCard({ check }: { check: ServiceCheck }) {
+function ServiceCard({ check, adminEmail }: { check: ServiceCheck; adminEmail: string | null }) {
   const Icon = SERVICE_ICONS[check.key] ?? Wifi;
   const isSmtp = check.key === "smtp";
+  const isLocalStorage = check.key === "local-storage";
   const borderColor =
     check.status === "ok"
       ? "border-emerald-200 dark:border-emerald-800"
@@ -211,7 +343,6 @@ function ServiceCard({ check }: { check: ServiceCheck }) {
 
       <p className={`text-xs break-all ${
         check.status === "fail" ? "text-rose-700 dark:text-rose-300 font-mono"
-        : check.status === "skip" ? "text-muted-foreground"
         : "text-muted-foreground"
       }`}>
         {check.detail}
@@ -228,7 +359,13 @@ function ServiceCard({ check }: { check: ServiceCheck }) {
       )}
 
       {isSmtp && check.status === "fail" && <SmtpFixTips detail={check.detail} />}
-      {isSmtp && <SmtpTestButton smtpOk={check.status === "ok"} />}
+      {isSmtp && (
+        <div className="mt-3 border-t border-border/40 pt-3 space-y-3">
+          <AdminEmailPingButton adminEmail={adminEmail} />
+          <SmtpCustomTestButton smtpOk={check.status === "ok"} />
+        </div>
+      )}
+      {isLocalStorage && <LocalStorageSyncButton />}
     </div>
   );
 }
@@ -344,7 +481,7 @@ export function AdminHealthWatch() {
       {/* Loading skeleton */}
       {loading && !report && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 8 }).map((_, i) => (
+          {Array.from({ length: 9 }).map((_, i) => (
             <div key={i} className="rounded-xl border border-border/50 bg-muted/20 p-4 h-24 animate-pulse" />
           ))}
         </div>
@@ -356,7 +493,7 @@ export function AdminHealthWatch() {
           <SummaryBar report={report} />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {report.checks.map((check) => (
-              <ServiceCard key={check.key} check={check} />
+              <ServiceCard key={check.key} check={check} adminEmail={report.adminEmail} />
             ))}
           </div>
 
