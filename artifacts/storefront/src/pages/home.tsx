@@ -15,7 +15,7 @@ import {
   Store, ShoppingCart, LayoutGrid, Zap, Truck, Tag,
   Watch, Mountain, Footprints, Heart, Laptop, Shirt, Dumbbell,
   UtensilsCrossed, BookOpen, Gamepad2, HeartPulse, Plane, PawPrint,
-  Gem, Home as HomeIcon, Music2, Car,
+  Gem, Home as HomeIcon, Music2, Car, Sun, Moon,
 } from "lucide-react";
 import { ProductCard } from "@/components/product-card";
 import { SaleCard } from "@/components/sale-card";
@@ -174,11 +174,12 @@ export default function Home() {
   const flashSaleLive = !!flashSale?.enabled && (flashSale?.products?.length ?? 0) > 0;
   const { h, m, s } = useCountdown(flashSaleLive ? flashSale!.endsAt : null);
 
-  const greeting = () => {
-    const h = new Date().getHours();
-    if (h < 12) return "Good morning";
-    if (h < 17) return "Good afternoon";
-    return "Good evening";
+  const [darkMode, setDarkMode] = useState(() => document.documentElement.classList.contains("dark"));
+  const toggleDark = () => {
+    const next = !darkMode;
+    setDarkMode(next);
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("theme", next ? "dark" : "light");
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -211,19 +212,23 @@ export default function Home() {
 
       {/* ── Header — black bar, actions only ────────────────────────────────── */}
       <section className="bg-[#0B0A14] px-4 pb-4 pt-safe">
-        {/* Top bar: logo | greeting+title | actions */}
+        {/* Top bar: logo | spacer | actions */}
         <div className="flex items-center gap-3 pt-3 pb-1">
           <ShopDrawerInner />
 
-          {/* Greeting (compact, inline) */}
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-white leading-tight truncate">
-              {greeting()}{me ? `, ${me.name.split(" ")[0]}` : ""} 👋
-            </p>
-          </div>
+          <div className="flex-1" />
 
           {/* Right actions */}
           <div className="flex items-center gap-2 shrink-0">
+            {/* Theme toggle */}
+            <button
+              onClick={toggleDark}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 hover:bg-white/25 transition-colors"
+              aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {darkMode ? <Sun className="h-4 w-4 text-white" /> : <Moon className="h-4 w-4 text-white" />}
+            </button>
+
             {/* Notifications */}
             {me && !isStaff && (
               <span className="[&_button]:bg-transparent [&_button]:hover:bg-white/10 [&_svg]:text-white/80">
@@ -231,7 +236,7 @@ export default function Home() {
               </span>
             )}
 
-            {/* Staff admin access (kept — required for admin tools) */}
+            {/* Staff admin access */}
             {me && isStaff && (
               <StaffSidebarTrigger role={me.role as "admin" | "pm"} name={me.name} />
             )}
@@ -450,9 +455,9 @@ export default function Home() {
               <p className="text-sm mt-1">Add some products in the admin panel to get started.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {(allProducts ?? []).map(p => (
-                <SaleCard key={p.id} product={p} variant="grid" />
+                <SaleCard key={p.id} product={p} variant="flash" />
               ))}
             </div>
           )}
