@@ -28,7 +28,7 @@ import {
 import {
   Search, Sparkles, ArrowRight, Zap,
   LayoutGrid, Truck, Tag, Menu, Store,
-  Bell, ShoppingCart, Sun, Moon,
+  Bell, ShoppingCart,
   UserCog, Users, Lock, LifeBuoy, LogOut, Package,
   Watch, Mountain, Footprints, Heart, Laptop, Shirt, Dumbbell,
   UtensilsCrossed, BookOpen, Gamepad2, HeartPulse, Plane, PawPrint,
@@ -154,14 +154,6 @@ export default function UserDashboard() {
   const cartCount = cart?.items?.reduce((s, i) => s + i.quantity, 0) ?? 0;
   const firstName = me ? (me as any).name?.split(" ")[0] ?? "" : "";
 
-  const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
-  const toggleDark = () => {
-    const next = !dark;
-    setDark(next);
-    document.documentElement.classList.toggle("dark", next);
-    localStorage.setItem("theme", next ? "dark" : "light");
-  };
-
   const greeting = () => {
     const h = new Date().getHours();
     return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
@@ -222,13 +214,8 @@ export default function UserDashboard() {
             <p className="text-[11px] text-white/60 leading-none mt-0.5">Shop Everything</p>
           </div>
 
-          {/* Right actions: brightness → cart → menu */}
+          {/* Right actions: cart → menu */}
           <div className="flex items-center gap-1.5 shrink-0">
-            {/* Brightness toggle */}
-            <button onClick={toggleDark} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 hover:bg-white/25 transition-colors">
-              {dark ? <Sun className="h-4 w-4 text-white" /> : <Moon className="h-4 w-4 text-white" />}
-            </button>
-
             {/* Cart */}
             <Link href="/cart">
               <button className="relative flex h-8 w-8 items-center justify-center rounded-full bg-white/15 hover:bg-white/25 transition-colors">
