@@ -31,26 +31,83 @@ interface ServiceCheck {
 
 // ── Individual checks ─────────────────────────────────────────────────────────
 
-async function checkDatabase(): Promise<ServiceCheck> {
+async function checkSupabase(): Promise<ServiceCheck> {
   const base: Omit<ServiceCheck, "status" | "detail"> = {
-    service: "PostgreSQL",
-    key: "db",
+    service: "Supabase / PostgreSQL",
+    key: "supabase",
     envVars: ["SUPABASE_DB_URL", "DATABASE_URL"],
     configured: !!(process.env.SUPABASE_DB_URL ?? process.env.DATABASE_URL),
   };
   const url = process.env.SUPABASE_DB_URL ?? process.env.DATABASE_URL;
   if (!url) return { ...base, status: "skip", detail: "SUPABASE_DB_URL / DATABASE_URL not set" };
 
+  // Build a safe host string without the password
+  let hostDisplay = "";
+  try {
+    const p = new URL(url);
+    hostDisplay = `${p.hostname}:${p.port || "5432"}${p.pathname}`;
+  } catch { /* malformed URL */ }
+
   const pool = new pg.Pool({ connectionString: url, max: 1, connectionTimeoutMillis: 5000 });
   const t0 = Date.now();
   try {
-    const { rows } = await pool.query<{ now: string }>("SELECT NOW() AS now");
+    const { rows } = await pool.query<{ now: string; version: string }>(
+      "SELECT NOW() AS now, current_setting('server_version') AS version",
+    );
     const ms = Date.now() - t0;
-    return { ...base, status: "ok", detail: `${rows[0]?.now}  (${ms} ms)` };
+    const ver = rows[0]?.version?.split(" ")[0] ?? "";
+    return {
+      ...base,
+      status: "ok",
+      detail: `${hostDisplay}${ver ? ` · pg ${ver}` : ""} · ${ms} ms`,
+    };
   } catch (err) {
     return { ...base, status: "fail", detail: err instanceof Error ? err.message : String(err) };
   } finally {
     await pool.end().catch(() => undefined);
+  }
+}
+
+function checkApiSelf(): ServiceCheck {
+  const uptimeSec = Math.floor(process.uptime());
+  let uptimeStr: string;
+  if (uptimeSec < 60) uptimeStr = `${uptimeSec}s`;
+  else if (uptimeSec < 3600) uptimeStr = `${Math.floor(uptimeSec / 60)}m ${uptimeSec % 60}s`;
+  else uptimeStr = `${Math.floor(uptimeSec / 3600)}h ${Math.floor((uptimeSec % 3600) / 60)}m`;
+
+  const memMb = (process.memoryUsage().rss / 1024 / 1024).toFixed(1);
+  const port = process.env.PORT_API ?? process.env.PORT ?? "?";
+
+  return {
+    service: "Express API server",
+    key: "api-server",
+    status: "ok",
+    detail: `port ${port} · up ${uptimeStr} · ${memMb} MB RSS · Node ${process.version}`,
+    envVars: [],
+    configured: true,
+  };
+}
+
+async function checkStorefront(): Promise<ServiceCheck> {
+  const base: Omit<ServiceCheck, "status" | "detail"> = {
+    service: "Storefront (React / Vite)",
+    key: "storefront",
+    envVars: ["APP_URL"],
+    configured: !!process.env.APP_URL,
+  };
+  const appUrl = process.env.APP_URL?.trim().replace(/\/$/, "");
+  if (!appUrl) return { ...base, status: "skip", detail: "APP_URL not set — cannot ping storefront" };
+
+  const t0 = Date.now();
+  try {
+    const r = await fetch(`${appUrl}/`, { signal: AbortSignal.timeout(8000) });
+    const ms = Date.now() - t0;
+    if (r.status < 400) {
+      return { ...base, status: "ok", detail: `${appUrl} → HTTP ${r.status} (${ms} ms)` };
+    }
+    return { ...base, status: "fail", detail: `${appUrl} → HTTP ${r.status} (${ms} ms)` };
+  } catch (err) {
+    return { ...base, status: "fail", detail: err instanceof Error ? err.message : String(err) };
   }
 }
 
@@ -279,8 +336,8 @@ router.get("/admin/health-watch", requireRole("admin"), async (req: Request, res
   const t0 = Date.now();
 
   try {
-    const [dbR, smtpR, resendR, s3R, stripeR, telegramR, groqR, nvidiaR] = await Promise.allSettled([
-      checkDatabase(),
+    const [supabaseR, smtpR, resendR, s3R, stripeR, telegramR, groqR, nvidiaR, storefrontR] = await Promise.allSettled([
+      checkSupabase(),
       checkSmtp(),
       checkResend(),
       checkS3(),
@@ -288,10 +345,12 @@ router.get("/admin/health-watch", requireRole("admin"), async (req: Request, res
       checkTelegram(),
       checkGroq(),
       checkNvidia(),
+      checkStorefront(),
     ]);
 
-    const settled = [dbR, smtpR, resendR, s3R, stripeR, telegramR, groqR, nvidiaR];
+    const settled = [supabaseR, smtpR, resendR, s3R, stripeR, telegramR, groqR, nvidiaR, storefrontR];
     const checks: ServiceCheck[] = [
+      checkApiSelf(),
       ...settled.map((r) =>
         r.status === "fulfilled"
           ? r.value

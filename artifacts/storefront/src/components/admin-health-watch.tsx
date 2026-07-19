@@ -20,6 +20,8 @@ import {
   FolderOpen,
   UploadCloud,
   Settings2,
+  Server,
+  Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -55,7 +57,8 @@ interface HealthReport {
 // ── Icon map ──────────────────────────────────────────────────────────────────
 
 const SERVICE_ICONS: Record<string, React.ElementType> = {
-  db: Database,
+  "api-server": Server,
+  supabase: Database,
   smtp: Mail,
   resend: Send,
   s3: HardDrive,
@@ -64,6 +67,7 @@ const SERVICE_ICONS: Record<string, React.ElementType> = {
   groq: Cpu,
   nvidia: Zap,
   "local-storage": FolderOpen,
+  storefront: Globe,
 };
 
 // ── Status badge ──────────────────────────────────────────────────────────────
@@ -557,7 +561,7 @@ export function AdminHealthWatch() {
       {/* Loading skeleton */}
       {loading && !report && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 9 }).map((_, i) => (
+          {Array.from({ length: 11 }).map((_, i) => (
             <div key={i} className="rounded-xl border border-border/50 bg-muted/20 p-4 h-24 animate-pulse" />
           ))}
         </div>
