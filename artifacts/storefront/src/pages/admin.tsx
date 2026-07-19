@@ -18,6 +18,7 @@ import { AdminTelegram } from "@/components/admin-telegram";
 import { CsvImportExport } from "@/components/csv-import-export";
 import { AdminReferrals } from "@/components/admin-referrals";
 import { AdminFlashSaleManager } from "@/components/admin-flash-sale";
+import { AdminHealthWatch } from "@/components/admin-health-watch";
 import {
   ShieldCheck,
   Users as UsersIcon,
@@ -34,6 +35,7 @@ import {
   Send,
   Gift,
   Zap,
+  Activity,
 } from "lucide-react";
 
 type Section =
@@ -51,7 +53,8 @@ type Section =
   | "visitors"
   | "telegram"
   | "referrals"
-  | "flash-sale";
+  | "flash-sale"
+  | "health";
 
 export default function Admin({ section = "dashboard" }: { section?: Section }) {
   const [, setLocation] = useLocation();
@@ -183,6 +186,13 @@ export default function Admin({ section = "dashboard" }: { section?: Section }) 
         <>
           <StaffPageHeader icon={Zap} title="Flash sale" description="Pick the products on sale and set the countdown shown on the storefront." />
           <AdminFlashSaleManager />
+        </>
+      )}
+
+      {section === "health" && (
+        <>
+          <StaffPageHeader icon={Activity} title="Service health" description="Live status of every connected service — database, email, storage, payments, and AI. Auto-refreshes every 30 s." />
+          <AdminHealthWatch />
         </>
       )}
     </div>

@@ -38,6 +38,7 @@ import {
   Send,
   Gift,
   Zap,
+  Activity,
 } from "lucide-react";
 
 type NavItem = {
@@ -62,6 +63,7 @@ const ADMIN_ITEMS: NavItem[] = [
   { href: "/admin/referrals", label: "Referrals", icon: Gift },
   { href: "/admin/bank", label: "Bank details", icon: Landmark },
   { href: "/admin/password", label: "Admin password", icon: KeyRound },
+  { href: "/admin/health", label: "Service health", icon: Activity },
 ];
 
 const PM_ITEMS: NavItem[] = [
