@@ -382,50 +382,37 @@ export default function UserDashboard() {
           </div>
         )}
 
-        {/* Best Selling — grouped by category, each in a horizontal scroll */}
-        {isLoading ? (
-          <div className="space-y-5">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i}>
-                <Skeleton className="h-4 w-32 mb-3 rounded" />
-                <div className="flex gap-2.5">
-                  {Array.from({ length: 4 }).map((_, j) => (
-                    <div key={j} className="shrink-0 w-[110px] space-y-2">
-                      <Skeleton className="aspect-square rounded-2xl" />
-                      <Skeleton className="h-3 w-3/4" />
-                      <Skeleton className="h-3 w-1/2" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
+        {/* Best Selling — flat grid, 4 per row, SaleCard style */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-bold">Best Selling</h2>
+            <Link href="/products">
+              <span className="text-xs font-semibold text-primary hover:underline cursor-pointer">See all</span>
+            </Link>
           </div>
-        ) : categoryGroups.length === 0 ? (
-          <div className="text-center py-16 text-muted-foreground">
-            <p className="text-base font-medium">No products yet.</p>
-            <p className="text-sm mt-1">Add products via the admin panel.</p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {categoryGroups.map(group => (
-              <div key={group.slug}>
-                {/* Category header */}
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-base font-bold">{group.name}</h2>
-                  <Link href={`/products?category=${group.slug}`}>
-                    <span className="text-xs font-semibold text-primary hover:underline">See all</span>
-                  </Link>
+          {isLoading ? (
+            <div className="grid grid-cols-4 gap-2">
+              {Array.from({ length: 8 }).map((_, j) => (
+                <div key={j} className="space-y-2">
+                  <Skeleton className="aspect-square rounded-2xl" />
+                  <Skeleton className="h-3 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
                 </div>
-                {/* Horizontal scroll of SaleCards */}
-                <div className="flex gap-2.5 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
-                  {group.products.map(p => (
-                    <SaleCard key={p.id} product={p} variant="scroll" width={110} />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          ) : (allProducts ?? []).length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground">
+              <p className="text-base font-medium">No products yet.</p>
+              <p className="text-sm mt-1">Add products via the admin panel.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-4 gap-2">
+              {(allProducts ?? []).map(p => (
+                <SaleCard key={p.id} product={p} variant="grid" />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
