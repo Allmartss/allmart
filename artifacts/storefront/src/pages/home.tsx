@@ -15,7 +15,7 @@ import {
   Store, ShoppingCart, LayoutGrid, Zap, Truck, Tag,
   Watch, Mountain, Footprints, Heart, Laptop, Shirt, Dumbbell,
   UtensilsCrossed, BookOpen, Gamepad2, HeartPulse, Plane, PawPrint,
-  Gem, Home as HomeIcon, Music2, Car, Sun, Moon,
+  Gem, Home as HomeIcon, Music2, Car,
 } from "lucide-react";
 import { ProductCard } from "@/components/product-card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -180,14 +180,6 @@ export default function Home() {
     return "Good evening";
   };
 
-  const [darkMode, setDarkMode] = useState(() => document.documentElement.classList.contains("dark"));
-  const toggleDark = () => {
-    const next = !darkMode;
-    setDarkMode(next);
-    document.documentElement.classList.toggle("dark", next);
-    localStorage.setItem("theme", next ? "dark" : "light");
-  };
-
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim()) {
@@ -237,15 +229,6 @@ export default function Home() {
                 <NotificationsBell enabled={true} variant="home" />
               </span>
             )}
-
-            {/* Theme toggle */}
-            <button
-              onClick={toggleDark}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-white hover:bg-primary/90 transition-colors"
-              aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </button>
 
             {/* Staff admin access (kept — required for admin tools) */}
             {me && isStaff && (
