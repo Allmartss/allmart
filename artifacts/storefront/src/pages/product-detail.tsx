@@ -124,7 +124,7 @@ export default function ProductDetail() {
   }
 
   // Fake-but-plausible social proof numbers seeded from product id
-  const viewerCount = 3 + (product.id % 17);
+  const viewerCount = 10000 + (product.id * 37 % 9000);
   const isPopular = product.rating >= 4.0 || product.stock < 20;
   const isSellingFast = product.stock < 30;
 

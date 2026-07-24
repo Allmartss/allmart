@@ -34,6 +34,7 @@ type TurnState = {
   stripeCheckoutUrl?: string | null;
   stripeError?: string | null;
   bankDetails?: BankDetails | null;
+  addedToCart?: any[];
 };
 
 export default function Assistant() {
@@ -64,6 +65,7 @@ export default function Assistant() {
               stripeCheckoutUrl: data.stripeCheckoutUrl ?? null,
               stripeError: data.stripeError ?? null,
               bankDetails: data.bankDetails ?? null,
+              addedToCart: data.addedToCart ?? [],
             }
           }));
         }
