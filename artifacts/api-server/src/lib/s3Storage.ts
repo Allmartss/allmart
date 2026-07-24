@@ -10,7 +10,8 @@
  *   FILE_ENDPOINT_URL        — full endpoint URL (e.g. https://<ref>.supabase.co/storage/v1/s3)
  *   FILE_REGION              — AWS / Supabase region (e.g. us-east-1 or ap-southeast-1)
  */
-import { S3Client, PutObjectCommand, HeadBucketCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, HeadBucketCommand, HeadObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { Readable } from "stream";
 import { logger } from "./logger";
 
 const S3_FOLDER = "Allnart";
@@ -89,6 +90,33 @@ export async function uploadToS3(
   logger.info({ bucket, key }, "S3 upload complete");
 
   return getS3PublicUrl(uuid);
+}
+
+/**
+ * Download a file from S3 and return its body as a Node.js Readable stream
+ * plus the content type. Returns null if the object does not exist.
+ */
+export async function downloadFromS3(
+  uuid: string,
+): Promise<{ body: Readable; contentType: string } | null> {
+  const client = getS3Client();
+  const bucket = getBucketName();
+  const key = `${S3_FOLDER}/${uuid}`;
+
+  try {
+    const cmd = new GetObjectCommand({ Bucket: bucket, Key: key });
+    const result = await client.send(cmd);
+    if (!result.Body) return null;
+    const body = result.Body as Readable;
+    const contentType = result.ContentType ?? "application/octet-stream";
+    return { body, contentType };
+  } catch (err: unknown) {
+    const code = err as { name?: string; $metadata?: { httpStatusCode?: number } };
+    if (code.name === "NoSuchKey" || code.$metadata?.httpStatusCode === 404) {
+      return null;
+    }
+    throw err;
+  }
 }
 
 /**

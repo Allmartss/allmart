@@ -14,7 +14,7 @@ import {
   LOCAL_OBJECT_PREFIX,
   LOCAL_UPLOADS_DIR,
 } from "../lib/localStorageFallback";
-import { isS3Configured, uploadToS3, getS3PublicUrl, fileExistsInS3 } from "../lib/s3Storage";
+import { isS3Configured, uploadToS3, getS3PublicUrl, fileExistsInS3, downloadFromS3 } from "../lib/s3Storage";
 import { requireRole } from "../lib/auth";
 
 const router: IRouter = Router();
@@ -69,11 +69,10 @@ router.post("/storage/uploads/request-url", async (req: Request, res: Response) 
     const uploadURL = `${base}/api/storage/local/${uuid}`;
 
     // objectPath is what gets stored in the DB and used as the final image URL.
-    // When S3 is configured, store the S3 public URL directly so images are
-    // always served from S3 after upload. Otherwise store the local path.
-    const objectPath = isS3Configured()
-      ? getS3PublicUrl(uuid)
-      : localObjectPath;
+    // Always use the local path so images are served through our own API
+    // endpoint — this works regardless of whether the S3 bucket is public.
+    // The S3 mirror is for redundancy/backup, not for direct browser access.
+    const objectPath = localObjectPath;
 
     res.json(
       RequestUploadUrlResponse.parse({
@@ -169,21 +168,44 @@ function detectMimeType(diskPath: string): string {
  * GET /storage/local/:uuid  — serve a locally-stored upload file.
  * GET /storage/objects/local-objects/:uuid — alias used when imageUrl is stored
  *   as a /local-objects/<uuid> path (set during request-url in local mode).
+ *
+ * Serve order:
+ *   1. Local disk (fast, always attempted first)
+ *   2. S3 fallback (when local file is missing but S3 is configured)
  */
-function serveLocalFile(req: Request, res: Response) {
-  const diskPath = safeLocalPath(req.params.uuid as string);
+async function serveLocalFile(req: Request, res: Response) {
+  const uuid = req.params.uuid as string;
+  const diskPath = safeLocalPath(uuid);
   if (!diskPath) {
     res.status(400).json({ error: "Invalid file identifier" });
     return;
   }
-  if (!fs.existsSync(diskPath)) {
-    res.status(404).json({ error: "File not found" });
+
+  // 1. Serve from local disk when available
+  if (fs.existsSync(diskPath)) {
+    const mimeType = detectMimeType(diskPath);
+    res.setHeader("Content-Type", mimeType);
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    res.sendFile(diskPath);
     return;
   }
-  const mimeType = detectMimeType(diskPath);
-  res.setHeader("Content-Type", mimeType);
-  res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-  res.sendFile(diskPath);
+
+  // 2. Fall back to S3 (handles case where local file was lost or only in S3)
+  if (isS3Configured()) {
+    try {
+      const s3File = await downloadFromS3(uuid);
+      if (s3File) {
+        res.setHeader("Content-Type", s3File.contentType);
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        s3File.body.pipe(res);
+        return;
+      }
+    } catch (err) {
+      req.log.error({ err, uuid }, "S3 fallback fetch failed");
+    }
+  }
+
+  res.status(404).json({ error: "File not found" });
 }
 
 router.get("/storage/local/:uuid", serveLocalFile);
