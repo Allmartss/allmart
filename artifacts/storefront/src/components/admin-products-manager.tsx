@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Pencil, Trash2, Loader2, Upload, X, Plus, Save, ChevronDown, ChevronRight } from "lucide-react";
 import { useImageUpload } from "@/hooks/use-image-upload";
+import { AiDescriptionButton } from "@/components/ai-description-button";
 
 type Product = {
   id: number; name: string; description: string; detailNote: string; category: string;
@@ -177,7 +178,14 @@ export function AdminProductsManager() {
           </div>
 
           <div className="space-y-1.5">
-            <Label>Description</Label>
+            <div className="flex items-center justify-between">
+              <Label>Description</Label>
+              <AiDescriptionButton
+                name={editing.name}
+                category={editing.category}
+                onGenerate={(desc) => setEditing(p => p ? { ...p, description: desc } : p)}
+              />
+            </div>
             <Textarea rows={3} value={editing.description} onChange={e => setEditing(p => p ? { ...p, description: e.target.value } : p)} />
           </div>
 

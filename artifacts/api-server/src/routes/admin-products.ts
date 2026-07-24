@@ -3,6 +3,7 @@ import { db, productsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireRole } from "../lib/auth";
 import { serializeProduct } from "../lib/serializers";
+import { chatCompletion } from "../lib/llm";
 
 const router: IRouter = Router();
 
@@ -55,6 +56,49 @@ router.delete("/admin/products/:id", requireRole("admin", "pm"), async (req: Req
   if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid id" }); return; }
   await db.delete(productsTable).where(eq(productsTable.id, id));
   res.status(204).end();
+});
+
+/**
+ * POST /admin/ai/generate-description
+ * Generate a product description using the configured LLM provider.
+ * Body: { name: string; category?: string; lines?: number }
+ */
+router.post("/admin/ai/generate-description", requireRole("admin", "pm"), async (req: Request, res: Response) => {
+  const { name, category = "general", lines = 3 } = req.body as {
+    name?: string;
+    category?: string;
+    lines?: number;
+  };
+
+  if (!name || typeof name !== "string" || !name.trim()) {
+    res.status(400).json({ error: "name is required" });
+    return;
+  }
+
+  const lineCount = Math.min(Math.max(Number(lines) || 3, 1), 20);
+
+  try {
+    const { completion } = await chatCompletion(
+      [
+        {
+          role: "user",
+          content:
+            `Write a compelling product description for an e-commerce store listing.\n` +
+            `Product name: "${name.trim()}"\n` +
+            `Category: "${category.trim() || "general"}"\n` +
+            `Write exactly ${lineCount} sentences. Be specific, engaging, and highlight key benefits and features. ` +
+            `Write in plain prose — no bullet points, no headings, no markdown. Just flowing sentences.`,
+        },
+      ],
+      [], // no tools needed
+    );
+
+    const description = completion.choices[0]?.message?.content?.trim() ?? "";
+    res.json({ description });
+  } catch (err) {
+    req.log.error({ err }, "AI description generation failed");
+    res.status(503).json({ error: "AI unavailable — make sure an API key is configured." });
+  }
 });
 
 export default router;

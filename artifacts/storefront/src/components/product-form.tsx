@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PackagePlus, Upload, X, Plus } from "lucide-react";
 import { useImageUpload } from "@/hooks/use-image-upload";
+import { AiDescriptionButton } from "@/components/ai-description-button";
 
 const CURATED_CATEGORIES = [
   "shoes", "apparel", "electronics", "home", "kitchen",
@@ -166,7 +167,14 @@ export function ProductForm({ sellerName }: { sellerName: string }) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="p-desc">Description</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="p-desc">Description</Label>
+          <AiDescriptionButton
+            name={name}
+            category={category === "__custom__" ? customCategory : category}
+            onGenerate={setDescription}
+          />
+        </div>
         <Textarea id="p-desc" required rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What it is, who it's for, what makes it great." />
       </div>
 
