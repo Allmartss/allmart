@@ -142,6 +142,29 @@ router.put("/storage/local/:uuid", (req: Request, res: Response) => {
   });
 });
 
+/** Detect MIME type from the first 12 bytes of a file (magic-byte sniffing). */
+function detectMimeType(diskPath: string): string {
+  try {
+    const buf = Buffer.alloc(12);
+    const fd = fs.openSync(diskPath, "r");
+    fs.readSync(fd, buf, 0, 12, 0);
+    fs.closeSync(fd);
+    // JPEG: FF D8
+    if (buf[0] === 0xff && buf[1] === 0xd8) return "image/jpeg";
+    // PNG: 89 50 4E 47
+    if (buf[0] === 0x89 && buf[1] === 0x50) return "image/png";
+    // GIF: 47 49 46
+    if (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46) return "image/gif";
+    // WebP: 52 49 46 46 ... 57 45 42 50
+    if (buf[0] === 0x52 && buf[1] === 0x49 && buf[8] === 0x57 && buf[9] === 0x45) return "image/webp";
+    // SVG / XML text
+    if (buf[0] === 0x3c) return "image/svg+xml";
+  } catch {
+    // ignore read errors — fall through to octet-stream
+  }
+  return "application/octet-stream";
+}
+
 /**
  * GET /storage/local/:uuid  — serve a locally-stored upload file.
  * GET /storage/objects/local-objects/:uuid — alias used when imageUrl is stored
@@ -157,6 +180,8 @@ function serveLocalFile(req: Request, res: Response) {
     res.status(404).json({ error: "File not found" });
     return;
   }
+  const mimeType = detectMimeType(diskPath);
+  res.setHeader("Content-Type", mimeType);
   res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
   res.sendFile(diskPath);
 }
