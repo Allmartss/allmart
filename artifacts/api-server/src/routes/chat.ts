@@ -18,7 +18,9 @@ import {
 } from "../lib/llm";
 import { serializeProduct } from "../lib/serializers";
 import { buildCart } from "./cart";
-import { placeOrderForSession } from "./orders";
+import { placeOrderForSession, sendPlacedEmailAndNotification } from "./orders";
+import { getUserFromCookie } from "../lib/auth";
+import { sendTelegram } from "../lib/telegram";
 
 const router: IRouter = Router();
 
@@ -222,6 +224,7 @@ router.post("/chat/messages", async (req: Request, res: Response) => {
   }
   const { content, confirmOrder, shippingAddress, paymentMethod, productId } = parsed.data;
   const sessionId = req.sessionId;
+  const chatUser = await getUserFromCookie(req);
 
   // If the request comes from "Ask AI to Buy" on a product page, pre-add the product to cart
   // so the AI doesn't need to search — it can immediately show and confirm the item.
@@ -568,6 +571,16 @@ router.post("/chat/messages", async (req: Request, res: Response) => {
                 note: "Order placed. Tell the shopper the bank details are displayed below — they should transfer the exact total and reference their tracking code.",
               }),
             });
+            // Fire in-app + email notification for logged-in users
+            if (chatUser?.id) {
+              sendPlacedEmailAndNotification(result.order, chatUser.id).catch((err) =>
+                req.log.error({ err }, "ai bank_transfer order notification failed"),
+              );
+            }
+            // Admin Telegram alert
+            sendTelegram(
+              `🛒 <b>New AI Order</b> — Bank Transfer\nTracking: <code>${result.order.trackingCode}</code>\nTotal: $${result.order.total}\nAddress: ${result.order.shippingAddress}`,
+            );
           }
         } else {
           // pay_on_delivery (or no paymentMethod — default)
@@ -590,6 +603,16 @@ router.post("/chat/messages", async (req: Request, res: Response) => {
                 paymentMethod: "pay_on_delivery",
               }),
             });
+            // Fire in-app + email notification for logged-in users
+            if (chatUser?.id) {
+              sendPlacedEmailAndNotification(result.order, chatUser.id).catch((err) =>
+                req.log.error({ err }, "ai pay_on_delivery order notification failed"),
+              );
+            }
+            // Admin Telegram alert
+            sendTelegram(
+              `🛒 <b>New AI Order</b> — Pay on Delivery\nTracking: <code>${result.order.trackingCode}</code>\nTotal: $${result.order.total}\nAddress: ${result.order.shippingAddress}`,
+            );
           }
         }
 

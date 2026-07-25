@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { placeOrderForSession, sendPlacedEmailAndNotification } from "./orders";
 import { serializeOrder } from "../lib/serializers";
 import { getUserFromCookie } from "../lib/auth";
+import { sendTelegram } from "../lib/telegram";
 
 const router: IRouter = Router();
 
@@ -96,6 +97,10 @@ router.post("/stripe/verify", async (req: Request, res: Response) => {
     if (user?.id) {
       try { await sendPlacedEmailAndNotification(placed.order, user.id); } catch (err) { req.log.error({ err }, "stripe order email failed"); }
     }
+    // Admin Telegram alert for Stripe-paid orders
+    sendTelegram(
+      `🛒 <b>New AI Order</b> — Card (Stripe)\nTracking: <code>${placed.order.trackingCode}</code>\nTotal: $${placed.order.total}\nAddress: ${placed.order.shippingAddress}`,
+    );
 
     res.status(201).json(serializeOrder(placed.order));
   } catch (err) {
