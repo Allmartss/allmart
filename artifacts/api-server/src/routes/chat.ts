@@ -220,8 +220,30 @@ router.post("/chat/messages", async (req: Request, res: Response) => {
     res.status(400).json({ error: "Invalid body" });
     return;
   }
-  const { content, confirmOrder, shippingAddress, paymentMethod } = parsed.data;
+  const { content, confirmOrder, shippingAddress, paymentMethod, productId } = parsed.data;
   const sessionId = req.sessionId;
+
+  // If the request comes from "Ask AI to Buy" on a product page, pre-add the product to cart
+  // so the AI doesn't need to search — it can immediately show and confirm the item.
+  let preAddedProduct: typeof import("@workspace/db").productsTable.$inferSelect | null = null;
+  if (productId) {
+    const [prod] = await db.select().from(productsTable).where(eq(productsTable.id, productId));
+    if (prod) {
+      preAddedProduct = prod;
+      const existing = await db
+        .select()
+        .from(cartItemsTable)
+        .where(and(eq(cartItemsTable.sessionId, sessionId), eq(cartItemsTable.productId, productId)));
+      if (existing.length > 0) {
+        await db
+          .update(cartItemsTable)
+          .set({ quantity: existing[0].quantity + 1 })
+          .where(and(eq(cartItemsTable.sessionId, sessionId), eq(cartItemsTable.productId, productId)));
+      } else {
+        await db.insert(cartItemsTable).values({ sessionId, productId, quantity: 1 });
+      }
+    }
+  }
 
   const [userRow] = await db
     .insert(chatMessagesTable)
@@ -269,14 +291,22 @@ router.post("/chat/messages", async (req: Request, res: Response) => {
       role: "system",
       content: `Current cart: ${cartSummary}. confirmOrder=${confirmOrder ? "true" : "false"}. shippingAddress=${shippingAddress ?? "(none provided)"}. paymentMethod=${paymentMethod ?? "(none chosen)"}. Recent orders this session: ${recentOrdersSummary}.`,
     },
+    ...(preAddedProduct
+      ? [
+          {
+            role: "system" as const,
+            content: `The shopper clicked "Ask AI to Buy" on the product page. The following product has already been added to their cart — do NOT call add_to_cart again:\n• ${preAddedProduct.name} — $${preAddedProduct.price} (id=${preAddedProduct.id})\nYour task for this turn:\n1. Greet them warmly and confirm which product was just added (show name + price).\n2. Ask "Is this the right product?"\n3. Once they confirm, proceed to the order confirmation flow (collect shipping address and payment method, then call place_order).`,
+          },
+        ]
+      : []),
     ...history.map((m) => ({
       role: m.role as "user" | "assistant",
       content: m.content,
     })),
   ];
 
-  const suggestedIds: number[] = [];
-  const addedProductIds: number[] = [];
+  const suggestedIds: number[] = preAddedProduct ? [preAddedProduct.id] : [];
+  const addedProductIds: number[] = preAddedProduct ? [preAddedProduct.id] : [];
   let placedOrderId: number | null = null;
   let needsShippingAddress = false;
   let needsConfirmation = false;

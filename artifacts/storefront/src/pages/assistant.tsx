@@ -87,15 +87,29 @@ export default function Assistant() {
   });
 
   useEffect(() => {
+    const buyProductId = sessionStorage.getItem("buy_product_id");
+    const buyProductName = sessionStorage.getItem("buy_product_name");
     const prefill = sessionStorage.getItem("nb_prefill");
     const initialQuery = sessionStorage.getItem("initial_assistant_query");
-    if (prefill) {
+
+    if (buyProductId && buyProductName) {
+      sessionStorage.removeItem("buy_product_id");
+      sessionStorage.removeItem("buy_product_name");
+      // Auto-send immediately with the product ID so the AI can skip searching
+      sendChat.mutate({
+        data: {
+          content: `I'd like to buy the ${buyProductName}`,
+          productId: Number(buyProductId),
+        },
+      });
+    } else if (prefill) {
       setContent(prefill);
       sessionStorage.removeItem("nb_prefill");
     } else if (initialQuery) {
       setContent(initialQuery);
       sessionStorage.removeItem("initial_assistant_query");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

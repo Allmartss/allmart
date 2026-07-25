@@ -790,6 +790,10 @@ export const SendChatMessageBody = zod.object({
     .enum(["stripe", "bank_transfer", "pay_on_delivery"])
     .optional()
     .describe("Payment method chosen by the shopper"),
+  productId: zod
+    .number()
+    .optional()
+    .describe("Product ID to pre-add to cart before the AI responds"),
 });
 
 export const SendChatMessageResponse = zod.object({

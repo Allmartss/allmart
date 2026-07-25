@@ -338,7 +338,8 @@ export default function ProductDetail() {
         {/* Ask AI to Buy */}
         <button
           onClick={() => {
-            sessionStorage.setItem("nb_prefill", `I'd like to buy the ${product.name}`);
+            sessionStorage.setItem("buy_product_id", String(product.id));
+            sessionStorage.setItem("buy_product_name", product.name);
             setLocation("/assistant");
           }}
           className="w-full flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-semibold text-primary bg-primary/5 hover:bg-primary/10 transition-colors"

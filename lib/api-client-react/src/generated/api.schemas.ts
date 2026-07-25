@@ -359,6 +359,8 @@ export interface SendChatMessageRequest {
   shippingAddress?: string;
   /** Payment method chosen by the shopper */
   paymentMethod?: SendChatMessageRequestPaymentMethod;
+  /** Product ID to pre-add to cart before the AI responds (used by "Ask AI to Buy" on product pages) */
+  productId?: number;
 }
 
 export interface ChatBankDetails {
