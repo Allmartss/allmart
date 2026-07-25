@@ -64,6 +64,7 @@ export interface Product {
   stock: number;
   sellerName: string;
   tags: string[];
+  freeShipping: boolean;
 }
 
 export type ResetCodeResponseScope =

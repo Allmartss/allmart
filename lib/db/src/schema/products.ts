@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, real, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, real, jsonb, boolean } from "drizzle-orm/pg-core";
 
 export const productsTable = pgTable("products", {
   id: serial("id").primaryKey(),
@@ -18,6 +18,7 @@ export const productsTable = pgTable("products", {
   stock: integer("stock").notNull().default(50),
   sellerName: text("seller_name").notNull(),
   tags: jsonb("tags").$type<string[]>().notNull().default([]),
+  freeShipping: boolean("free_shipping").notNull().default(false),
 });
 
 export type Product = typeof productsTable.$inferSelect;

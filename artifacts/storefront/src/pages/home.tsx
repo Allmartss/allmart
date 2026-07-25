@@ -15,7 +15,7 @@ import {
   Store, ShoppingCart, LayoutGrid, Zap, Truck, Tag,
   Watch, Mountain, Footprints, Heart, Laptop, Shirt, Dumbbell,
   UtensilsCrossed, BookOpen, Gamepad2, HeartPulse, Plane, PawPrint,
-  Gem, Home as HomeIcon, Music2, Car, Sun, Moon,
+  Gem, Home as HomeIcon, Music2, Car, Sun, Moon, PackageCheck,
 } from "lucide-react";
 import { ProductCard } from "@/components/product-card";
 import { SaleCard } from "@/components/sale-card";
@@ -171,6 +171,7 @@ export default function Home() {
   const isStaff = me && (me.role === "admin" || me.role === "pm");
   const cartItemCount = cart?.items?.reduce((acc, item) => acc + item.quantity, 0) || 0;
 
+  const freeShippingProducts = (allProducts ?? []).filter((p: any) => p.freeShipping === true);
   const flashSaleLive = !!flashSale?.enabled && (flashSale?.products?.length ?? 0) > 0;
   const { h, m, s } = useCountdown(flashSaleLive ? flashSale!.endsAt : null);
 
@@ -428,6 +429,49 @@ export default function Home() {
                 })}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Free Shipping — only shown when at least one product is flagged */}
+        {freeShippingProducts.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-bold text-foreground flex items-center gap-1.5">
+                <PackageCheck className="h-4 w-4 text-emerald-500" />
+                Free Shipping
+              </h2>
+              <Link href="/products">
+                <span className="text-xs font-semibold text-primary hover:underline">See all</span>
+              </Link>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide" style={{ scrollbarWidth: "none" }}>
+              {freeShippingProducts.map(p => (
+                <Link key={p.id} href={`/products/${p.id}`}>
+                  <div className="relative shrink-0 w-36 group cursor-pointer">
+                    <span className="absolute top-2 left-2 z-10 rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white flex items-center gap-0.5">
+                      <Truck className="h-2.5 w-2.5" /> Free
+                    </span>
+                    <div className="overflow-hidden rounded-2xl bg-muted aspect-square mb-2">
+                      {p.imageUrl ? (
+                        <img
+                          src={p.imageUrl}
+                          alt={p.name}
+                          className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center text-muted-foreground">
+                          <PackageCheck className="h-8 w-8" />
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs font-semibold text-foreground leading-tight line-clamp-2 mb-0.5">{p.name}</p>
+                    <p className="text-sm font-bold text-primary">
+                      {p.currency === "NGN" ? "₦" : "$"}{p.price.toLocaleString()}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
         )}
 

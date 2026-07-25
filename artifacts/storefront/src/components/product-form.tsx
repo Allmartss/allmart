@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { PackagePlus, Upload, X, Plus } from "lucide-react";
+import { PackagePlus, Upload, X, Plus, Truck } from "lucide-react";
 import { useImageUpload } from "@/hooks/use-image-upload";
 import { AiDescriptionButton } from "@/components/ai-description-button";
 
@@ -37,6 +37,7 @@ export function ProductForm({ sellerName }: { sellerName: string }) {
   const [productType, setProductType] = useState("");
   const [tags, setTags] = useState("");
   const [shippingFee, setShippingFee] = useState("");
+  const [freeShipping, setFreeShipping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -113,11 +114,12 @@ export function ProductForm({ sellerName }: { sellerName: string }) {
           rating: ratingNum,
           originalPrice: originalPriceNum,
           shippingFee: shippingFee ? Number(shippingFee) : null,
+          freeShipping,
         }),
       });
       setSuccess(`Published "${created.name}".`);
       setName(""); setDescription(""); setPrice(""); setOriginalPrice(""); setRating("4.5");
-      setImageUrl(""); setExtraImages([]); setColors(""); setProductType(""); setTags(""); setShippingFee("");
+      setImageUrl(""); setExtraImages([]); setColors(""); setProductType(""); setTags(""); setShippingFee(""); setFreeShipping(false);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() }),
         queryClient.invalidateQueries({ queryKey: getListCategoriesQueryKey() }),
@@ -269,6 +271,26 @@ export function ProductForm({ sellerName }: { sellerName: string }) {
           <p className="text-xs text-muted-foreground">Leave blank or 0 for free shipping. Add a note like "Free within USA" in tags.</p>
         </div>
       </div>
+
+      {/* Free shipping feature toggle */}
+      <button
+        type="button"
+        onClick={() => setFreeShipping(v => !v)}
+        className={`flex items-center gap-3 w-full rounded-xl border px-4 py-3 text-sm font-medium transition-all text-left ${
+          freeShipping
+            ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400"
+            : "border-border bg-background text-muted-foreground hover:border-border/80"
+        }`}
+      >
+        <Truck className="h-4 w-4 shrink-0" />
+        <div className="flex-1">
+          <p className="font-semibold">Feature in Free Shipping</p>
+          <p className="text-xs font-normal opacity-70">Shows this product in the "Free Shipping" section on the home page</p>
+        </div>
+        <div className={`h-5 w-9 rounded-full transition-colors flex items-center px-0.5 shrink-0 ${freeShipping ? "bg-emerald-500" : "bg-muted-foreground/30"}`}>
+          <div className={`h-4 w-4 rounded-full bg-white shadow transition-transform ${freeShipping ? "translate-x-4" : "translate-x-0"}`} />
+        </div>
+      </button>
 
       {error && (
         <div className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">{error}</div>

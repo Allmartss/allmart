@@ -18,12 +18,12 @@ router.patch("/admin/products/:id", requireRole("admin", "pm"), async (req: Requ
 
   const {
     name, description, detailNote, category, price, originalPrice, shippingFee, stock,
-    imageUrl, images, colors, productType, tags, rating,
+    imageUrl, images, colors, productType, tags, rating, freeShipping,
   } = req.body as {
     name?: string; description?: string; detailNote?: string; category?: string;
     price?: number; originalPrice?: number | null; shippingFee?: number | null; stock?: number; imageUrl?: string;
     images?: string[]; colors?: string[]; productType?: string; tags?: string[];
-    rating?: number;
+    rating?: number; freeShipping?: boolean;
   };
 
   const [updated] = await db
@@ -43,6 +43,7 @@ router.patch("/admin/products/:id", requireRole("admin", "pm"), async (req: Requ
       ...(productType !== undefined && { productType }),
       ...(tags !== undefined && { tags }),
       ...(rating !== undefined && { rating }),
+      ...(freeShipping !== undefined && { freeShipping }),
     })
     .where(eq(productsTable.id, id))
     .returning();

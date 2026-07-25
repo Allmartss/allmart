@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, Trash2, Loader2, Upload, X, Plus, Save, ChevronDown, ChevronRight } from "lucide-react";
+import { Pencil, Trash2, Loader2, Upload, X, Plus, Save, ChevronDown, ChevronRight, Truck } from "lucide-react";
 import { useImageUpload } from "@/hooks/use-image-upload";
 import { AiDescriptionButton } from "@/components/ai-description-button";
 
@@ -14,7 +14,7 @@ type Product = {
   id: number; name: string; description: string; detailNote: string; category: string;
   price: number; originalPrice: number | null; shippingFee: number | null; currency: string;
   imageUrl: string; images: string[]; colors: string[]; productType: string;
-  stock: number; sellerName: string; tags: string[]; rating: number;
+  stock: number; sellerName: string; tags: string[]; rating: number; freeShipping: boolean;
 };
 
 export function AdminProductsManager() {
@@ -36,7 +36,7 @@ export function AdminProductsManager() {
   }, []);
 
   function startEdit(p: Product) {
-    setEditing({ ...p, images: p.images ?? [], colors: p.colors ?? [], tags: p.tags ?? [], originalPrice: p.originalPrice ?? null, detailNote: p.detailNote ?? "" });
+    setEditing({ ...p, images: p.images ?? [], colors: p.colors ?? [], tags: p.tags ?? [], originalPrice: p.originalPrice ?? null, detailNote: p.detailNote ?? "", freeShipping: p.freeShipping ?? false });
   }
 
   async function handleMainImage(e: React.ChangeEvent<HTMLInputElement>) {
@@ -84,6 +84,7 @@ export function AdminProductsManager() {
           images: editing.images, colors: editing.colors,
           productType: editing.productType, tags: editing.tags,
           rating: editing.rating,
+          freeShipping: editing.freeShipping,
         }),
       });
       const updated = await res.json() as Product;
@@ -176,6 +177,26 @@ export function AdminProductsManager() {
               <Input value={editing.productType} onChange={e => setEditing(p => p ? { ...p, productType: e.target.value } : p)} placeholder="e.g. Sneakers" />
             </div>
           </div>
+
+          {/* Free shipping toggle */}
+          <button
+            type="button"
+            onClick={() => setEditing(p => p ? { ...p, freeShipping: !p.freeShipping } : p)}
+            className={`flex items-center gap-3 w-full rounded-xl border px-4 py-3 text-sm font-medium transition-all text-left ${
+              editing.freeShipping
+                ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400"
+                : "border-border bg-background text-muted-foreground hover:border-border/80"
+            }`}
+          >
+            <Truck className="h-4 w-4 shrink-0" />
+            <div className="flex-1">
+              <p className="font-semibold">Free Shipping</p>
+              <p className="text-xs font-normal opacity-70">Shows this product in the "Free Shipping" section on the home page</p>
+            </div>
+            <div className={`h-5 w-9 rounded-full transition-colors flex items-center px-0.5 shrink-0 ${editing.freeShipping ? "bg-emerald-500" : "bg-muted-foreground/30"}`}>
+              <div className={`h-4 w-4 rounded-full bg-white shadow transition-transform ${editing.freeShipping ? "translate-x-4" : "translate-x-0"}`} />
+            </div>
+          </button>
 
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
@@ -277,6 +298,7 @@ export function AdminProductsManager() {
                             ? <span className="ml-1 text-amber-600">+{fmt(p.shippingFee)} ship</span>
                             : <span className="ml-1 text-emerald-600">free ship</span>}
                           {" · "}★{p.rating.toFixed(1)}
+                          {p.freeShipping && <span className="ml-1 inline-flex items-center gap-0.5 text-emerald-600"><Truck className="h-3 w-3" /> Free Shipping</span>}
                         </p>
                         {p.colors.length > 0 && <div className="flex gap-1 mt-1">{p.colors.map(c => <Badge key={c} variant="outline" className="text-[10px] py-0">{c}</Badge>)}</div>}
                       </div>
