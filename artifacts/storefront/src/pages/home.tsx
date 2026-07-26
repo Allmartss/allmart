@@ -211,8 +211,8 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-[100dvh] bg-[#F4F3FF] dark:bg-[#0D0B1A]">
 
-      {/* ── Header — black bar, actions only ────────────────────────────────── */}
-      <section className="bg-[#0B0A14] px-4 pb-4 pt-safe">
+      {/* ── Header — white bar, actions only ────────────────────────────────── */}
+      <section className="bg-white dark:bg-[#0B0A14] border-b border-border/40 dark:border-white/5 px-4 pb-4 pt-safe">
         {/* Top bar: logo | spacer | actions */}
         <div className="flex items-center gap-3 pt-3 pb-1">
           <ShopDrawerInner />
@@ -224,15 +224,15 @@ export default function Home() {
             {/* Theme toggle */}
             <button
               onClick={toggleDark}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 hover:bg-white/25 transition-colors"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-black/5 dark:bg-white/15 hover:bg-black/10 dark:hover:bg-white/25 transition-colors"
               aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
             >
-              {darkMode ? <Sun className="h-4 w-4 text-white" /> : <Moon className="h-4 w-4 text-white" />}
+              {darkMode ? <Sun className="h-4 w-4 text-foreground/70 dark:text-white" /> : <Moon className="h-4 w-4 text-foreground/70 dark:text-white" />}
             </button>
 
             {/* Notifications */}
             {me && !isStaff && (
-              <span className="[&_button]:bg-transparent [&_button]:hover:bg-white/10 [&_svg]:text-white/80">
+              <span className="[&_button]:bg-transparent [&_button]:hover:bg-black/5 dark:[&_button]:hover:bg-white/10 [&_svg]:text-foreground/70 dark:[&_svg]:text-white/80">
                 <NotificationsBell enabled={true} variant="home" />
               </span>
             )}
@@ -253,8 +253,8 @@ export default function Home() {
 
             {/* Cart */}
             <Link href="/cart">
-              <button className="relative flex h-9 w-9 items-center justify-center rounded-full border border-white/25 hover:border-white/40 transition-colors">
-                <ShoppingCart className="h-4 w-4 text-white/80" />
+              <button className="relative flex h-9 w-9 items-center justify-center rounded-full border border-border/60 dark:border-white/25 hover:border-border dark:hover:border-white/40 transition-colors">
+                <ShoppingCart className="h-4 w-4 text-foreground/70 dark:text-white/80" />
                 {cartItemCount > 0 && (
                   <span className="absolute -right-1 -top-1 flex h-[14px] w-[14px] items-center justify-center rounded-full bg-orange-400 text-[9px] font-bold text-white">
                     {cartItemCount > 9 ? "9+" : cartItemCount}
