@@ -61,6 +61,7 @@ export default function Products() {
   const searchString = useSearch();
   const searchParams = new URLSearchParams(searchString);
   const qParam = searchParams.get("q") || undefined;
+  const freeShippingParam = searchParams.get("freeShipping") === "true";
 
   const [searchInput, setSearchInput] = useState(qParam || "");
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
@@ -68,7 +69,9 @@ export default function Products() {
 
   useEffect(() => { setSearchInput(qParam || ""); }, [qParam]);
 
-  const { data: allProducts, isLoading: isProductsLoading } = useListProducts({ q: qParam });
+  const { data: allProducts, isLoading: isProductsLoading } = useListProducts(
+    freeShippingParam ? { freeShipping: true } as any : { q: qParam }
+  );
   const { data: categories, isLoading: isCategoriesLoading } = useListCategories();
   const { data: summary } = useGetStorefrontSummary();
 
@@ -126,10 +129,12 @@ export default function Products() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            {qParam ? `Results for "${qParam}"` : "All Products"}
+            {freeShippingParam ? "Free Shipping" : qParam ? `Results for "${qParam}"` : "All Products"}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {categoryGroups.length > 0
+            {freeShippingParam
+              ? `${allProducts?.length ?? 0} products with free delivery`
+              : categoryGroups.length > 0
               ? `${allProducts?.length ?? 0} products across ${categoryGroups.length} categories`
               : "Discover our complete collection."}
           </p>

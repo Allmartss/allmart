@@ -37,9 +37,11 @@ router.post("/products", requireRole("admin", "pm"), async (req: Request, res: R
 router.get("/products", async (req, res) => {
   const category = typeof req.query.category === "string" ? req.query.category : undefined;
   const q = typeof req.query.q === "string" ? req.query.q : undefined;
+  const freeShipping = req.query.freeShipping === "true" ? true : undefined;
 
   const filters = [] as ReturnType<typeof eq>[];
   if (category) filters.push(eq(productsTable.category, category));
+  if (freeShipping) filters.push(eq(productsTable.freeShipping, true));
   if (q) {
     const like = `%${q}%`;
     filters.push(

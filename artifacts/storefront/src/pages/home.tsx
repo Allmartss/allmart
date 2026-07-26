@@ -432,37 +432,18 @@ export default function Home() {
           </div>
         )}
 
-        {/* Free Shipping — prominent Mega-Sale style banner + product scroll */}
+        {/* Free Shipping — simple header + product scroll */}
         {freeShippingProducts.length > 0 && (
           <div>
-            {/* Banner card */}
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-500 px-5 py-4 shadow-xl shadow-emerald-500/30 mb-4">
-              {/* Decorative blobs */}
-              <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl pointer-events-none" />
-              <div className="absolute -left-4 -bottom-6 h-24 w-24 rounded-full bg-white/10 blur-2xl pointer-events-none" />
-
-              <div className="relative z-10 flex items-center justify-between">
-                <div className="space-y-1">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-semibold text-white/95">
-                    🚚 No Extra Cost
-                  </span>
-                  <p className="text-xl font-extrabold text-white leading-tight">Free Shipping</p>
-                  <p className="text-xs text-white/75">On selected products — delivered to your door</p>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 shadow-inner">
-                    <Truck className="h-7 w-7 text-white" />
-                  </div>
-                  <Link href="/products">
-                    <button className="text-[10px] font-bold text-white/90 bg-white/20 hover:bg-white/30 transition-colors px-3 py-1 rounded-full">
-                      See all →
-                    </button>
-                  </Link>
-                </div>
-              </div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-bold text-foreground flex items-center gap-1.5">
+                <Truck className="h-4 w-4 text-emerald-500" />
+                Free Shipping
+              </h2>
+              <Link href="/products?freeShipping=true">
+                <span className="text-xs font-semibold text-primary hover:underline">See all</span>
+              </Link>
             </div>
-
-            {/* Product scroll */}
             <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide" style={{ scrollbarWidth: "none" }}>
               {freeShippingProducts.map(p => (
                 <Link key={p.id} href={`/products/${p.id}`}>
@@ -470,7 +451,7 @@ export default function Home() {
                     <span className="absolute top-2 left-2 z-10 rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white flex items-center gap-0.5 shadow">
                       <Truck className="h-2.5 w-2.5" /> Free
                     </span>
-                    <div className="overflow-hidden rounded-2xl bg-muted aspect-square mb-2 ring-2 ring-emerald-400/30">
+                    <div className="overflow-hidden rounded-2xl bg-muted aspect-square mb-2">
                       {p.imageUrl ? (
                         <img
                           src={p.imageUrl}
