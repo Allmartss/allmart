@@ -312,7 +312,7 @@ export default function Home() {
             {([
               { href: "/products",          icon: LayoutGrid, label: "Categories" },
               { href: "/products?sort=sale", icon: Zap,        label: "Flash Sale" },
-              { href: "/products?sort=new",  icon: Truck,       label: "Free Ship" },
+              { href: "/products?freeShipping=true",  icon: Truck,       label: "Free Ship" },
               { href: "/products?sort=featured", icon: Tag,     label: "Vouchers" },
             ] as const).map(({ href, icon: Icon, label }) => (
               <Link key={href} href={href}>
