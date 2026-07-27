@@ -18,7 +18,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Trash2, UserCircle2, KeyRound, Copy, Shield, Pencil, MailCheck, MailX } from "lucide-react";
+import { Trash2, UserCircle2, KeyRound, Copy, Shield, Pencil, MailCheck, Ban, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

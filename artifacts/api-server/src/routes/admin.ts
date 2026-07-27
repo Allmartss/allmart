@@ -9,8 +9,8 @@ import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
-function publicUser(u: { id: number; email: string; name: string; role: string; tier: number; country?: string | null; phone?: string | null; sex?: string | null; address?: string | null; profileComplete: boolean; referralCode?: string | null; bonusBalance: number }) {
-  return { id: u.id, email: u.email, name: u.name, role: u.role, tier: u.tier, country: u.country ?? null, phone: u.phone ?? null, sex: u.sex ?? null, address: u.address ?? null, profileComplete: u.profileComplete, referralCode: u.referralCode ?? null, bonusBalance: u.bonusBalance };
+function publicUser(u: { id: number; email: string; name: string; role: string; tier: number; country?: string | null; phone?: string | null; sex?: string | null; address?: string | null; profileComplete: boolean; referralCode?: string | null; bonusBalance: number; banned?: boolean | null }) {
+  return { id: u.id, email: u.email, name: u.name, role: u.role, tier: u.tier, country: u.country ?? null, phone: u.phone ?? null, sex: u.sex ?? null, address: u.address ?? null, profileComplete: u.profileComplete, referralCode: u.referralCode ?? null, bonusBalance: u.bonusBalance, banned: u.banned ?? false };
 }
 
 router.get("/admin/users", requireRole("admin"), async (_req: Request, res: Response) => {
