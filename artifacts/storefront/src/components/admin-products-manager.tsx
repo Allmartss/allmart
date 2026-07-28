@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, Trash2, Loader2, Upload, X, Plus, Save, ChevronDown, ChevronRight, Truck } from "lucide-react";
+import { Pencil, Trash2, Loader2, Upload, X, Plus, Save, ChevronDown, ChevronRight, Truck, Eye, EyeOff } from "lucide-react";
 import { useImageUpload } from "@/hooks/use-image-upload";
 import { AiDescriptionButton } from "@/components/ai-description-button";
 
@@ -15,6 +15,7 @@ type Product = {
   price: number; originalPrice: number | null; shippingFee: number | null; currency: string;
   imageUrl: string; images: string[]; colors: string[]; productType: string;
   stock: number; sellerName: string; tags: string[]; rating: number; freeShipping: boolean;
+  hidden: boolean;
 };
 
 export function AdminProductsManager() {
@@ -93,6 +94,19 @@ export function AdminProductsManager() {
       toast({ title: "Product updated!" });
     } catch { toast({ title: "Error", variant: "destructive" }); }
     finally { setSaving(false); }
+  }
+
+  async function toggleHide(p: Product) {
+    try {
+      const res = await fetch(`/api/admin/products/${p.id}`, {
+        method: "PATCH", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hidden: !p.hidden }),
+      });
+      const updated = await res.json() as Product;
+      setProducts(prev => prev.map(x => x.id === updated.id ? updated : x));
+      toast({ title: p.hidden ? "Product is now visible" : "Product hidden from storefront" });
+    } catch { toast({ title: "Error", variant: "destructive" }); }
   }
 
   async function handleDelete(id: number) {
@@ -286,10 +300,24 @@ export function AdminProductsManager() {
               {!collapsed && (
                 <div className="divide-y divide-border/30">
                   {catProducts.map(p => (
-                    <div key={p.id} className="flex items-center gap-4 p-4 bg-card">
-                      <img src={p.imageUrl} alt={p.name} className="h-14 w-14 rounded-md object-cover border border-border/40 shrink-0" />
+                    <div key={p.id} className={`flex items-center gap-4 p-4 bg-card transition-opacity ${p.hidden ? "opacity-50" : ""}`}>
+                      <div className="relative shrink-0">
+                        <img src={p.imageUrl} alt={p.name} className="h-14 w-14 rounded-md object-cover border border-border/40" />
+                        {p.hidden && (
+                          <div className="absolute inset-0 rounded-md bg-background/60 flex items-center justify-center">
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        )}
+                      </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{p.name}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium text-sm truncate">{p.name}</p>
+                          {p.hidden && (
+                            <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded border bg-muted text-muted-foreground border-border/50 shrink-0">
+                              Hidden
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground">
                           {fmt(p.price)}
                           {p.originalPrice ? <span className="line-through text-muted-foreground ml-1">{fmt(p.originalPrice)}</span> : ""}
@@ -303,6 +331,13 @@ export function AdminProductsManager() {
                         {p.colors.length > 0 && <div className="flex gap-1 mt-1">{p.colors.map(c => <Badge key={c} variant="outline" className="text-[10px] py-0">{c}</Badge>)}</div>}
                       </div>
                       <div className="flex gap-2 shrink-0">
+                        <Button
+                          size="sm" variant="outline" className={`h-8 w-8 p-0 ${p.hidden ? "text-emerald-600 border-emerald-200 hover:bg-emerald-50" : "text-muted-foreground"}`}
+                          onClick={() => toggleHide(p)}
+                          title={p.hidden ? "Unhide — make visible on storefront" : "Hide from storefront"}
+                        >
+                          {p.hidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                        </Button>
                         <Button size="sm" variant="outline" className="gap-1.5 h-8" onClick={() => startEdit(p)}>
                           <Pencil className="h-3.5 w-3.5" /> Edit
                         </Button>

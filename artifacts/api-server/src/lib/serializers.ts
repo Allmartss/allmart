@@ -20,6 +20,7 @@ export function serializeProduct(p: Product) {
     sellerName: p.sellerName,
     tags: (p.tags ?? []) as string[],
     freeShipping: p.freeShipping ?? false,
+    hidden: p.hidden ?? false,
   };
 }
 

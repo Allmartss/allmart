@@ -19,6 +19,7 @@ export const productsTable = pgTable("products", {
   sellerName: text("seller_name").notNull(),
   tags: jsonb("tags").$type<string[]>().notNull().default([]),
   freeShipping: boolean("free_shipping").notNull().default(false),
+  hidden: boolean("hidden").notNull().default(false),
 });
 
 export type Product = typeof productsTable.$inferSelect;

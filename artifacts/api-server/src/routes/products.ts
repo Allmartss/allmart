@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, productsTable } from "@workspace/db";
-import { and, eq, ilike, or, sql, desc } from "drizzle-orm";
+import { and, eq, ilike, or, sql, desc, ne } from "drizzle-orm";
 import { CreateProductBody } from "@workspace/api-zod";
 import { serializeProduct } from "../lib/serializers";
 import { requireRole } from "../lib/auth";
@@ -39,7 +39,7 @@ router.get("/products", async (req, res) => {
   const q = typeof req.query.q === "string" ? req.query.q : undefined;
   const freeShipping = req.query.freeShipping === "true" ? true : undefined;
 
-  const filters = [] as ReturnType<typeof eq>[];
+  const filters = [ne(productsTable.hidden, true)] as ReturnType<typeof eq>[];
   if (category) filters.push(eq(productsTable.category, category));
   if (freeShipping) filters.push(eq(productsTable.freeShipping, true));
   if (q) {
@@ -69,7 +69,7 @@ router.get("/products/:id", async (req, res) => {
     res.status(400).json({ error: "Invalid id" });
     return;
   }
-  const [row] = await db.select().from(productsTable).where(eq(productsTable.id, id));
+  const [row] = await db.select().from(productsTable).where(and(eq(productsTable.id, id), ne(productsTable.hidden, true)));
   if (!row) {
     res.status(404).json({ error: "Not found" });
     return;
