@@ -59,6 +59,7 @@ export default function Payment() {
   const user = authData?.user as ({ tier?: number; bonusBalance?: number } & typeof authData.user) | null | undefined;
   const [method, setMethod] = useState<Method>("stripe");
   const [bankDetails, setBankDetails] = useState<BankDetails | null>(null);
+  const [bankLoaded, setBankLoaded] = useState(false);
   const [cautionNote, setCautionNote] = useState<string>("");
   const [providerLoading, setProviderLoading] = useState(false);
   const [reference] = useState(
@@ -108,8 +109,8 @@ export default function Payment() {
   useEffect(() => {
     fetch("/api/settings/bank")
       .then((r) => r.json())
-      .then((d) => setBankDetails(d as BankDetails))
-      .catch(() => {});
+      .then((d) => { setBankDetails(d as BankDetails); setBankLoaded(true); })
+      .catch(() => setBankLoaded(true));
     fetch("/api/settings/bank-caution")
       .then((r) => r.json())
       .then((d: { note: string }) => setCautionNote(d.note))
@@ -259,7 +260,9 @@ export default function Payment() {
             <div className="grid gap-2">
               {ALL_METHODS.map((m) => {
                 const userTier = (user as { tier?: number } | null | undefined)?.tier ?? 0;
-                const locked = m.minTier !== undefined && userTier < m.minTier;
+                const tierLocked = m.minTier !== undefined && userTier < m.minTier;
+                const bankUnavailable = m.id === "transfer" && bankLoaded && !bankDetails?.bankName;
+                const locked = tierLocked || bankUnavailable;
                 return (
                   <button
                     key={m.id}
@@ -280,11 +283,19 @@ export default function Payment() {
                     <div className="flex-1">
                       <p className="font-medium text-sm">{m.label}</p>
                       <p className="text-xs text-muted-foreground">
-                        {locked ? "Not available for your account — contact support to upgrade." : m.hint}
+                        {bankUnavailable
+                          ? "Not available — please try another payment option."
+                          : tierLocked
+                          ? "Not available for your account — contact support to upgrade."
+                          : m.hint}
                       </p>
                     </div>
                     {method === m.id && !locked && <CheckCircle2 className="h-5 w-5 text-primary" />}
-                    {locked && <span className="text-[10px] font-semibold bg-muted text-muted-foreground rounded px-1.5 py-0.5">Locked</span>}
+                    {locked && (
+                      <span className="text-[10px] font-semibold bg-muted text-muted-foreground rounded px-1.5 py-0.5">
+                        {bankUnavailable ? "Unavailable" : "Locked"}
+                      </span>
+                    )}
                   </button>
                 );
               })}
