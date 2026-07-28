@@ -47,7 +47,7 @@ const tierColor: Record<number, string> = {
   3: "bg-emerald-50 text-emerald-700",
 };
 
-type UserWithTier = AuthUser & { tier?: number; emailVerified?: boolean };
+type UserWithTier = AuthUser & { tier?: number; emailVerified?: boolean; banned?: boolean };
 
 export function UsersManager({ currentUserId }: { currentUserId: number }) {
   const queryClient = useQueryClient();
@@ -56,6 +56,7 @@ export function UsersManager({ currentUserId }: { currentUserId: number }) {
   const [issuingFor, setIssuingFor] = useState<number | null>(null);
   const [issuedCode, setIssuedCode] = useState<ResetCodeResponse | null>(null);
   const [tierLoading, setTierLoading] = useState<number | null>(null);
+  const [banLoading, setBanLoading] = useState<number | null>(null);
   const [editUser, setEditUser] = useState<UserWithTier | null>(null);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
@@ -116,6 +117,26 @@ export function UsersManager({ currentUserId }: { currentUserId: number }) {
       toast({ title: `${user.email} marked as verified` });
     } catch {
       toast({ title: "Failed to verify email", variant: "destructive" });
+    }
+  }
+
+  async function toggleBan(user: UserWithTier) {
+    const action = user.banned ? "unban" : "ban";
+    if (!confirm(`${action === "ban" ? "Ban" : "Unban"} ${user.email}?`)) return;
+    setBanLoading(user.id);
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}/ban`, {
+        method: "PATCH", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ banned: !user.banned }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? "Failed"); }
+      await queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
+      toast({ title: user.banned ? `${user.email} unbanned` : `${user.email} banned` });
+    } catch (err: unknown) {
+      toast({ title: err instanceof Error ? err.message : `Failed to ${action}`, variant: "destructive" });
+    } finally {
+      setBanLoading(null);
     }
   }
 
@@ -180,6 +201,11 @@ export function UsersManager({ currentUserId }: { currentUserId: number }) {
                           <Shield className="h-2.5 w-2.5" />{tierLabel[tier] ?? `Tier ${tier}`}
                         </span>
                         {isSelf && <span className="text-[10px] text-muted-foreground">(you)</span>}
+                        {user.banned && (
+                          <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded border bg-destructive/10 text-destructive border-destructive/20">
+                            banned
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground">{user.email}</p>
                     </div>
@@ -205,6 +231,14 @@ export function UsersManager({ currentUserId }: { currentUserId: number }) {
                       disabled={issuingFor === user.id} onClick={() => generateResetCode(user)}
                       aria-label="Generate password reset code" title="Generate password reset code">
                       <KeyRound className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="icon" variant="ghost"
+                      className={`h-7 w-7 ${user.banned ? "text-emerald-600 hover:bg-emerald-50" : "text-amber-600 hover:bg-amber-50"}`}
+                      disabled={isSelf || banLoading === user.id}
+                      onClick={() => toggleBan(user)}
+                      aria-label={user.banned ? "Unban user" : "Ban user"}
+                      title={user.banned ? "Unban user" : "Ban user"}>
+                      {user.banned ? <ShieldCheck className="h-3.5 w-3.5" /> : <Ban className="h-3.5 w-3.5" />}
                     </Button>
                     <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:bg-destructive/10"
                       disabled={isSelf} onClick={() => remove(user)} aria-label="Delete user">

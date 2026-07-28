@@ -31,4 +31,17 @@ router.patch("/admin/users/:id/verify-email", requireRole("admin"), async (req: 
   res.json({ id: updated.id, emailVerified: updated.emailVerified });
 });
 
+/** Ban or unban a user. Cannot ban yourself. */
+router.patch("/admin/users/:id/ban", requireRole("admin"), async (req: Request, res: Response) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const authUser = (req as Request & { authUser: { id: number } }).authUser;
+  if (authUser.id === id) { res.status(400).json({ error: "You can't ban yourself" }); return; }
+  const { banned } = req.body as { banned?: boolean };
+  if (typeof banned !== "boolean") { res.status(400).json({ error: "banned must be a boolean" }); return; }
+  const [updated] = await db.update(usersTable).set({ banned }).where(eq(usersTable.id, id)).returning();
+  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
+  res.json({ id: updated.id, banned: updated.banned });
+});
+
 export default router;
