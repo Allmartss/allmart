@@ -13,7 +13,9 @@ type LandingPageData = {
 
 type PageSummary = {
   id: number; slug: string; title: string; description: string;
-  productCount: number; createdAt: string;
+  productCount: number;
+  previewImages: { id: number; imageUrl: string; name: string }[];
+  createdAt: string;
 };
 
 export default function ShopLanding() {
@@ -126,19 +128,39 @@ export default function ShopLanding() {
           >
             {otherPages.map(page => (
               <Link key={page.id} href={`/shop/${page.slug}`}>
-                <div className="snap-start shrink-0 w-64 rounded-2xl border border-border/50 bg-card p-5 hover:border-primary/40 hover:shadow-md transition-all cursor-pointer group">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">/shop/{page.slug}</span>
-                    <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
-                      {page.productCount} item{page.productCount === 1 ? "" : "s"}
-                    </span>
-                  </div>
-                  <h3 className="font-serif font-bold text-base leading-tight group-hover:text-primary transition-colors line-clamp-2">
-                    {page.title}
-                  </h3>
-                  {page.description && (
-                    <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{page.description}</p>
+                <div className="snap-start shrink-0 w-56 rounded-2xl border border-border/50 bg-card overflow-hidden hover:border-primary/40 hover:shadow-md transition-all cursor-pointer group">
+                  {/* Product image grid */}
+                  {page.previewImages.length > 0 ? (
+                    <div className={`grid gap-0.5 bg-muted/30 ${page.previewImages.length >= 4 ? "grid-cols-2" : page.previewImages.length === 3 ? "grid-cols-3" : page.previewImages.length === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
+                      {page.previewImages.slice(0, 4).map((img, i) => (
+                        <div key={img.id} className={`overflow-hidden bg-muted ${page.previewImages.length === 1 ? "aspect-[4/3]" : "aspect-square"} ${page.previewImages.length === 3 && i === 0 ? "col-span-3" : ""}`}>
+                          <img
+                            src={img.imageUrl}
+                            alt={img.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="aspect-[4/3] bg-muted/40 flex items-center justify-center">
+                      <LayoutGrid className="h-8 w-8 text-muted-foreground/30" />
+                    </div>
                   )}
+                  {/* Text info */}
+                  <div className="p-3">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <h3 className="font-semibold text-sm leading-tight group-hover:text-primary transition-colors line-clamp-1">
+                        {page.title}
+                      </h3>
+                      <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full shrink-0">
+                        {page.productCount}
+                      </span>
+                    </div>
+                    {page.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-2">{page.description}</p>
+                    )}
+                  </div>
                 </div>
               </Link>
             ))}

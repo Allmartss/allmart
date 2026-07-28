@@ -62,14 +62,28 @@ router.delete("/admin/landing-pages/:id", requireRole("admin"), async (req: Requ
   res.status(204).end();
 });
 
-/** Public: list all landing pages (basic info only, no products). Used for the carousel. */
+/** Public: list all landing pages with up to 4 preview product images. Used for the carousel. */
 router.get("/landing-pages", async (_req: Request, res: Response) => {
   const rows = await db.select().from(landingPagesTable).orderBy(desc(landingPagesTable.createdAt));
-  res.json(rows.map(r => ({
-    id: r.id, slug: r.slug, title: r.title, description: r.description,
-    productCount: (r.productIds as number[]).length,
-    createdAt: r.createdAt.toISOString(),
-  })));
+  // collect all unique product ids needed across all pages (up to 4 per page)
+  const allPreviewIds = [...new Set(
+    rows.flatMap(r => (r.productIds as number[]).slice(0, 4))
+  )];
+  const previewProds = allPreviewIds.length > 0
+    ? await db.select({ id: productsTable.id, imageUrl: productsTable.imageUrl, name: productsTable.name })
+        .from(productsTable).where(inArray(productsTable.id, allPreviewIds))
+    : [];
+  const prodMap = new Map(previewProds.map(p => [p.id, p]));
+  res.json(rows.map(r => {
+    const ids = r.productIds as number[];
+    const previews = ids.slice(0, 4).map(id => prodMap.get(id)).filter(Boolean) as { id: number; imageUrl: string; name: string }[];
+    return {
+      id: r.id, slug: r.slug, title: r.title, description: r.description,
+      productCount: ids.length,
+      previewImages: previews.map(p => ({ id: p.id, imageUrl: p.imageUrl, name: p.name })),
+      createdAt: r.createdAt.toISOString(),
+    };
+  }));
 });
 
 router.get("/landing-pages/:slug", async (req: Request, res: Response) => {
