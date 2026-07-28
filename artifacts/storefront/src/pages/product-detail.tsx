@@ -6,7 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft, Star, ShoppingCart, Sparkles, Package,
-  ChevronLeft, ChevronRight, Share2, Users, Zap, BadgeCheck,
+  ChevronLeft, ChevronRight, Share2, Zap, BadgeCheck,
   ShieldCheck, LayoutGrid,
   Watch, Mountain, Footprints, Heart, Laptop, Shirt, Dumbbell,
   UtensilsCrossed, BookOpen, Gamepad2, HeartPulse, Plane, PawPrint,
@@ -124,7 +124,6 @@ export default function ProductDetail() {
   }
 
   // Fake-but-plausible social proof numbers seeded from product id
-  const viewerCount = 10000 + (product.id * 37 % 9000);
   const isPopular = product.rating >= 4.0 || product.stock < 20;
   const isSellingFast = product.stock < 30;
 
@@ -349,13 +348,6 @@ export default function ProductDetail() {
 
         {/* Social proof bar */}
         <div className="rounded-2xl border border-border/50 bg-card px-4 py-3 flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <Users className="h-4 w-4 text-primary shrink-0" />
-            <div>
-              <p className="text-xs font-bold text-primary leading-none">{viewerCount} People</p>
-              <p className="text-[10px] text-muted-foreground leading-none mt-0.5">Viewed this product</p>
-            </div>
-          </div>
           {isSellingFast && (
             <div className="flex items-center gap-1.5 min-w-0">
               <Zap className="h-4 w-4 text-orange-500 fill-orange-500 shrink-0" />
