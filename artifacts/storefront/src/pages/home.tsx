@@ -315,7 +315,10 @@ export default function Home() {
                 Bonus balance: <span className="font-semibold text-violet-200">{me ? `$${(userStats?.bonusBalance ?? 0).toFixed(2)}` : "$0.00"}</span>
               </p>
             </div>
-            <div className="text-4xl select-none">🛍️</div>
+            <div className="text-right">
+              <div className="text-4xl select-none">🛍️</div>
+              <p className="text-xs font-bold text-white/80 mt-1">Mega Sale</p>
+            </div>
           </div>
 
           {/* Quick-nav: 4 icon buttons */}
