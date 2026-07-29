@@ -353,8 +353,8 @@ export default function Payment() {
               </div>
 
               <div className="mt-6 space-y-3">
-                <Label className="text-sm font-semibold">Upload payment screenshot <span className="text-muted-foreground font-normal">(recommended)</span></Label>
-                <p className="text-xs text-muted-foreground">Attach your payment receipt or screenshot to help us verify your order faster.</p>
+                <Label className="text-sm font-semibold">Upload payment screenshot <span className="text-destructive font-normal">*</span></Label>
+                <p className="text-xs text-muted-foreground">A screenshot of your transfer is required before your order can be submitted.</p>
 
                 {screenshotPreview ? (
                   <div className="relative inline-block">
@@ -430,21 +430,33 @@ export default function Payment() {
           )}
 
           {(method === "transfer" || method === "delivery") && (
-            <Button
-              size="lg"
-              className="w-full h-14 text-base font-semibold gap-2"
-              disabled={placeOrder.isPending || isUploading}
-              onClick={confirmDeliveryOrTransfer}
-            >
-              <CheckCircle2 className="h-5 w-5" />
-              {placeOrder.isPending
-                ? "Placing order…"
-                : isUploading
-                ? "Uploading screenshot…"
-                : method === "transfer"
-                ? `I've paid · ${fmt(grandTotal)}`
-                : `Confirm order · ${fmt(grandTotal)}`}
-            </Button>
+            <div className="space-y-2">
+              {method === "transfer" && !screenshotUrl && !isUploading && (
+                <div className="flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3">
+                  <Upload className="h-4 w-4 text-destructive shrink-0" />
+                  <p className="text-xs text-destructive font-medium">Upload your payment screenshot to continue.</p>
+                </div>
+              )}
+              <Button
+                size="lg"
+                className="w-full h-14 text-base font-semibold gap-2"
+                disabled={
+                  placeOrder.isPending ||
+                  isUploading ||
+                  (method === "transfer" && !screenshotUrl)
+                }
+                onClick={confirmDeliveryOrTransfer}
+              >
+                <CheckCircle2 className="h-5 w-5" />
+                {placeOrder.isPending
+                  ? "Placing order…"
+                  : isUploading
+                  ? "Uploading screenshot…"
+                  : method === "transfer"
+                  ? `I've paid · ${fmt(grandTotal)}`
+                  : `Confirm order · ${fmt(grandTotal)}`}
+              </Button>
+            </div>
           )}
         </div>
 
