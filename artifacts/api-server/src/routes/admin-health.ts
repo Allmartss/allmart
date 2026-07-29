@@ -135,13 +135,14 @@ async function checkSmtp(): Promise<ServiceCheck> {
     return { ...base, status: "skip", detail: "SMTP_HOST / SMTP_USER / SMTP_PASSWORD not set" };
 
   const configuredPort = Number(SMTP_PORT ?? "587");
-  // Many VPS providers block 587 and 465. Build a fallback list that includes
-  // 2525 (open on most VPS, supported by SendGrid/Mailgun) as a common alternative.
-  // If the user pinned a specific port via SMTP_PORT, respect that and don't add extras.
+  // SMTP_PORT_FALLBACK lets operators pin a secondary retry port (e.g. 2525)
+  // without changing the primary port. If SMTP_PORT is explicitly set, honour
+  // it exactly (no extras). If not set, auto-build a fallback chain.
   const pinnedByUser = !!SMTP_PORT;
+  const fallbackPort = process.env.SMTP_PORT_FALLBACK ? Number(process.env.SMTP_PORT_FALLBACK) : 2525;
   const portsToTry: number[] = pinnedByUser
     ? [configuredPort]
-    : [...new Set([configuredPort, 2525, 465])];
+    : [...new Set([configuredPort, fallbackPort, 465])];
 
   let lastErr = "";
   for (const port of portsToTry) {

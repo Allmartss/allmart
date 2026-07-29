@@ -290,7 +290,7 @@ function LocalStorageSyncButton() {
 // ── SMTP fix tips ─────────────────────────────────────────────────────────────
 
 function SmtpFixTips({ detail }: { detail: string }) {
-  const isGmail = (process.env.SMTP_HOST ?? "").includes("gmail") || detail.toLowerCase().includes("gmail");
+  const isGmail = detail.toLowerCase().includes("gmail");
   const isAuth = detail.toLowerCase().includes("auth") || detail.toLowerCase().includes("535") || detail.toLowerCase().includes("username") || detail.toLowerCase().includes("password");
   const isConnect = detail.toLowerCase().includes("connect") || detail.toLowerCase().includes("econnrefused") || detail.toLowerCase().includes("timeout");
 
@@ -307,8 +307,9 @@ function SmtpFixTips({ detail }: { detail: string }) {
       )}
       {isConnect && (
         <>
-          <p>• Check that your VPS firewall allows outbound port <strong>587</strong> (or 465). Some providers block it by default.</p>
-          <p>• Try <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">SMTP_PORT=465</code> with SSL, or <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">SMTP_PORT=587</code> with STARTTLS.</p>
+          <p>• Many VPS providers (HostVds etc.) block ports 587 and 465. Set <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">SMTP_PORT=2525</code> — it's widely open and supported by SendGrid, Brevo, and Mailgun.</p>
+          <p>• You can also set <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">SMTP_PORT_FALLBACK=2525</code> to keep your primary port and add 2525 as an automatic retry.</p>
+          <p>• Or use <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">SMTP_PORT=465</code> (SSL) if port 465 is open on your VPS.</p>
         </>
       )}
       {!isAuth && !isConnect && (
