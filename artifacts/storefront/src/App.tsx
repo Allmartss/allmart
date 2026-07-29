@@ -33,6 +33,8 @@ import Security from "@/pages/security";
 import Referral from "@/pages/referral";
 import UserDashboard from "@/pages/user-dashboard";
 import MyAccount from "@/pages/my-account";
+import Terms from "@/pages/terms";
+import Privacy from "@/pages/privacy";
 
 const queryClient = new QueryClient();
 
@@ -136,6 +138,8 @@ function Router() {
         <Route path="/pm/catalog" component={() => <PMConsole section="catalog" />} />
         <Route path="/reset-password" component={ResetPassword} />
         <Route path="/verify-email" component={VerifyEmail} />
+        <Route path="/terms" component={Terms} />
+        <Route path="/privacy" component={Privacy} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
