@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowRight, ArrowLeft, MapPin, Package, User, Tag, CheckCircle2, XCircle, Gift } from "lucide-react";
+import { ArrowRight, ArrowLeft, MapPin, Package, User, Tag, CheckCircle2, XCircle, Gift, BookUser } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const STORAGE_KEY = "nb_checkout_address";
@@ -44,6 +44,18 @@ export default function Checkout() {
   });
 
   const bonusBalance = (me as { bonusBalance?: number } | null)?.bonusBalance ?? 0;
+  const profileAddress = (me as { address?: string | null } | null)?.address ?? null;
+  const [useProfileAddr, setUseProfileAddr] = useState(false);
+
+  // When user ticks "use profile address", fill the textarea; untick = clear to let them type
+  function handleUseProfileAddr(checked: boolean) {
+    setUseProfileAddr(checked);
+    if (checked && profileAddress) {
+      setShippingAddress(profileAddress);
+    } else {
+      setShippingAddress("");
+    }
+  }
 
   useEffect(() => {
     if (!isLoading && cart && cart.items.length === 0) setLocation("/cart");
@@ -186,9 +198,33 @@ export default function Checkout() {
               <MapPin className="h-4 w-4 text-primary" />
               <h2 className="font-semibold text-lg">Delivery address *</h2>
             </div>
+
+            {/* Profile address shortcut — only shown when user has a saved address */}
+            {profileAddress && (
+              <label className="flex items-start gap-3 cursor-pointer p-3 mb-4 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={useProfileAddr}
+                  onChange={e => handleUseProfileAddr(e.target.checked)}
+                  className="mt-0.5 accent-primary"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <BookUser className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <span className="text-sm font-medium text-primary">Use my saved address</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">{profileAddress}</p>
+                </div>
+                {useProfileAddr && <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />}
+              </label>
+            )}
+
             <Textarea
               value={shippingAddress}
-              onChange={(e) => setShippingAddress(e.target.value)}
+              onChange={(e) => {
+                setShippingAddress(e.target.value);
+                if (useProfileAddr) setUseProfileAddr(false);
+              }}
               placeholder="Street address, city, state, postal code…"
               className="h-28 resize-none"
             />
