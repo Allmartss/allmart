@@ -169,17 +169,29 @@ async function checkBrevo(): Promise<ServiceCheck> {
   const base: Omit<ServiceCheck, "status" | "detail"> = {
     service: "Brevo (Sendinblue) email",
     key: "brevo",
-    envVars: ["BREVO_API_KEY"],
+    envVars: ["BREVO_API_KEY", "BREVO_SENDER_EMAIL"],
     configured: !!process.env.BREVO_API_KEY,
   };
   const key = process.env.BREVO_API_KEY;
   if (!key) return { ...base, status: "skip", detail: "BREVO_API_KEY not set" };
 
+  // Determine which sender email will be used for Brevo sends
+  const senderEmail = process.env.BREVO_SENDER_EMAIL ?? process.env.SMTP_USER ?? null;
+  const senderNote = process.env.BREVO_SENDER_EMAIL
+    ? `sender: ${process.env.BREVO_SENDER_EMAIL} ✓`
+    : process.env.SMTP_USER
+      ? `sender: ${process.env.SMTP_USER} ⚠ (using SMTP_USER — set BREVO_SENDER_EMAIL to a verified Brevo sender)`
+      : `sender: noreply@allmart.com ⚠ (set BREVO_SENDER_EMAIL to a verified Brevo sender)`;
+
   try {
     const brevo = new BrevoClient({ apiKey: key });
-    const data = await brevo.account.getAccount() as { plan?: { type?: string }[] };
+    const data = await brevo.account.getAccount() as { email?: string; plan?: { type?: string }[] };
     const plan = data?.plan?.[0]?.type ?? "unknown";
-    return { ...base, status: "ok", detail: `account OK · plan: ${plan}` };
+    return {
+      ...base,
+      status: process.env.BREVO_SENDER_EMAIL ? "ok" : "fail",
+      detail: `account OK · plan: ${plan} · ${senderNote}`,
+    };
   } catch (err) {
     return { ...base, status: "fail", detail: err instanceof Error ? err.message : String(err) };
   }

@@ -5,10 +5,16 @@ import nodemailer from "nodemailer";
 
 const router: IRouter = Router();
 
-const FROM =
-  process.env.SMTP_USER
-    ? `AllMart <${process.env.SMTP_USER}>`
-    : "AllMart <noreply@allmart.com>";
+// Default FROM (used for SMTP and as a fallback)
+const DEFAULT_FROM = process.env.SMTP_USER
+  ? `AllMart <${process.env.SMTP_USER}>`
+  : "AllMart <noreply@allmart.com>";
+
+// Brevo-specific FROM — BREVO_SENDER_EMAIL must be a verified sender in your Brevo account.
+// If not set, falls back to SMTP_USER which may not be verified in Brevo and can cause delivery failure.
+const BREVO_FROM = process.env.BREVO_SENDER_EMAIL
+  ? `AllMart <${process.env.BREVO_SENDER_EMAIL}>`
+  : DEFAULT_FROM;
 
 // ---------------------------------------------------------------------------
 // Brevo (Sendinblue) sender — exported so ping endpoint can target it directly
@@ -31,6 +37,8 @@ export async function sendViaBrevo(payload: { to: string[]; subject: string; htm
     subject: payload.subject,
     htmlContent: payload.html,
   });
+
+  logger.info({ to: payload.to, subject: payload.subject, sender: senderEmail }, "Email sent via Brevo");
 }
 
 // ---------------------------------------------------------------------------
@@ -86,24 +94,33 @@ interface EmailPayload {
 }
 
 export async function sendEmail(payload: EmailPayload): Promise<"smtp" | "brevo"> {
-  const { to, subject, html, from = FROM } = payload;
+  const { to, subject, html } = payload;
   const toArr = Array.isArray(to) ? to : [to];
+
+  // When caller passes an explicit from, honour it for both providers.
+  // Otherwise use provider-specific defaults so Brevo uses its verified sender.
+  const brevoFrom = payload.from ?? BREVO_FROM;
+  const smtpFrom  = payload.from ?? DEFAULT_FROM;
 
   // --- Brevo (primary) ---
   if (process.env.BREVO_API_KEY) {
     try {
-      await sendViaBrevo({ to: toArr, subject, html, from });
-      logger.info({ to: toArr, subject }, "Email sent via Brevo");
+      await sendViaBrevo({ to: toArr, subject, html, from: brevoFrom });
       return "brevo";
     } catch (brevoErr) {
-      logger.warn({ err: brevoErr, to: toArr, subject }, "Brevo send failed — falling back to SMTP");
+      logger.error(
+        { err: brevoErr, to: toArr, subject, brevoFrom },
+        "Brevo send failed — falling back to SMTP. " +
+        "Most common cause: sender email not verified in Brevo (Settings → Senders & IPs). " +
+        "Set BREVO_SENDER_EMAIL to your verified Brevo sender address.",
+      );
     }
   }
 
   // --- SMTP (fallback) ---
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD) {
     try {
-      await sendViaSmtp({ to: toArr, subject, html, from });
+      await sendViaSmtp({ to: toArr, subject, html, from: smtpFrom });
       return "smtp";
     } catch (smtpErr) {
       logger.warn({ err: smtpErr, to: toArr, subject }, "SMTP send failed on all ports");
