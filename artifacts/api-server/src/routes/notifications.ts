@@ -42,17 +42,36 @@ router.post(
   "/admin/notifications/push",
   requireRole("admin"),
   async (req: Request, res: Response) => {
-    const { title, message } = req.body as { title: string; message: string };
+    const { title, message, userIds } = req.body as {
+      title: string;
+      message: string;
+      userIds?: number[];
+    };
     if (!title || !message) {
       res.status(400).json({ error: "title and message required" });
       return;
     }
-    const users = await db.select({ id: usersTable.id }).from(usersTable);
-    if (users.length === 0) { res.json({ sent: 0 }); return; }
+
+    let targets: { id: number }[];
+
+    if (Array.isArray(userIds) && userIds.length > 0) {
+      // Validate all ids are finite numbers
+      const ids = userIds.filter((id) => Number.isFinite(id));
+      if (ids.length === 0) {
+        res.status(400).json({ error: "No valid user IDs provided" });
+        return;
+      }
+      targets = ids.map((id) => ({ id }));
+    } else {
+      // Send to all users
+      targets = await db.select({ id: usersTable.id }).from(usersTable);
+    }
+
+    if (targets.length === 0) { res.json({ sent: 0 }); return; }
     await db.insert(notificationsTable).values(
-      users.map((u) => ({ userId: u.id, title, message })),
+      targets.map((u) => ({ userId: u.id, title, message })),
     );
-    res.json({ sent: users.length });
+    res.json({ sent: targets.length });
   },
 );
 
