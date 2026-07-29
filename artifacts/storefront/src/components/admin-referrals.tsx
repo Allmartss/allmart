@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Users, Settings2, CheckCircle2 } from "lucide-react";
+import { Loader2, Save, Users, Settings2, CheckCircle2, Gift, Search, X, ChevronDown } from "lucide-react";
+
+type UserRow = { id: number; name: string; email: string };
 
 type ReferralRecord = {
   id: number;
@@ -31,6 +33,94 @@ function useFetch<T>(url: string) {
   });
 }
 
+// ── User picker dropdown ──────────────────────────────────────────────────────
+function UserPicker({
+  users,
+  loading,
+  selected,
+  onSelect,
+}: {
+  users: UserRow[];
+  loading: boolean;
+  selected: UserRow | null;
+  onSelect: (u: UserRow | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return users;
+    const q = search.toLowerCase();
+    return users.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
+  }, [users, search]);
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md border border-input bg-background text-sm hover:bg-muted/40 transition-colors"
+      >
+        {loading ? (
+          <span className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading users…</span>
+        ) : selected ? (
+          <span className="flex flex-col items-start text-left min-w-0">
+            <span className="font-medium truncate">{selected.name}</span>
+            <span className="text-xs text-muted-foreground truncate">{selected.email}</span>
+          </span>
+        ) : (
+          <span className="text-muted-foreground">Select a user…</span>
+        )}
+        <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full rounded-xl border border-border/60 bg-popover shadow-lg overflow-hidden">
+          {/* Search */}
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-border/40 bg-muted/30">
+            <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <input
+              autoFocus
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search by name or email…"
+              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            />
+            {search && (
+              <button type="button" onClick={() => setSearch("")}>
+                <X className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+              </button>
+            )}
+          </div>
+          {/* List */}
+          <div className="max-h-48 overflow-y-auto divide-y divide-border/30">
+            {filtered.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">No users found.</p>
+            ) : (
+              filtered.map(u => (
+                <button
+                  key={u.id}
+                  type="button"
+                  onClick={() => { onSelect(u); setOpen(false); setSearch(""); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-muted/40 transition-colors ${selected?.id === u.id ? "bg-primary/5" : ""}`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{u.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                  </div>
+                  {selected?.id === u.id && <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main component ─────────────────────────────────────────────────────────────
 export function AdminReferrals() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -42,6 +132,23 @@ export function AdminReferrals() {
   const [note, setNote] = useState("");
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
+
+  // Grant bonus state
+  const [grantUsers, setGrantUsers] = useState<UserRow[]>([]);
+  const [loadingGrantUsers, setLoadingGrantUsers] = useState(false);
+  const [grantTarget, setGrantTarget] = useState<UserRow | null>(null);
+  const [grantAmount, setGrantAmount] = useState("");
+  const [grantReason, setGrantReason] = useState("");
+  const [granting, setGranting] = useState(false);
+
+  useEffect(() => {
+    setLoadingGrantUsers(true);
+    fetch("/api/admin/users", { credentials: "include" })
+      .then(r => r.json())
+      .then((data: UserRow[]) => setGrantUsers(Array.isArray(data) ? data : []))
+      .catch(() => {})
+      .finally(() => setLoadingGrantUsers(false));
+  }, []);
 
   if (settings && !settingsLoaded) {
     setReferrerBonus(String(settings.referralReferrerBonus));
@@ -70,6 +177,38 @@ export function AdminReferrals() {
       toast({ title: "Failed to save", variant: "destructive" });
     } finally {
       setSavingSettings(false);
+    }
+  }
+
+  async function grantBonus(e: React.FormEvent) {
+    e.preventDefault();
+    if (!grantTarget) return;
+    const amount = Number(grantAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast({ title: "Invalid amount", description: "Enter a positive number.", variant: "destructive" });
+      return;
+    }
+    setGranting(true);
+    try {
+      const res = await fetch("/api/admin/grant-bonus", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: grantTarget.id, amount, reason: grantReason || undefined }),
+      });
+      const data = await res.json() as { ok?: boolean; newBalance?: number; error?: string };
+      if (!res.ok) { toast({ title: "Error", description: data.error, variant: "destructive" }); return; }
+      toast({
+        title: "Bonus granted!",
+        description: `${grantTarget.name} now has $${(data.newBalance ?? 0).toFixed(2)} bonus balance.`,
+      });
+      setGrantTarget(null);
+      setGrantAmount("");
+      setGrantReason("");
+    } catch {
+      toast({ title: "Network error", variant: "destructive" });
+    } finally {
+      setGranting(false);
     }
   }
 
@@ -113,6 +252,77 @@ export function AdminReferrals() {
             </Button>
           </>
         )}
+      </Card>
+
+      {/* Grant bonus card */}
+      <Card className="p-6 border-border/50 shadow-sm">
+        <div className="flex items-center gap-2 mb-5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100">
+            <Gift className="h-4 w-4 text-violet-600" />
+          </div>
+          <div>
+            <h3 className="font-semibold">Grant bonus to user</h3>
+            <p className="text-xs text-muted-foreground">Manually add bonus credit to any user's account. It appears at checkout alongside their balance.</p>
+          </div>
+        </div>
+
+        <form onSubmit={grantBonus} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>User</Label>
+            <UserPicker
+              users={grantUsers}
+              loading={loadingGrantUsers}
+              selected={grantTarget}
+              onSelect={setGrantTarget}
+            />
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="grant-amount">Bonus amount ($) *</Label>
+              <Input
+                id="grant-amount"
+                type="number"
+                min="0.01"
+                step="0.01"
+                required
+                placeholder="e.g. 25.00"
+                value={grantAmount}
+                onChange={e => setGrantAmount(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="grant-reason">Reason <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Input
+                id="grant-reason"
+                placeholder="e.g. Loyalty reward, compensation…"
+                value={grantReason}
+                onChange={e => setGrantReason(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Preview */}
+          {grantTarget && Number(grantAmount) > 0 && (
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-violet-50 border border-violet-200 text-sm">
+              <Gift className="h-4 w-4 text-violet-600 shrink-0" />
+              <span className="text-violet-700">
+                <span className="font-semibold">{fmt(Number(grantAmount))}</span> will be added to{" "}
+                <span className="font-semibold">{grantTarget.name}</span>'s bonus balance.
+                They can apply it at checkout.
+              </span>
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            disabled={granting || !grantTarget || !grantAmount || Number(grantAmount) <= 0}
+            className="gap-2 bg-violet-600 hover:bg-violet-700 text-white"
+          >
+            {granting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gift className="h-4 w-4" />}
+            {granting ? "Granting…" : "Grant bonus"}
+          </Button>
+        </form>
       </Card>
 
       {/* Referrals table */}

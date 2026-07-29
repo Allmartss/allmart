@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, referralsTable, usersTable, settingsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { requireRole } from "../lib/auth";
 
 const router: IRouter = Router();
@@ -63,6 +63,24 @@ router.get("/admin/referrals", requireRole("admin"), async (_req: Request, res: 
     referrerClaimed: r.referrerClaimed,
     createdAt: r.createdAt.toISOString(),
   })));
+});
+
+/** Grant a manual bonus to a specific user — adds to their bonusBalance */
+router.post("/admin/grant-bonus", requireRole("admin"), async (req: Request, res: Response) => {
+  const { userId, amount, reason } = req.body as { userId?: number; amount?: number; reason?: string };
+  if (!userId || !Number.isFinite(userId)) {
+    res.status(400).json({ error: "userId is required" }); return;
+  }
+  if (!amount || !Number.isFinite(amount) || amount <= 0) {
+    res.status(400).json({ error: "amount must be a positive number" }); return;
+  }
+  const [updated] = await db
+    .update(usersTable)
+    .set({ bonusBalance: sql`${usersTable.bonusBalance} + ${amount}` })
+    .where(eq(usersTable.id, userId))
+    .returning({ id: usersTable.id, name: usersTable.name, bonusBalance: usersTable.bonusBalance });
+  if (!updated) { res.status(404).json({ error: "User not found" }); return; }
+  res.json({ ok: true, userId: updated.id, name: updated.name, newBalance: updated.bonusBalance, granted: amount, reason: reason ?? null });
 });
 
 export default router;
