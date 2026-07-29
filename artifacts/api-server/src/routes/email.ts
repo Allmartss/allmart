@@ -1,5 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { Resend } from "resend";
+import { BrevoClient } from "@getbrevo/brevo";
 import { logger } from "../lib/logger";
 import nodemailer from "nodemailer";
 
@@ -10,6 +11,29 @@ const FROM =
   (process.env.SMTP_USER
     ? `AllMart <${process.env.SMTP_USER}>`
     : "AllMart <onboarding@resend.dev>");
+
+// ---------------------------------------------------------------------------
+// Brevo (Sendinblue) sender helper
+// ---------------------------------------------------------------------------
+
+async function sendViaBrevo(payload: { to: string[]; subject: string; html: string; from: string }): Promise<void> {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) throw new Error("BREVO_API_KEY not set");
+
+  const brevo = new BrevoClient({ apiKey });
+
+  // Parse "Name <email>" or plain email
+  const fromMatch = payload.from.match(/^(.*?)\s*<([^>]+)>$/);
+  const senderName = fromMatch ? fromMatch[1].trim() || "AllMart" : "AllMart";
+  const senderEmail = fromMatch ? fromMatch[2] : payload.from;
+
+  await brevo.transactionalEmails.sendTransacEmail({
+    sender: { name: senderName, email: senderEmail },
+    to: payload.to.map((email) => ({ email })),
+    subject: payload.subject,
+    htmlContent: payload.html,
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Unified email sender — tries Resend first, falls back to SMTP.
@@ -63,6 +87,17 @@ export async function sendEmail(payload: EmailPayload): Promise<void> {
     if (smtpSent) return;
   }
 
+  // --- Brevo (Sendinblue) ---
+  if (process.env.BREVO_API_KEY) {
+    try {
+      await sendViaBrevo({ to: toArr, subject, html, from });
+      logger.info({ to: toArr, subject }, "Email sent via Brevo");
+      return;
+    } catch (brevoErr) {
+      logger.warn({ err: brevoErr, to: toArr, subject }, "Brevo send failed — falling back to Resend");
+    }
+  }
+
   // --- Resend fallback ---
   if (process.env.RESEND_API_KEY) {
     const resend = new Resend(process.env.RESEND_API_KEY);
@@ -75,7 +110,7 @@ export async function sendEmail(payload: EmailPayload): Promise<void> {
   // --- No transport configured ---
   logger.warn(
     { to: toArr, subject },
-    "Email skipped: set SMTP_HOST + SMTP_USER + SMTP_PASSWORD (or RESEND_API_KEY) to enable emails",
+    "Email skipped: set SMTP_HOST + SMTP_USER + SMTP_PASSWORD, BREVO_API_KEY, or RESEND_API_KEY to enable emails",
   );
 }
 

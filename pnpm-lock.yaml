@@ -210,6 +210,9 @@ importers:
       '@aws-sdk/client-s3':
         specifier: ^3.840.0
         version: 3.1088.0
+      '@getbrevo/brevo':
+        specifier: ^6.0.2
+        version: 6.0.2
       '@google-cloud/storage':
         specifier: ^7.19.0
         version: 7.19.0
@@ -1763,6 +1766,10 @@ packages:
 
   '@gerrit0/mini-shiki@3.23.0':
     resolution: {integrity: sha512-bEMORlG0cqdjVyCEuU0cDQbORWX+kYCeo0kV1lbxF5bt4r7SID2l9bqsxJEM0zndaxpOUT7riCyIVEuqq/Ynxg==}
+
+  '@getbrevo/brevo@6.0.2':
+    resolution: {integrity: sha512-yxyacx4wkuWcCbFDdFE3RxklaHSGXEP3d0gZaxPy+9aBquvl4ksr7IQgbRCcF8crx5aRvpStVBLeh5iCbWHJrg==}
+    engines: {node: '>=18.0.0'}
 
   '@google-cloud/paginator@5.0.2':
     resolution: {integrity: sha512-DJS3s0OVH4zFDB1PzjxAsHqJT6sKVbRwwML0ZBP9PbU7Yebtu/7SWMRzvO2J3nUi9pRNITCfu4LJeooM2w4pjg==}
@@ -7865,6 +7872,8 @@ snapshots:
       '@shikijs/themes': 3.23.0
       '@shikijs/types': 3.23.0
       '@shikijs/vscode-textmate': 10.0.2
+
+  '@getbrevo/brevo@6.0.2': {}
 
   '@google-cloud/paginator@5.0.2':
     dependencies:

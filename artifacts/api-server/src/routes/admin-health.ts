@@ -7,6 +7,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { S3Client, HeadBucketCommand } from "@aws-sdk/client-s3";
 import nodemailer from "nodemailer";
+import { BrevoClient } from "@getbrevo/brevo";
 import pg from "pg";
 import fs from "fs";
 import { requireRole } from "../lib/auth";
@@ -161,6 +162,26 @@ async function checkSmtp(): Promise<ServiceCheck> {
     }
   }
   return { ...base, status: "fail", detail: `Tried ports ${portsToTry.join(", ")}: ${lastErr}` };
+}
+
+async function checkBrevo(): Promise<ServiceCheck> {
+  const base: Omit<ServiceCheck, "status" | "detail"> = {
+    service: "Brevo (Sendinblue) email",
+    key: "brevo",
+    envVars: ["BREVO_API_KEY"],
+    configured: !!process.env.BREVO_API_KEY,
+  };
+  const key = process.env.BREVO_API_KEY;
+  if (!key) return { ...base, status: "skip", detail: "BREVO_API_KEY not set" };
+
+  try {
+    const brevo = new BrevoClient({ apiKey: key });
+    const data = await brevo.account.getAccount() as { plan?: { type?: string }[] };
+    const plan = data?.plan?.[0]?.type ?? "unknown";
+    return { ...base, status: "ok", detail: `account OK · plan: ${plan}` };
+  } catch (err) {
+    return { ...base, status: "fail", detail: err instanceof Error ? err.message : String(err) };
+  }
 }
 
 async function checkResend(): Promise<ServiceCheck> {
@@ -359,9 +380,10 @@ router.get("/admin/health-watch", requireRole("admin"), async (req: Request, res
   const t0 = Date.now();
 
   try {
-    const [supabaseR, smtpR, resendR, s3R, stripeR, telegramR, groqR, nvidiaR, storefrontR] = await Promise.allSettled([
+    const [supabaseR, smtpR, brevoR, resendR, s3R, stripeR, telegramR, groqR, nvidiaR, storefrontR] = await Promise.allSettled([
       checkSupabase(),
       checkSmtp(),
+      checkBrevo(),
       checkResend(),
       checkS3(),
       checkStripe(),
@@ -371,7 +393,7 @@ router.get("/admin/health-watch", requireRole("admin"), async (req: Request, res
       checkStorefront(),
     ]);
 
-    const settled = [supabaseR, smtpR, resendR, s3R, stripeR, telegramR, groqR, nvidiaR, storefrontR];
+    const settled = [supabaseR, smtpR, brevoR, resendR, s3R, stripeR, telegramR, groqR, nvidiaR, storefrontR];
     const checks: ServiceCheck[] = [
       checkApiSelf(),
       ...settled.map((r) =>
