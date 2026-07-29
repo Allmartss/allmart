@@ -60,7 +60,7 @@ const SERVICE_ICONS: Record<string, React.ElementType> = {
   "api-server": Server,
   supabase: Database,
   smtp: Mail,
-  resend: Send,
+  brevo: Send,
   s3: HardDrive,
   stripe: CreditCard,
   telegram: Bot,
@@ -92,21 +92,50 @@ function StatusBadge({ status }: { status: CheckStatus }) {
   );
 }
 
+// ── Provider badge ────────────────────────────────────────────────────────────
+
+function ProviderBadge({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 px-2 py-0.5 text-xs font-semibold text-blue-700 dark:text-blue-300">
+      {label}
+    </span>
+  );
+}
+
 // ── Admin email ping button ───────────────────────────────────────────────────
 
-function AdminEmailPingButton({ adminEmail }: { adminEmail: string | null }) {
+interface AdminEmailPingButtonProps {
+  adminEmail: string | null;
+  smtpConfigured: boolean;
+  brevoConfigured: boolean;
+}
+
+function AdminEmailPingButton({ adminEmail, smtpConfigured, brevoConfigured }: AdminEmailPingButtonProps) {
   const [state, setState] = useState<"idle" | "sending" | "ok" | "fail">("idle");
   const [err, setErr] = useState("");
+  const [usedProvider, setUsedProvider] = useState<"smtp" | "brevo" | null>(null);
+
+  // Derive the expected provider label for display before sending
+  const providerLabel =
+    smtpConfigured && brevoConfigured
+      ? "SMTP → Brevo"
+      : smtpConfigured
+        ? "SMTP"
+        : brevoConfigured
+          ? "Brevo"
+          : null;
 
   async function ping() {
     setState("sending");
     setErr("");
+    setUsedProvider(null);
     try {
       const r = await fetch("/api/admin/email/ping", { method: "POST", credentials: "include" });
-      const data = (await r.json()) as { ok?: boolean; to?: string; error?: string; detail?: string };
+      const data = (await r.json()) as { ok?: boolean; to?: string; provider?: "smtp" | "brevo"; error?: string; detail?: string };
       if (r.ok && data.ok) {
+        setUsedProvider(data.provider ?? null);
         setState("ok");
-        setTimeout(() => setState("idle"), 6000);
+        setTimeout(() => setState("idle"), 8000);
       } else {
         setErr(data.detail ?? data.error ?? `HTTP ${r.status}`);
         setState("fail");
@@ -120,16 +149,18 @@ function AdminEmailPingButton({ adminEmail }: { adminEmail: string | null }) {
   if (!adminEmail) return (
     <p className="mt-2 text-xs text-muted-foreground flex items-center gap-1.5">
       <TestTube2 className="h-3.5 w-3.5" />
-      Set <code className="bg-muted px-1 rounded">ADMIN_EMAIL</code> in your <code className="bg-muted px-1 rounded">.env</code> to enable one-click ping.
+      Set <code className="bg-muted px-1 rounded">ADMIN_EMAIL</code> to enable one-click ping.
     </p>
   );
 
   return (
     <div className="mt-3 border-t border-border/40 pt-3 space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <p className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
           <TestTube2 className="h-3.5 w-3.5" />
           Ping <span className="font-mono font-medium text-foreground">{adminEmail}</span>
+          {providerLabel && state !== "ok" && <ProviderBadge label={`via ${providerLabel}`} />}
+          {state === "ok" && usedProvider && <ProviderBadge label={`via ${usedProvider.toUpperCase()}`} />}
         </p>
         <Button size="sm" variant="outline" onClick={ping} disabled={state === "sending"} className="gap-1.5 shrink-0 h-7 text-xs">
           {state === "sending" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
@@ -138,7 +169,8 @@ function AdminEmailPingButton({ adminEmail }: { adminEmail: string | null }) {
       </div>
       {state === "ok" && (
         <p className="flex items-center gap-1.5 text-xs text-emerald-600">
-          <CheckCircle2 className="h-3.5 w-3.5" /> Ping sent to {adminEmail} ✓
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          Ping sent to {adminEmail} via {usedProvider ? usedProvider.toUpperCase() : "email"} ✓
         </p>
       )}
       {state === "fail" && (
@@ -151,17 +183,33 @@ function AdminEmailPingButton({ adminEmail }: { adminEmail: string | null }) {
   );
 }
 
-// ── SMTP custom test email ────────────────────────────────────────────────────
+// ── Custom test email button ──────────────────────────────────────────────────
 
-function SmtpCustomTestButton({ smtpOk }: { smtpOk: boolean }) {
+interface EmailCustomTestButtonProps {
+  smtpConfigured: boolean;
+  brevoConfigured: boolean;
+}
+
+function EmailCustomTestButton({ smtpConfigured, brevoConfigured }: EmailCustomTestButtonProps) {
   const [to, setTo] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "ok" | "fail">("idle");
   const [err, setErr] = useState("");
+  const [usedProvider, setUsedProvider] = useState<string | null>(null);
+
+  const providerLabel =
+    smtpConfigured && brevoConfigured
+      ? "SMTP → Brevo"
+      : smtpConfigured
+        ? "SMTP"
+        : brevoConfigured
+          ? "Brevo"
+          : null;
 
   async function send() {
     if (!to.trim()) return;
     setState("sending");
     setErr("");
+    setUsedProvider(null);
     try {
       const r = await fetch("/api/email/test", {
         method: "POST",
@@ -169,8 +217,9 @@ function SmtpCustomTestButton({ smtpOk }: { smtpOk: boolean }) {
         credentials: "include",
         body: JSON.stringify({ to: to.trim() }),
       });
-      const data = (await r.json()) as { ok?: boolean; error?: string; detail?: string };
+      const data = (await r.json()) as { ok?: boolean; provider?: string; error?: string; detail?: string };
       if (r.ok && data.ok) {
+        setUsedProvider(data.provider ?? null);
         setState("ok");
         setTimeout(() => setState("idle"), 5000);
       } else {
@@ -185,8 +234,9 @@ function SmtpCustomTestButton({ smtpOk }: { smtpOk: boolean }) {
 
   return (
     <div className="space-y-2">
-      <p className="text-xs text-muted-foreground">
-        Or send to any address{!smtpOk && <span className="text-amber-500"> (will try Resend fallback)</span>}:
+      <p className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
+        Send to any address
+        {providerLabel && <ProviderBadge label={`via ${providerLabel}`} />}
       </p>
       <div className="flex gap-2">
         <input
@@ -204,7 +254,8 @@ function SmtpCustomTestButton({ smtpOk }: { smtpOk: boolean }) {
       </div>
       {state === "ok" && (
         <p className="flex items-center gap-1.5 text-xs text-emerald-600">
-          <CheckCircle2 className="h-3.5 w-3.5" /> Sent to {to}
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          Sent to {to} via {usedProvider ? usedProvider.toUpperCase() : "email"} ✓
         </p>
       )}
       {state === "fail" && (
@@ -290,7 +341,6 @@ function LocalStorageSyncButton() {
 // ── SMTP fix tips ─────────────────────────────────────────────────────────────
 
 function SmtpFixTips({ detail }: { detail: string }) {
-  const isGmail = detail.toLowerCase().includes("gmail");
   const isAuth = detail.toLowerCase().includes("auth") || detail.toLowerCase().includes("535") || detail.toLowerCase().includes("username") || detail.toLowerCase().includes("password");
   const isConnect = detail.toLowerCase().includes("connect") || detail.toLowerCase().includes("econnrefused") || detail.toLowerCase().includes("timeout");
 
@@ -307,7 +357,7 @@ function SmtpFixTips({ detail }: { detail: string }) {
       )}
       {isConnect && (
         <>
-          <p>• Many VPS providers (HostVds etc.) block ports 587 and 465. Set <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">SMTP_PORT=2525</code> — it's widely open and supported by SendGrid, Brevo, and Mailgun.</p>
+          <p>• Many VPS providers block ports 587 and 465. Set <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">SMTP_PORT=2525</code> — it's widely open and supported by Brevo, SendGrid, and Mailgun.</p>
           <p>• You can also set <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">SMTP_PORT_FALLBACK=2525</code> to keep your primary port and add 2525 as an automatic retry.</p>
           <p>• Or use <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">SMTP_PORT=465</code> (SSL) if port 465 is open on your VPS.</p>
         </>
@@ -322,10 +372,30 @@ function SmtpFixTips({ detail }: { detail: string }) {
 
 // ── Service card ──────────────────────────────────────────────────────────────
 
-function ServiceCard({ check, adminEmail }: { check: ServiceCheck; adminEmail: string | null }) {
+interface EmailContext {
+  smtpConfigured: boolean;
+  brevoConfigured: boolean;
+}
+
+function ServiceCard({
+  check,
+  adminEmail,
+  emailContext,
+}: {
+  check: ServiceCheck;
+  adminEmail: string | null;
+  emailContext: EmailContext;
+}) {
   const Icon = SERVICE_ICONS[check.key] ?? Wifi;
   const isSmtp = check.key === "smtp";
+  const isBrevo = check.key === "brevo";
   const isLocalStorage = check.key === "local-storage";
+
+  // Show email test tools once:
+  // - In the SMTP card if SMTP is configured
+  // - In the Brevo card only if SMTP is NOT configured (Brevo is the sole provider)
+  const showEmailTools = isSmtp || (isBrevo && !emailContext.smtpConfigured);
+
   const borderColor =
     check.status === "ok"
       ? "border-emerald-200 dark:border-emerald-800"
@@ -373,12 +443,21 @@ function ServiceCard({ check, adminEmail }: { check: ServiceCheck; adminEmail: s
       )}
 
       {isSmtp && check.status === "fail" && <SmtpFixTips detail={check.detail} />}
-      {isSmtp && (
+
+      {showEmailTools && (
         <div className="mt-3 border-t border-border/40 pt-3 space-y-3">
-          <AdminEmailPingButton adminEmail={adminEmail} />
-          <SmtpCustomTestButton smtpOk={check.status === "ok"} />
+          <AdminEmailPingButton
+            adminEmail={adminEmail}
+            smtpConfigured={emailContext.smtpConfigured}
+            brevoConfigured={emailContext.brevoConfigured}
+          />
+          <EmailCustomTestButton
+            smtpConfigured={emailContext.smtpConfigured}
+            brevoConfigured={emailContext.brevoConfigured}
+          />
         </div>
       )}
+
       {isLocalStorage && <LocalStorageSyncButton />}
     </div>
   );
@@ -569,29 +648,42 @@ export function AdminHealthWatch() {
       )}
 
       {/* Results */}
-      {report && (
-        <>
-          <SummaryBar report={report} />
-          {report.envInfo && <EnvInfoCard envInfo={report.envInfo} />}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {report.checks.map((check) => (
-              <ServiceCard key={check.key} check={check} adminEmail={report.adminEmail} />
-            ))}
-          </div>
-
-          {report.summary.fail > 0 && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800 p-4 text-sm text-amber-800 dark:text-amber-200 space-y-1.5">
-              <p className="font-semibold flex items-center gap-1.5">
-                <AlertTriangle className="h-4 w-4" />
-                {report.summary.fail} service{report.summary.fail !== 1 ? "s are" : " is"} failing
-              </p>
-              <p className="text-xs">
-                Check your <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">.env</code> file on the VPS and run <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">bash check-env.sh</code> to validate all variables. Restart the service after any change: <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">sudo systemctl restart allmart</code>
-              </p>
+      {report && (() => {
+        const smtpCheck = report.checks.find((c) => c.key === "smtp");
+        const brevoCheck = report.checks.find((c) => c.key === "brevo");
+        const emailContext: EmailContext = {
+          smtpConfigured: smtpCheck?.configured ?? false,
+          brevoConfigured: brevoCheck?.configured ?? false,
+        };
+        return (
+          <>
+            <SummaryBar report={report} />
+            {report.envInfo && <EnvInfoCard envInfo={report.envInfo} />}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {report.checks.map((check) => (
+                <ServiceCard
+                  key={check.key}
+                  check={check}
+                  adminEmail={report.adminEmail}
+                  emailContext={emailContext}
+                />
+              ))}
             </div>
-          )}
-        </>
-      )}
+
+            {report.summary.fail > 0 && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800 p-4 text-sm text-amber-800 dark:text-amber-200 space-y-1.5">
+                <p className="font-semibold flex items-center gap-1.5">
+                  <AlertTriangle className="h-4 w-4" />
+                  {report.summary.fail} service{report.summary.fail !== 1 ? "s are" : " is"} failing
+                </p>
+                <p className="text-xs">
+                  Check your <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">.env</code> file on the VPS and run <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">bash check-env.sh</code> to validate all variables. Restart the service after any change: <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">sudo systemctl restart allmart</code>
+                </p>
+              </div>
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 }

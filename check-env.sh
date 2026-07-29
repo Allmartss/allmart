@@ -160,7 +160,7 @@ check_optional SMTP_HOST "email sending will be disabled"
 check_optional SMTP_PORT
 check_optional SMTP_USER
 check_optional SMTP_PASSWORD
-check_optional RESEND_API_KEY "alternative to SMTP"
+check_optional BREVO_API_KEY "Brevo email API fallback (alternative to SMTP)"
 
 echo ""
 echo -e "  ${CYAN}AI features:${RESET}"

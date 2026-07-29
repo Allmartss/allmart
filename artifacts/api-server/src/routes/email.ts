@@ -1,5 +1,4 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { Resend } from "resend";
 import { BrevoClient } from "@getbrevo/brevo";
 import { logger } from "../lib/logger";
 import nodemailer from "nodemailer";
@@ -7,10 +6,9 @@ import nodemailer from "nodemailer";
 const router: IRouter = Router();
 
 const FROM =
-  process.env.RESEND_FROM ??
-  (process.env.SMTP_USER
+  process.env.SMTP_USER
     ? `AllMart <${process.env.SMTP_USER}>`
-    : "AllMart <onboarding@resend.dev>");
+    : "AllMart <noreply@allmart.com>";
 
 // ---------------------------------------------------------------------------
 // Brevo (Sendinblue) sender helper
@@ -36,7 +34,8 @@ async function sendViaBrevo(payload: { to: string[]; subject: string; html: stri
 }
 
 // ---------------------------------------------------------------------------
-// Unified email sender — tries Resend first, falls back to SMTP.
+// Unified email sender — tries SMTP first, falls back to Brevo.
+// Returns the name of the provider that was used.
 // ---------------------------------------------------------------------------
 
 interface EmailPayload {
@@ -46,11 +45,11 @@ interface EmailPayload {
   from?: string;
 }
 
-export async function sendEmail(payload: EmailPayload): Promise<void> {
+export async function sendEmail(payload: EmailPayload): Promise<"smtp" | "brevo"> {
   const { to, subject, html, from = FROM } = payload;
   const toArr = Array.isArray(to) ? to : [to];
 
-  // --- SMTP (primary) — try configured port, then 465 as fallback, then Resend ---
+  // --- SMTP (primary) — try configured port, then fallback ports ---
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD) {
     const configuredPort = Number(process.env.SMTP_PORT ?? "587");
     // SMTP_PORT_FALLBACK lets operators pin a secondary retry port (e.g. 2525)
@@ -79,40 +78,31 @@ export async function sendEmail(payload: EmailPayload): Promise<void> {
         break;
       } catch (smtpErr) {
         if (port !== portsToTry[portsToTry.length - 1]) {
-          logger.warn({ port, err: smtpErr }, `SMTP port ${port} failed, retrying on port 465`);
+          logger.warn({ port, err: smtpErr }, `SMTP port ${port} failed, retrying on port ${portsToTry[portsToTry.indexOf(port) + 1]}`);
         } else {
-          logger.warn({ err: smtpErr, to: toArr, subject }, "SMTP send failed on all ports — falling back to Resend");
+          logger.warn({ err: smtpErr, to: toArr, subject }, "SMTP send failed on all ports — falling back to Brevo");
         }
       }
     }
-    if (smtpSent) return;
+    if (smtpSent) return "smtp";
   }
 
-  // --- Brevo (Sendinblue) ---
+  // --- Brevo (Sendinblue) fallback ---
   if (process.env.BREVO_API_KEY) {
     try {
       await sendViaBrevo({ to: toArr, subject, html, from });
       logger.info({ to: toArr, subject }, "Email sent via Brevo");
-      return;
+      return "brevo";
     } catch (brevoErr) {
-      logger.warn({ err: brevoErr, to: toArr, subject }, "Brevo send failed — falling back to Resend");
+      logger.warn({ err: brevoErr, to: toArr, subject }, "Brevo send failed");
+      throw brevoErr;
     }
   }
 
-  // --- Resend fallback ---
-  if (process.env.RESEND_API_KEY) {
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    const { error } = await resend.emails.send({ from, to: toArr, subject, html });
-    if (error) throw new Error(`Resend error: ${error.message}`);
-    logger.info({ to: toArr, subject }, "Email sent via Resend");
-    return;
-  }
-
   // --- No transport configured ---
-  logger.warn(
-    { to: toArr, subject },
-    "Email skipped: set SMTP_HOST + SMTP_USER + SMTP_PASSWORD, BREVO_API_KEY, or RESEND_API_KEY to enable emails",
-  );
+  const err = "Email skipped: set SMTP_HOST + SMTP_USER + SMTP_PASSWORD or BREVO_API_KEY to enable emails";
+  logger.warn({ to: toArr, subject }, err);
+  throw new Error(err);
 }
 
 // ---------------------------------------------------------------------------
@@ -258,12 +248,12 @@ router.post("/email/test", async (req: Request, res: Response) => {
   const { to } = req.body as { to?: string };
   if (!to) { res.status(400).json({ error: "to required" }); return; }
   try {
-    await sendEmail({
+    const provider = await sendEmail({
       to,
       subject: "AllMart — Email test",
       html: "<div style='font-family:sans-serif;padding:24px'><h2 style='color:#1a56e8'>AllMart</h2><p>This is a test email. If you received this, emails are working correctly!</p></div>",
     });
-    res.json({ ok: true });
+    res.json({ ok: true, provider });
   } catch (err) {
     res.status(500).json({ error: "Email failed", detail: String(err) });
   }

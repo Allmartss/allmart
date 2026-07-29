@@ -185,28 +185,6 @@ async function checkBrevo(): Promise<ServiceCheck> {
   }
 }
 
-async function checkResend(): Promise<ServiceCheck> {
-  const base: Omit<ServiceCheck, "status" | "detail"> = {
-    service: "Resend (fallback email)",
-    key: "resend",
-    envVars: ["RESEND_API_KEY"],
-    configured: !!process.env.RESEND_API_KEY,
-  };
-  const key = process.env.RESEND_API_KEY;
-  if (!key) return { ...base, status: "skip", detail: "RESEND_API_KEY not set" };
-
-  try {
-    const r = await fetch("https://api.resend.com/domains", {
-      headers: { Authorization: `Bearer ${key}` },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (r.ok) return { ...base, status: "ok", detail: "API key valid" };
-    const data = (await r.json()) as { message?: string };
-    return { ...base, status: "fail", detail: data.message ?? `HTTP ${r.status}` };
-  } catch (err) {
-    return { ...base, status: "fail", detail: err instanceof Error ? err.message : String(err) };
-  }
-}
 
 async function checkS3(): Promise<ServiceCheck> {
   const base: Omit<ServiceCheck, "status" | "detail"> = {
@@ -449,11 +427,10 @@ router.get("/admin/health-watch", requireRole("admin"), async (req: Request, res
   const t0 = Date.now();
 
   try {
-    const [supabaseR, smtpR, brevoR, resendR, s3R, stripeR, telegramR, groqR, nvidiaR, storefrontR] = await Promise.allSettled([
+    const [supabaseR, smtpR, brevoR, s3R, stripeR, telegramR, groqR, nvidiaR, storefrontR] = await Promise.allSettled([
       checkSupabase(),
       checkSmtp(),
       checkBrevo(),
-      checkResend(),
       checkS3(),
       checkStripe(),
       checkTelegram(),
@@ -462,7 +439,7 @@ router.get("/admin/health-watch", requireRole("admin"), async (req: Request, res
       checkStorefront(),
     ]);
 
-    const settled = [supabaseR, smtpR, brevoR, resendR, s3R, stripeR, telegramR, groqR, nvidiaR, storefrontR];
+    const settled = [supabaseR, smtpR, brevoR, s3R, stripeR, telegramR, groqR, nvidiaR, storefrontR];
     const checks: ServiceCheck[] = [
       checkApiSelf(),
       checkEnvVars(),
@@ -510,7 +487,7 @@ router.post("/admin/email/ping", requireRole("admin"), async (req: Request, res:
     return;
   }
   try {
-    await sendEmail({
+    const provider = await sendEmail({
       to,
       subject: "AllMart — Admin email ping",
       html: `<div style="font-family:sans-serif;padding:24px;max-width:480px">
@@ -519,7 +496,7 @@ router.post("/admin/email/ping", requireRole("admin"), async (req: Request, res:
         <p style="color:#555;font-size:13px">Sent at: ${new Date().toISOString()}<br>Server: ${process.env.APP_URL ?? "unknown"}</p>
       </div>`,
     });
-    res.json({ ok: true, to });
+    res.json({ ok: true, to, provider });
   } catch (err) {
     res.status(500).json({ error: "Email failed", detail: err instanceof Error ? err.message : String(err) });
   }
