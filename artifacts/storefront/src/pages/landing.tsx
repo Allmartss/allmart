@@ -30,6 +30,73 @@ import { ProductCard } from "@/components/product-card";
 import { SaleCard } from "@/components/sale-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FeaturedCarousel } from "@/components/featured-carousel";
+import { CheckCircle2 } from "lucide-react";
+
+function SubscribeForm() {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+
+  async function handleSubscribe(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("loading");
+    setErrorMsg("");
+    try {
+      const res = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) {
+        const data = await res.json() as { error?: string };
+        setErrorMsg(data.error ?? "Something went wrong");
+        setStatus("error");
+      } else {
+        setStatus("success");
+        setEmail("");
+      }
+    } catch {
+      setErrorMsg("Network error. Please try again.");
+      setStatus("error");
+    }
+  }
+
+  return (
+    <div>
+      <h4 className="font-semibold text-sm mb-1.5">Stay Updated</h4>
+      <p className="text-sm text-white/60 mb-4">Subscribe to get updates on new products and special offers.</p>
+      {status === "success" ? (
+        <div className="flex items-center gap-2 rounded-lg bg-green-500/20 border border-green-400/30 px-4 py-3 text-sm text-green-300">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          <span>You're subscribed! We'll keep you posted.</span>
+        </div>
+      ) : (
+        <form onSubmit={handleSubscribe} className="space-y-2">
+          <input
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="Enter your email"
+            required
+            disabled={status === "loading"}
+            className="w-full rounded-lg bg-white/10 border border-white/15 px-4 py-2.5 text-sm text-white placeholder:text-white/40 outline-none focus:border-primary transition-colors disabled:opacity-50"
+          />
+          <button
+            type="submit"
+            disabled={status === "loading" || !email.trim()}
+            className="w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <Send className="h-3.5 w-3.5" />
+            {status === "loading" ? "Subscribing…" : "Subscribe"}
+          </button>
+          {status === "error" && (
+            <p className="text-xs text-red-400">{errorMsg}</p>
+          )}
+        </form>
+      )}
+    </div>
+  );
+}
 
 export default function Landing() {
   const [, setLocation] = useLocation();
@@ -327,20 +394,7 @@ export default function Landing() {
             </div>
 
             {/* Stay Updated */}
-            <div>
-              <h4 className="font-semibold text-sm mb-1.5">Stay Updated</h4>
-              <p className="text-sm text-white/60 mb-4">Subscribe to get updates on new products and special offers.</p>
-              <div className="space-y-2">
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  className="w-full rounded-lg bg-white/10 border border-white/15 px-4 py-2.5 text-sm text-white placeholder:text-white/40 outline-none focus:border-primary transition-colors"
-                />
-                <button className="w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
-                  <Send className="h-3.5 w-3.5" /> Subscribe
-                </button>
-              </div>
-            </div>
+            <SubscribeForm />
           </div>
 
           {/* Bottom bar */}

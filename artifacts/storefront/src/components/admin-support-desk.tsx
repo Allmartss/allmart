@@ -4,13 +4,73 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, Loader2, MessageSquare, CheckCircle2 } from "lucide-react";
+import { Mail, Loader2, MessageSquare, CheckCircle2, Users } from "lucide-react";
 
 type Ticket = {
   id: number; name: string; email: string; subject: string;
   message: string; status: string; adminReply: string | null;
   createdAt: string; repliedAt: string | null;
 };
+
+type Subscriber = {
+  id: number; email: string; subscribedAt: string; active: boolean;
+};
+
+function SubscribersTable() {
+  const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/admin/subscribers", { credentials: "include" })
+      .then(r => r.json())
+      .then(d => { setSubscribers(d as Subscriber[]); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="text-sm text-muted-foreground p-2">Loading subscribers…</div>;
+
+  return (
+    <div className="mt-10">
+      <div className="flex items-center gap-2 mb-4">
+        <Users className="h-4 w-4 text-primary" />
+        <h3 className="font-semibold text-sm">Newsletter subscribers</h3>
+        <span className="text-xs text-muted-foreground">({subscribers.length})</span>
+      </div>
+      {subscribers.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-8">No subscribers yet</p>
+      ) : (
+        <div className="rounded-lg border border-border/50 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border/50 bg-muted/30">
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">#</th>
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">Email</th>
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">Subscribed</th>
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {subscribers.map((s, i) => (
+                <tr key={s.id} className="border-b border-border/30 last:border-0 hover:bg-muted/20 transition-colors">
+                  <td className="px-4 py-2.5 text-muted-foreground">{i + 1}</td>
+                  <td className="px-4 py-2.5">
+                    <a href={`mailto:${s.email}`} className="text-primary hover:underline">{s.email}</a>
+                  </td>
+                  <td className="px-4 py-2.5 text-muted-foreground">{new Date(s.subscribedAt).toLocaleDateString()}</td>
+                  <td className="px-4 py-2.5">
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${s.active ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"}`}>
+                      {s.active ? "active" : "inactive"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function AdminSupportDesk() {
   const { toast } = useToast();
@@ -64,6 +124,7 @@ export function AdminSupportDesk() {
   if (loading) return <div className="text-sm text-muted-foreground p-4">Loading tickets…</div>;
 
   return (
+    <>
     <div className="grid lg:grid-cols-[280px_1fr] gap-6 min-h-[500px]">
       <div className="space-y-2 overflow-y-auto max-h-[600px]">
         {tickets.length === 0 && (
@@ -118,5 +179,7 @@ export function AdminSupportDesk() {
         )}
       </div>
     </div>
+    <SubscribersTable />
+  </>
   );
 }

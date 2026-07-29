@@ -27,6 +27,7 @@ import referralRouter from "./referral";
 import adminReferralsRouter from "./admin-referrals";
 import flashSaleRouter from "./flash-sale";
 import adminHealthRouter from "./admin-health";
+import subscriptionsRouter from "./subscriptions";
 
 const router: IRouter = Router();
 
@@ -58,5 +59,6 @@ router.use(referralRouter);
 router.use(adminReferralsRouter);
 router.use(flashSaleRouter);
 router.use(adminHealthRouter);
+router.use(subscriptionsRouter);
 
 export default router;

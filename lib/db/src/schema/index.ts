@@ -12,3 +12,4 @@ export * from "./cashback";
 export * from "./landing-pages";
 export * from "./visitors";
 export * from "./admin-bonus-gifts";
+export * from "./email-subscriptions";
