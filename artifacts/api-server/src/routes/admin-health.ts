@@ -338,6 +338,74 @@ async function checkNvidia(): Promise<ServiceCheck> {
   }
 }
 
+function checkEnvVars(): ServiceCheck {
+  const issues: string[] = [];
+  const warnings: string[] = [];
+  const configured: string[] = [];
+
+  // ── Required ──────────────────────────────────────────────────────────────
+  const dbUrl = process.env.SUPABASE_DB_URL ?? process.env.DATABASE_URL;
+  if (!dbUrl) {
+    issues.push("DATABASE_URL / SUPABASE_DB_URL missing");
+  } else if (!/^postgres(ql)?:\/\//.test(dbUrl)) {
+    issues.push("DATABASE_URL has unexpected format (expected postgres://...)");
+  } else {
+    configured.push("DB");
+  }
+
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) {
+    issues.push("SESSION_SECRET missing");
+  } else if (secret.length < 32) {
+    issues.push(`SESSION_SECRET too short (${secret.length} chars, need 32+)`);
+  } else {
+    configured.push("SESSION_SECRET");
+  }
+
+  // ── Optional groups ───────────────────────────────────────────────────────
+  const groups: Array<{ label: string; vars: string[] }> = [
+    { label: "S3", vars: ["FILE_ACCESS_KEY_ID", "FILE_SECRET_ACCESS_KEY", "FILE_ENDPOINT_URL", "FILE_REGION", "FILE_BUCKET"] },
+    { label: "Stripe", vars: ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"] },
+    { label: "Telegram", vars: ["TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "TELEGRAM_WEBHOOK_SECRET"] },
+    { label: "SMTP", vars: ["SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD"] },
+    { label: "Brevo", vars: ["BREVO_API_KEY"] },
+    { label: "Resend", vars: ["RESEND_API_KEY"] },
+    { label: "Groq", vars: ["GROQ_API_KEY"] },
+    { label: "NVIDIA", vars: ["NVIDIA_API_KEY"] },
+    { label: "APP_URL", vars: ["APP_URL"] },
+  ];
+
+  for (const g of groups) {
+    const allSet = g.vars.every((v) => !!process.env[v]);
+    const anySet = g.vars.some((v) => !!process.env[v]);
+    if (allSet) configured.push(g.label);
+    else if (anySet) warnings.push(`${g.label} partial`);
+  }
+
+  // ── Stripe key mode ───────────────────────────────────────────────────────
+  const stripeKey = process.env.STRIPE_SECRET_KEY;
+  if (stripeKey?.startsWith("sk_live_")) {
+    warnings.push("STRIPE live key active — real charges");
+  }
+
+  const status: "ok" | "fail" | "skip" =
+    issues.length > 0 ? "fail" : "ok";
+
+  const parts: string[] = [];
+  if (configured.length) parts.push(`configured: ${configured.join(", ")}`);
+  if (warnings.length) parts.push(`⚠ ${warnings.join("; ")}`);
+  if (issues.length) parts.push(`✗ ${issues.join("; ")}`);
+
+  return {
+    service: "Environment variables",
+    key: "env-vars",
+    status,
+    detail: parts.join(" · ") || "all required vars present",
+    envVars: ["DATABASE_URL", "SUPABASE_DB_URL", "SESSION_SECRET"],
+    configured: true,
+  };
+}
+
 function checkLocalStorage(): ServiceCheck {
   let fileCount = 0;
   let totalBytes = 0;
@@ -396,6 +464,7 @@ router.get("/admin/health-watch", requireRole("admin"), async (req: Request, res
     const settled = [supabaseR, smtpR, brevoR, resendR, s3R, stripeR, telegramR, groqR, nvidiaR, storefrontR];
     const checks: ServiceCheck[] = [
       checkApiSelf(),
+      checkEnvVars(),
       ...settled.map((r) =>
         r.status === "fulfilled"
           ? r.value

@@ -140,10 +140,13 @@ async function checkSmtp() {
   }
 
   const configuredPort = Number(env("SMTP_PORT") ?? "587");
-  // Try the configured port first; if it fails (often blocked on VPS), also try 465
-  const portsToTry = configuredPort === 465
-    ? [465]
-    : [configuredPort, ...(configuredPort !== 465 ? [465] : [])];
+  // Many VPS providers (e.g. HostVds) block 587 and 465. Include 2525 which
+  // SendGrid/Mailgun keep open and most VPS firewalls leave unblocked.
+  // If SMTP_PORT is explicitly set, respect it and don't add extras.
+  const pinnedByUser = !!env("SMTP_PORT");
+  const portsToTry: number[] = pinnedByUser
+    ? [configuredPort]
+    : [...new Set([configuredPort, 2525, 465])];
 
   let lastErr: unknown;
   for (const port of portsToTry) {
@@ -166,18 +169,17 @@ async function checkSmtp() {
     } catch (e) {
       lastErr = e;
       if (port !== portsToTry[portsToTry.length - 1]!) {
-        console.log(`         ${c.dim}port ${port} unreachable — retrying on port 465 (SSL)…${c.reset}`);
+        console.log(`         ${c.dim}port ${port} unreachable — trying next port…${c.reset}`);
       }
     }
   }
 
   fail(`SMTP  (tried ports: ${portsToTry.join(", ")})`, lastErr);
   console.log(`\n         ${c.yellow}Troubleshooting hints:`);
+  console.log(`           • VPS (HostVds etc.): set SMTP_PORT=2525 — widely unblocked.`);
   console.log(`           • Gmail: use an App Password, not your login password.`);
   console.log(`             Create one at  https://myaccount.google.com/apppasswords`);
-  console.log(`           • VPS: most providers block outbound port 587 by default.`);
-  console.log(`             Try  SMTP_PORT=465  (SSL) or open port 587 in your firewall.`);
-  console.log(`           • Alternative: use Resend (RESEND_API_KEY) — no port issues.${c.reset}\n`);
+  console.log(`           • Alternative: use Brevo (BREVO_API_KEY) or Resend (RESEND_API_KEY).${c.reset}\n`);
 }
 
 async function checkStripe() {
@@ -303,6 +305,127 @@ async function checkGitHub() {
   }
 }
 
+async function checkBrevo() {
+  section("Brevo (Sendinblue) API");
+  const key = env("BREVO_API_KEY");
+  if (!key) {
+    skip("GET account", "BREVO_API_KEY not set");
+    return;
+  }
+  try {
+    const r = await fetch("https://api.brevo.com/v3/account", {
+      headers: { "api-key": key },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (r.ok) {
+      const data = (await r.json()) as { email?: string; plan?: { type?: string }[] };
+      const plan = data.plan?.[0]?.type ?? "unknown";
+      ok("GET /v3/account", `${data.email ?? ""} · plan: ${plan}`);
+    } else {
+      const body = (await r.json()) as { message?: string };
+      fail("GET /v3/account", body.message ?? `HTTP ${r.status}`);
+    }
+  } catch (e) {
+    fail("GET /v3/account", e);
+  }
+}
+
+// ── Environment variable checks (mirrors check-env.sh) ───────────────────────
+
+function checkEnvVars() {
+  section("Environment variables  (check-env.sh parity)");
+
+  // ── Required ──────────────────────────────────────────────────────────────
+  const dbUrl = env("SUPABASE_DB_URL") ?? env("DATABASE_URL");
+  if (!dbUrl) {
+    fail("DATABASE_URL / SUPABASE_DB_URL", "missing — database will not connect");
+  } else {
+    const masked = dbUrl.slice(0, 20) + "***";
+    if (/^postgres(ql)?:\/\//.test(dbUrl)) {
+      ok("DATABASE_URL / SUPABASE_DB_URL", masked);
+    } else {
+      fail("DATABASE_URL / SUPABASE_DB_URL", `unexpected format (got: ${masked}) — expected postgres://...`);
+    }
+  }
+
+  const sessionSecret = env("SESSION_SECRET");
+  if (!sessionSecret) {
+    fail("SESSION_SECRET", "missing — sessions will not work");
+  } else if (sessionSecret.length < 32) {
+    fail("SESSION_SECRET", `only ${sessionSecret.length} chars — minimum 32 required for security`);
+  } else {
+    ok("SESSION_SECRET", `${sessionSecret.length} chars ✓`);
+  }
+
+  // ── Optional groups ───────────────────────────────────────────────────────
+  const optionalGroups: Array<{ label: string; vars: string[]; hint?: string }> = [
+    {
+      label: "File storage (S3)",
+      vars: ["FILE_ENDPOINT_URL", "FILE_BUCKET", "FILE_ACCESS_KEY_ID", "FILE_SECRET_ACCESS_KEY", "FILE_REGION"],
+      hint: "images stored locally only",
+    },
+    {
+      label: "Stripe payments",
+      vars: ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"],
+      hint: "checkout disabled",
+    },
+    {
+      label: "Telegram bot",
+      vars: ["TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "TELEGRAM_WEBHOOK_SECRET"],
+      hint: "notifications disabled",
+    },
+    {
+      label: "SMTP email",
+      vars: ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASSWORD"],
+      hint: "email disabled",
+    },
+    {
+      label: "Brevo email",
+      vars: ["BREVO_API_KEY"],
+      hint: "Brevo disabled",
+    },
+    {
+      label: "Resend email",
+      vars: ["RESEND_API_KEY"],
+      hint: "Resend disabled",
+    },
+    {
+      label: "AI features",
+      vars: ["GROQ_API_KEY", "NVIDIA_API_KEY"],
+      hint: "AI assistant disabled",
+    },
+    {
+      label: "Server config",
+      vars: ["APP_URL", "PORT_API", "NODE_ENV"],
+    },
+  ];
+
+  for (const group of optionalGroups) {
+    const set = group.vars.filter((v) => !!env(v));
+    const missing = group.vars.filter((v) => !env(v));
+    if (set.length === 0) {
+      const tag = `${c.yellow}${c.bold} – SKIP${c.reset}`;
+      console.log(`  ${tag}  ${group.label}  ${c.dim}(none set${group.hint ? ` — ${group.hint}` : ""})${c.reset}`);
+    } else if (missing.length > 0) {
+      ok(`${group.label}`, `partial — missing: ${missing.join(", ")}`);
+    } else {
+      ok(`${group.label}`, `all ${group.vars.length} vars set`);
+    }
+  }
+
+  // ── Stripe key mode ───────────────────────────────────────────────────────
+  const stripeKey = env("STRIPE_SECRET_KEY");
+  if (stripeKey) {
+    if (stripeKey.startsWith("sk_live_")) {
+      console.log(`         ${c.yellow}⚠  STRIPE_SECRET_KEY is a LIVE key — real charges will occur.${c.reset}`);
+    } else if (stripeKey.startsWith("sk_test_")) {
+      console.log(`         ${c.dim}ℹ  STRIPE_SECRET_KEY is a TEST key — safe for development.${c.reset}`);
+    } else {
+      console.log(`         ${c.yellow}⚠  STRIPE_SECRET_KEY has an unexpected prefix.${c.reset}`);
+    }
+  }
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -310,11 +433,15 @@ async function main() {
     `\n${c.bold}AllMart — service ping suite${c.reset}  ${c.dim}${new Date().toISOString()}${c.reset}`,
   );
 
+  // Environment variable audit first — surfaces missing config before network checks
+  checkEnvVars();
+
   await checkApiHealth();
   await checkStorefront();
   await checkDatabase();
   await checkS3();
   await checkSmtp();
+  await checkBrevo();
   await checkStripe();
   await checkTelegram();
   await checkGroq();
