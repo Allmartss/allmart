@@ -164,10 +164,15 @@ export async function sendPlacedEmailAndNotification(
 }
 
 router.get("/orders", async (req: Request, res: Response) => {
+  const user = await getUserFromCookie(req);
   const rows = await db
     .select()
     .from(ordersTable)
-    .where(eq(ordersTable.sessionId, req.sessionId))
+    .where(
+      user
+        ? eq(ordersTable.userId, user.id)
+        : eq(ordersTable.sessionId, req.sessionId)
+    )
     .orderBy(desc(ordersTable.createdAt));
   res.json(rows.map(serializeOrder));
 });
