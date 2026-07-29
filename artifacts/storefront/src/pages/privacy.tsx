@@ -3,8 +3,8 @@ import { ArrowLeft, Lock } from "lucide-react";
 
 const LAST_UPDATED = "July 1, 2025";
 const COMPANY = "AllMart Inc.";
-const EMAIL = "support@allmart.com";
-const SITE = "allmart.com";
+const EMAIL = "help@allmarts.us";
+const SITE = "allmarts.us";
 
 export default function Privacy() {
   return (

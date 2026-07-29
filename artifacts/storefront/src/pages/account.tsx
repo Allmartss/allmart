@@ -533,7 +533,7 @@ export default function Account() {
         {/* Terms */}
         <p style={{ textAlign: "center", fontSize: 11, color: TEXT_MUTED, marginTop: 16 }}>
           By continuing you agree to AllMart's{" "}
-          <Link href="/" style={{ color: PURPLE, textDecoration: "underline" }}>terms</Link>.
+          <Link href="/terms" style={{ color: PURPLE, textDecoration: "underline" }}>terms</Link>.
         </p>
       </div>
     </div>

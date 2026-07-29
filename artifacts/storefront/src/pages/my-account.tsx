@@ -257,7 +257,7 @@ export default function MyAccount() {
             icon={ShieldCheck}
             label="Privacy &amp; Terms"
             sub="How we use your data"
-            href="/support"
+            href="/terms"
           />
         </MenuGroup>
 

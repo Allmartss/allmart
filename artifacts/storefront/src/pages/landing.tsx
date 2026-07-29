@@ -268,7 +268,7 @@ export default function Landing() {
               </p>
               <Link href="/account">
                 <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline cursor-pointer">
-                  Meet the Founder <ArrowRight className="h-3.5 w-3.5" />
+                  Follow Us<ArrowRight className="h-3.5 w-3.5" />
                 </span>
               </Link>
               {/* Social icons */}
@@ -355,8 +355,8 @@ export default function Landing() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2 mt-4">
             <p className="text-xs text-white/30">© 2026 AllMart. All rights reserved.</p>
             <div className="flex items-center gap-4">
-              <Link href="/account"><span className="text-xs text-white/40 hover:text-white/70 cursor-pointer transition-colors">Privacy Policy</span></Link>
-              <Link href="/account"><span className="text-xs text-white/40 hover:text-white/70 cursor-pointer transition-colors">Terms</span></Link>
+              <Link href="/privacy"><span className="text-xs text-white/40 hover:text-white/70 cursor-pointer transition-colors">Privacy Policy</span></Link>
+              <Link href="/terms"><span className="text-xs text-white/40 hover:text-white/70 cursor-pointer transition-colors">Terms</span></Link>
             </div>
           </div>
         </div>
