@@ -76,11 +76,11 @@ router.post("/admin/grant-bonus", requireRole("admin"), async (req: Request, res
   }
   const [updated] = await db
     .update(usersTable)
-    .set({ bonusBalance: sql`${usersTable.bonusBalance} + ${amount}` })
+    .set({ pendingAdminBonus: sql`${usersTable.pendingAdminBonus} + ${amount}` })
     .where(eq(usersTable.id, userId))
-    .returning({ id: usersTable.id, name: usersTable.name, bonusBalance: usersTable.bonusBalance });
+    .returning({ id: usersTable.id, name: usersTable.name, bonusBalance: usersTable.bonusBalance, pendingAdminBonus: usersTable.pendingAdminBonus });
   if (!updated) { res.status(404).json({ error: "User not found" }); return; }
-  res.json({ ok: true, userId: updated.id, name: updated.name, newBalance: updated.bonusBalance, granted: amount, reason: reason ?? null });
+  res.json({ ok: true, userId: updated.id, name: updated.name, newBalance: updated.bonusBalance, pendingAdminBonus: updated.pendingAdminBonus, granted: amount, reason: reason ?? null });
 });
 
 export default router;

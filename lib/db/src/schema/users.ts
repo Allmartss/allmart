@@ -17,6 +17,7 @@ export const usersTable = pgTable("users", {
   emailVerificationExpiry: timestamp("email_verification_expiry", { withTimezone: true }),
   referralCode: text("referral_code").unique(),
   bonusBalance: real("bonus_balance").notNull().default(0),
+  pendingAdminBonus: real("pending_admin_bonus").notNull().default(0),
   banned: boolean("banned").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()

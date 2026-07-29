@@ -55,6 +55,7 @@ router.get("/referral", async (req: Request, res: Response) => {
     referralCode: user.referralCode,
     referralLink: user.referralCode ? `${origin}/signup?ref=${user.referralCode}` : null,
     bonusBalance: user.bonusBalance,
+    pendingAdminBonus: user.pendingAdminBonus,
     totalReferrals: referrals.length,
     totalEarned,
     unclaimedTotal,
@@ -93,6 +94,27 @@ router.post("/referral/claim", async (req: Request, res: Response) => {
   const [updated] = await db.update(usersTable).set({ bonusBalance: newBalance }).where(eq(usersTable.id, user.id)).returning();
 
   res.json({ bonusBalance: updated!.bonusBalance, claimed: total });
+});
+
+router.post("/bonus/claim-admin", async (req: Request, res: Response) => {
+  const user = await getUserFromCookie(req);
+  if (!user) { res.status(401).json({ error: "Sign in required" }); return; }
+
+  if (!user.pendingAdminBonus || user.pendingAdminBonus <= 0) {
+    res.json({ bonusBalance: user.bonusBalance, claimed: 0 });
+    return;
+  }
+
+  const claimed = user.pendingAdminBonus;
+  const newBalance = Math.round((user.bonusBalance + claimed) * 100) / 100;
+
+  const [updated] = await db
+    .update(usersTable)
+    .set({ bonusBalance: newBalance, pendingAdminBonus: 0 })
+    .where(eq(usersTable.id, user.id))
+    .returning();
+
+  res.json({ bonusBalance: updated!.bonusBalance, claimed });
 });
 
 router.get("/bonus/validate", async (req: Request, res: Response) => {

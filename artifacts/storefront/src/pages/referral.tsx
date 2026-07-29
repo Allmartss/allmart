@@ -5,12 +5,13 @@ import { useGetCurrentUser, getGetCurrentUserQueryKey } from "@workspace/api-cli
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, Users, DollarSign, Link2, Gift, Loader2, CheckCircle2, Share2 } from "lucide-react";
+import { Copy, Users, DollarSign, Link2, Gift, Loader2, CheckCircle2, Share2, Sparkles } from "lucide-react";
 
 type ReferralData = {
   referralCode: string | null;
   referralLink: string | null;
   bonusBalance: number;
+  pendingAdminBonus: number;
   totalReferrals: number;
   totalEarned: number;
   unclaimedTotal: number;
@@ -36,6 +37,7 @@ export default function Referral() {
   });
 
   const [claiming, setClaiming] = useState(false);
+  const [claimingAdmin, setClaimingAdmin] = useState(false);
   const [copied, setCopied] = useState(false);
 
   if (!me) { setLocation("/account"); return null; }
@@ -59,6 +61,25 @@ export default function Referral() {
       }).catch(() => {});
     } else {
       copyLink();
+    }
+  }
+
+  async function claimAdminBonus() {
+    setClaimingAdmin(true);
+    try {
+      const res = await fetch("/api/bonus/claim-admin", { method: "POST", credentials: "include" });
+      const d = await res.json() as { bonusBalance: number; claimed: number };
+      if (!res.ok) throw new Error("Claim failed");
+      await refetch();
+      await queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
+      toast({
+        title: `$${d.claimed.toFixed(2)} bonus claimed!`,
+        description: `Your bonus balance is now $${d.bonusBalance.toFixed(2)}.`,
+      });
+    } catch {
+      toast({ title: "Failed to claim", variant: "destructive" });
+    } finally {
+      setClaimingAdmin(false);
     }
   }
 
@@ -145,6 +166,31 @@ export default function Referral() {
           <p className="text-sm text-muted-foreground">No referral code yet — sign out and back in to generate one.</p>
         )}
       </Card>
+
+      {/* Admin-gifted pending bonus */}
+      {(data?.pendingAdminBonus ?? 0) > 0 && (
+        <Card className="p-6 border-amber-200 bg-amber-50/50 shadow-sm space-y-4">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-amber-500" />
+            <h2 className="font-semibold text-amber-800">You have a bonus gift!</h2>
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-3xl font-bold text-amber-600">{fmt(data.pendingAdminBonus)}</div>
+              <p className="text-xs text-amber-700/70 mt-1">Gifted to you by the store — claim it to add to your balance</p>
+            </div>
+          </div>
+          <Button
+            onClick={claimAdminBonus}
+            disabled={claimingAdmin}
+            className="w-full gap-2 bg-amber-500 hover:bg-amber-600 text-white border-0"
+          >
+            {claimingAdmin
+              ? <><Loader2 className="h-4 w-4 animate-spin" /> Claiming…</>
+              : <><Sparkles className="h-4 w-4" /> Claim {fmt(data.pendingAdminBonus)} gift</>}
+          </Button>
+        </Card>
+      )}
 
       {/* Bonus balance + claim */}
       <Card className="p-6 border-border/50 shadow-sm space-y-4">
