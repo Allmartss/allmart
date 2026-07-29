@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { db, usersTable, referralsTable, settingsTable } from "@workspace/db";
-import { eq, and, sum } from "drizzle-orm";
+import { db, usersTable, referralsTable, settingsTable, adminBonusGiftsTable } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
 import { getUserFromCookie } from "../lib/auth";
 
 const router: IRouter = Router();
@@ -51,11 +51,15 @@ router.get("/referral", async (req: Request, res: Response) => {
 
   const origin = req.headers.origin ?? `https://${req.headers.host}`;
 
+  const adminGifts = await db
+    .select()
+    .from(adminBonusGiftsTable)
+    .where(eq(adminBonusGiftsTable.userId, user.id));
+
   res.json({
     referralCode: user.referralCode,
     referralLink: user.referralCode ? `${origin}/signup?ref=${user.referralCode}` : null,
     bonusBalance: user.bonusBalance,
-    pendingAdminBonus: user.pendingAdminBonus,
     totalReferrals: referrals.length,
     totalEarned,
     unclaimedTotal,
@@ -66,6 +70,13 @@ router.get("/referral", async (req: Request, res: Response) => {
       joinedAt: referredMap.get(r.referredId)?.createdAt?.toISOString() ?? r.createdAt.toISOString(),
       referrerBonus: r.referrerBonus,
       claimed: r.referrerClaimed,
+    })),
+    adminGifts: adminGifts.map(g => ({
+      id: g.id,
+      amount: g.amount,
+      reason: g.reason,
+      claimed: g.claimed,
+      createdAt: g.createdAt.toISOString(),
     })),
   });
 });
@@ -96,25 +107,31 @@ router.post("/referral/claim", async (req: Request, res: Response) => {
   res.json({ bonusBalance: updated!.bonusBalance, claimed: total });
 });
 
-router.post("/bonus/claim-admin", async (req: Request, res: Response) => {
+router.post("/bonus/claim-admin/:giftId", async (req: Request, res: Response) => {
   const user = await getUserFromCookie(req);
   if (!user) { res.status(401).json({ error: "Sign in required" }); return; }
 
-  if (!user.pendingAdminBonus || user.pendingAdminBonus <= 0) {
-    res.json({ bonusBalance: user.bonusBalance, claimed: 0 });
-    return;
-  }
+  const giftId = Number(req.params.giftId);
+  if (!Number.isFinite(giftId)) { res.status(400).json({ error: "Invalid gift ID" }); return; }
 
-  const claimed = user.pendingAdminBonus;
-  const newBalance = Math.round((user.bonusBalance + claimed) * 100) / 100;
+  const [gift] = await db
+    .select()
+    .from(adminBonusGiftsTable)
+    .where(and(eq(adminBonusGiftsTable.id, giftId), eq(adminBonusGiftsTable.userId, user.id)));
 
+  if (!gift) { res.status(404).json({ error: "Gift not found" }); return; }
+  if (gift.claimed) { res.status(400).json({ error: "Already claimed" }); return; }
+
+  await db.update(adminBonusGiftsTable).set({ claimed: true }).where(eq(adminBonusGiftsTable.id, giftId));
+
+  const newBalance = Math.round((user.bonusBalance + gift.amount) * 100) / 100;
   const [updated] = await db
     .update(usersTable)
-    .set({ bonusBalance: newBalance, pendingAdminBonus: 0 })
+    .set({ bonusBalance: newBalance })
     .where(eq(usersTable.id, user.id))
     .returning();
 
-  res.json({ bonusBalance: updated!.bonusBalance, claimed });
+  res.json({ bonusBalance: updated!.bonusBalance, claimed: gift.amount });
 });
 
 router.get("/bonus/validate", async (req: Request, res: Response) => {

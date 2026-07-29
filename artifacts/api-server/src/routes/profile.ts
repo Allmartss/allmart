@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { db, usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, usersTable, ordersTable, adminBonusGiftsTable } from "@workspace/db";
+import { eq, sum } from "drizzle-orm";
 import { getUserFromCookie } from "../lib/auth";
 
 const router: IRouter = Router();
@@ -21,6 +21,27 @@ function publicProfile(u: typeof usersTable.$inferSelect) {
     bonusBalance: u.bonusBalance,
   };
 }
+
+router.get("/me/stats", async (req: Request, res: Response) => {
+  const user = await getUserFromCookie(req);
+  if (!user) { res.status(401).json({ error: "Sign in required" }); return; }
+
+  const [spendRow] = await db
+    .select({ total: sum(ordersTable.total) })
+    .from(ordersTable)
+    .where(eq(ordersTable.userId, user.id));
+
+  const [pendingRow] = await db
+    .select({ total: sum(adminBonusGiftsTable.amount) })
+    .from(adminBonusGiftsTable)
+    .where(eq(adminBonusGiftsTable.userId, user.id));
+
+  res.json({
+    totalSpend: Math.round(Number(spendRow?.total ?? 0) * 100) / 100,
+    bonusBalance: user.bonusBalance,
+    pendingAdminBonus: Math.round(Number(pendingRow?.total ?? 0) * 100) / 100,
+  });
+});
 
 router.get("/profile", async (req: Request, res: Response) => {
   const user = await getUserFromCookie(req);

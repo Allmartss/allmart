@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { db, referralsTable, usersTable, settingsTable } from "@workspace/db";
+import { db, referralsTable, usersTable, settingsTable, adminBonusGiftsTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { requireRole } from "../lib/auth";
 
@@ -74,13 +74,10 @@ router.post("/admin/grant-bonus", requireRole("admin"), async (req: Request, res
   if (!amount || !Number.isFinite(amount) || amount <= 0) {
     res.status(400).json({ error: "amount must be a positive number" }); return;
   }
-  const [updated] = await db
-    .update(usersTable)
-    .set({ pendingAdminBonus: sql`${usersTable.pendingAdminBonus} + ${amount}` })
-    .where(eq(usersTable.id, userId))
-    .returning({ id: usersTable.id, name: usersTable.name, bonusBalance: usersTable.bonusBalance, pendingAdminBonus: usersTable.pendingAdminBonus });
-  if (!updated) { res.status(404).json({ error: "User not found" }); return; }
-  res.json({ ok: true, userId: updated.id, name: updated.name, newBalance: updated.bonusBalance, pendingAdminBonus: updated.pendingAdminBonus, granted: amount, reason: reason ?? null });
+  const [user] = await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable).where(eq(usersTable.id, userId));
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+  const [gift] = await db.insert(adminBonusGiftsTable).values({ userId, amount, reason: reason ?? null }).returning();
+  res.json({ ok: true, userId: user.id, name: user.name, giftId: gift!.id, granted: amount, reason: reason ?? null });
 });
 
 export default router;

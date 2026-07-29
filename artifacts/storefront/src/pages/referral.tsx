@@ -7,16 +7,18 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Copy, Users, DollarSign, Link2, Gift, Loader2, CheckCircle2, Share2, Sparkles } from "lucide-react";
 
+type AdminGift = { id: number; amount: number; reason: string | null; claimed: boolean; createdAt: string };
+
 type ReferralData = {
   referralCode: string | null;
   referralLink: string | null;
   bonusBalance: number;
-  pendingAdminBonus: number;
   totalReferrals: number;
   totalEarned: number;
   unclaimedTotal: number;
   note: string;
   referrals: { id: number; name: string; joinedAt: string; referrerBonus: number; claimed: boolean }[];
+  adminGifts: AdminGift[];
 };
 
 function fetchReferralData(): Promise<ReferralData> {
@@ -37,7 +39,7 @@ export default function Referral() {
   });
 
   const [claiming, setClaiming] = useState(false);
-  const [claimingAdmin, setClaimingAdmin] = useState(false);
+  const [claimingGift, setClaimingGift] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
 
   if (!me) { setLocation("/account"); return null; }
@@ -64,22 +66,22 @@ export default function Referral() {
     }
   }
 
-  async function claimAdminBonus() {
-    setClaimingAdmin(true);
+  async function claimGift(giftId: number) {
+    setClaimingGift(giftId);
     try {
-      const res = await fetch("/api/bonus/claim-admin", { method: "POST", credentials: "include" });
+      const res = await fetch(`/api/bonus/claim-admin/${giftId}`, { method: "POST", credentials: "include" });
       const d = await res.json() as { bonusBalance: number; claimed: number };
       if (!res.ok) throw new Error("Claim failed");
       await refetch();
       await queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
       toast({
-        title: `$${d.claimed.toFixed(2)} bonus claimed!`,
+        title: `$${d.claimed.toFixed(2)} gift claimed!`,
         description: `Your bonus balance is now $${d.bonusBalance.toFixed(2)}.`,
       });
     } catch {
       toast({ title: "Failed to claim", variant: "destructive" });
     } finally {
-      setClaimingAdmin(false);
+      setClaimingGift(null);
     }
   }
 
@@ -103,6 +105,7 @@ export default function Referral() {
   }
 
   const fmt = (n: number) => `$${n.toFixed(2)}`;
+  const unclaimedGifts = (data?.adminGifts ?? []).filter(g => !g.claimed);
 
   return (
     <div className="container max-w-2xl mx-auto py-12 px-6 space-y-6">
@@ -167,7 +170,7 @@ export default function Referral() {
         )}
       </Card>
 
-      {/* Bonus balance + claim */}
+      {/* Bonus balance card */}
       <Card className="p-6 border-border/50 shadow-sm space-y-4">
         <div className="flex items-center gap-2">
           <Gift className="h-4 w-4 text-violet-500" />
@@ -184,38 +187,50 @@ export default function Referral() {
           </div>
         </div>
 
-        {/* Admin-gifted pending bonus claim */}
-        {(data?.pendingAdminBonus ?? 0) > 0 && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50/60 px-4 py-3 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-amber-500" />
-                <span className="text-sm font-medium text-amber-800">Store gift</span>
+        {/* Admin-gifted bonuses — one Claim button per gift */}
+        {unclaimedGifts.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Store gifts</p>
+            {unclaimedGifts.map(gift => (
+              <div
+                key={gift.id}
+                className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50/60 px-4 py-3 gap-3"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <Sparkles className="h-4 w-4 text-amber-500 shrink-0" />
+                  <div className="min-w-0">
+                    <span className="font-semibold text-amber-700">{fmt(gift.amount)}</span>
+                    {gift.reason && (
+                      <p className="text-xs text-amber-600/80 truncate">{gift.reason}</p>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => claimGift(gift.id)}
+                  disabled={claimingGift === gift.id}
+                  className="shrink-0 gap-1.5 bg-amber-500 hover:bg-amber-600 text-white border-0"
+                >
+                  {claimingGift === gift.id
+                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    : <><Sparkles className="h-3.5 w-3.5" /> Claim</>}
+                </Button>
               </div>
-              <span className="text-lg font-bold text-amber-600">{fmt(data.pendingAdminBonus)}</span>
-            </div>
-            <p className="text-xs text-amber-700/70">Gifted to you by the store — claim to add to your balance</p>
-            <Button
-              onClick={claimAdminBonus}
-              disabled={claimingAdmin}
-              className="w-full gap-2 bg-amber-500 hover:bg-amber-600 text-white border-0"
-            >
-              {claimingAdmin
-                ? <><Loader2 className="h-4 w-4 animate-spin" /> Claiming…</>
-                : <><Sparkles className="h-4 w-4" /> Claim {fmt(data.pendingAdminBonus)} gift</>}
-            </Button>
+            ))}
           </div>
         )}
 
+        {/* Referral unclaimed claim button */}
         {(data?.unclaimedTotal ?? 0) > 0 && (
           <Button onClick={claimBonus} disabled={claiming} className="w-full gap-2 bg-violet-600 hover:bg-violet-700 text-white border-0">
             {claiming ? <><Loader2 className="h-4 w-4 animate-spin" /> Claiming…</> : <><DollarSign className="h-4 w-4" /> Claim {fmt(data?.unclaimedTotal ?? 0)} referral bonus</>}
           </Button>
         )}
-        {(data?.unclaimedTotal ?? 0) === 0 && (data?.bonusBalance ?? 0) > 0 && (data?.pendingAdminBonus ?? 0) === 0 && (
+
+        {(data?.unclaimedTotal ?? 0) === 0 && unclaimedGifts.length === 0 && (data?.bonusBalance ?? 0) > 0 && (
           <p className="text-xs text-center text-muted-foreground">Use this balance at checkout — tick "Use bonus balance" in the order summary.</p>
         )}
-        {(data?.unclaimedTotal ?? 0) === 0 && (data?.bonusBalance ?? 0) === 0 && (data?.pendingAdminBonus ?? 0) === 0 && (
+        {(data?.unclaimedTotal ?? 0) === 0 && unclaimedGifts.length === 0 && (data?.bonusBalance ?? 0) === 0 && (
           <p className="text-xs text-center text-muted-foreground">Refer friends to earn bonus credits!</p>
         )}
       </Card>

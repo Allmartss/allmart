@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import {
   useGetStorefrontSummary,
   useListProducts,
@@ -168,6 +169,12 @@ export default function Home() {
   const { data: cart } = useGetCart();
   const { data: flashSale } = useGetFlashSale();
   const me = meData?.user ?? null;
+
+  const { data: userStats } = useQuery<{ totalSpend: number; bonusBalance: number; pendingAdminBonus: number }>({
+    queryKey: ["me-stats"],
+    queryFn: () => fetch("/api/me/stats", { credentials: "include" }).then(r => r.json()),
+    enabled: !!me,
+  });
   const isStaff = me && (me.role === "admin" || me.role === "pm");
   const cartItemCount = cart?.items?.reduce((acc, item) => acc + item.quantity, 0) || 0;
 
@@ -293,27 +300,37 @@ export default function Home() {
       {/* ── Body ──────────────────────────────────────────────────────────────── */}
       <div className="max-w-screen-xl mx-auto w-full px-4 space-y-6 py-5 pb-12">
 
-        {/* Promo banner */}
+        {/* Stats + Quick-nav banner */}
         <div className="relative overflow-hidden rounded-2xl bg-[#1e1150] dark:bg-[#160d40] px-5 py-4 shadow-xl">
           <div className="absolute -right-6 -top-6 h-28 w-28 rounded-full bg-primary/20 blur-2xl pointer-events-none" />
-          <div className="relative z-10 flex items-center justify-between mb-4">
-            <div className="space-y-1">
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold text-white/90">
-                🔥 Limited Time
-              </span>
-              <p className="text-xl font-extrabold text-white leading-tight">Mega Sale</p>
-              <p className="text-xs text-white/70">Up to 60% Off</p>
+
+          {/* Stats row */}
+          <div className="relative z-10 flex items-stretch gap-3 mb-4">
+            {/* Total Spend */}
+            <div className="flex-1 rounded-xl bg-white/10 px-4 py-3">
+              <p className="text-[10px] font-semibold text-white/60 uppercase tracking-wide mb-0.5">Total spend</p>
+              <p className="text-xl font-extrabold text-white leading-tight">
+                {me ? `$${(userStats?.totalSpend ?? 0).toFixed(2)}` : "$0.00"}
+              </p>
             </div>
-            <div className="text-4xl select-none">🛍️</div>
+            {/* Bonus Balance */}
+            <Link href="/referral" className="flex-1">
+              <div className="h-full rounded-xl bg-violet-500/30 border border-violet-400/30 px-4 py-3 cursor-pointer hover:bg-violet-500/40 transition-colors">
+                <p className="text-[10px] font-semibold text-violet-200/80 uppercase tracking-wide mb-0.5">Bonus balance</p>
+                <p className="text-xl font-extrabold text-violet-100 leading-tight">
+                  {me ? `$${(userStats?.bonusBalance ?? 0).toFixed(2)}` : "$0.00"}
+                </p>
+              </div>
+            </Link>
           </div>
 
-          {/* Quick-nav: 4 icon buttons, inside the card */}
+          {/* Quick-nav: 4 icon buttons */}
           <div className="relative z-10 grid grid-cols-4 gap-2">
             {([
-              { href: "/products",          icon: LayoutGrid, label: "Categories" },
-              { href: "/products?sort=sale", icon: Zap,        label: "Flash Sale" },
-              { href: "/products?freeShipping=true",  icon: Truck,       label: "Free Ship" },
-              { href: "/referral",                icon: Tag,     label: "Vouchers" },
+              { href: "/products",                    icon: LayoutGrid, label: "Categories" },
+              { href: "/products?sort=sale",          icon: Zap,        label: "Flash Sale" },
+              { href: "/products?freeShipping=true",  icon: Truck,      label: "Free Ship" },
+              { href: "/referral",                    icon: Tag,        label: "Vouchers" },
             ] as const).map(({ href, icon: Icon, label }) => (
               <Link key={href} href={href}>
                 <button className="flex flex-col items-center gap-1.5 w-full group">
