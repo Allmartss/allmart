@@ -94,10 +94,10 @@ export default function Support() {
           <Card className="p-6 border-border/50">
             <h3 className="font-semibold mb-3">Contact us directly</h3>
             <a
-              href="mailto:support@allmart.com"
+              href="mailto:help@allmarts.us"
               className="flex items-center gap-2 text-primary hover:underline text-sm font-medium"
             >
-              <Mail className="h-4 w-4" /> support@allmart.com
+              <Mail className="h-4 w-4" /> help@allmarts.us
             </a>
           </Card>
           <Card className="p-6 border-border/50">
