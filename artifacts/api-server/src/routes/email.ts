@@ -11,10 +11,10 @@ const FROM =
     : "AllMart <noreply@allmart.com>";
 
 // ---------------------------------------------------------------------------
-// Brevo (Sendinblue) sender helper
+// Brevo (Sendinblue) sender — exported so ping endpoint can target it directly
 // ---------------------------------------------------------------------------
 
-async function sendViaBrevo(payload: { to: string[]; subject: string; html: string; from: string }): Promise<void> {
+export async function sendViaBrevo(payload: { to: string[]; subject: string; html: string; from: string }): Promise<void> {
   const apiKey = process.env.BREVO_API_KEY;
   if (!apiKey) throw new Error("BREVO_API_KEY not set");
 
@@ -34,7 +34,47 @@ async function sendViaBrevo(payload: { to: string[]; subject: string; html: stri
 }
 
 // ---------------------------------------------------------------------------
-// Unified email sender — tries SMTP first, falls back to Brevo.
+// SMTP sender — exported so ping endpoint can target it directly
+// ---------------------------------------------------------------------------
+
+export async function sendViaSmtp(payload: { to: string[]; subject: string; html: string; from: string }): Promise<void> {
+  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD } = process.env;
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASSWORD)
+    throw new Error("SMTP_HOST / SMTP_USER / SMTP_PASSWORD not set");
+
+  const configuredPort = Number(SMTP_PORT ?? "587");
+  const pinnedByUser = !!SMTP_PORT;
+  const fallbackPort = process.env.SMTP_PORT_FALLBACK ? Number(process.env.SMTP_PORT_FALLBACK) : 2525;
+  const portsToTry: number[] = pinnedByUser
+    ? [configuredPort]
+    : [...new Set([configuredPort, fallbackPort, 465])];
+
+  let lastErr: unknown;
+  for (const port of portsToTry) {
+    const transporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port,
+      secure: port === 465,
+      auth: { user: SMTP_USER, pass: SMTP_PASSWORD },
+      connectionTimeout: 8_000,
+      greetingTimeout: 5_000,
+    });
+    try {
+      await transporter.sendMail({ from: payload.from, to: payload.to.join(", "), subject: payload.subject, html: payload.html });
+      logger.info({ to: payload.to, subject: payload.subject, host: SMTP_HOST, port }, "Email sent via SMTP");
+      return;
+    } catch (smtpErr) {
+      lastErr = smtpErr;
+      if (port !== portsToTry[portsToTry.length - 1]) {
+        logger.warn({ port, err: smtpErr }, `SMTP port ${port} failed, retrying on next port`);
+      }
+    }
+  }
+  throw lastErr;
+}
+
+// ---------------------------------------------------------------------------
+// Unified email sender — tries Brevo first, falls back to SMTP.
 // Returns the name of the provider that was used.
 // ---------------------------------------------------------------------------
 
@@ -49,58 +89,30 @@ export async function sendEmail(payload: EmailPayload): Promise<"smtp" | "brevo"
   const { to, subject, html, from = FROM } = payload;
   const toArr = Array.isArray(to) ? to : [to];
 
-  // --- SMTP (primary) — try configured port, then fallback ports ---
-  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD) {
-    const configuredPort = Number(process.env.SMTP_PORT ?? "587");
-    // SMTP_PORT_FALLBACK lets operators pin a secondary retry port (e.g. 2525)
-    // without changing the primary port. If SMTP_PORT is explicitly set, honour
-    // it exactly (no extras). If not set, auto-build a fallback chain.
-    const pinnedByUser = !!process.env.SMTP_PORT;
-    const fallbackPort = process.env.SMTP_PORT_FALLBACK ? Number(process.env.SMTP_PORT_FALLBACK) : 2525;
-    const portsToTry: number[] = pinnedByUser
-      ? [configuredPort]
-      : [...new Set([configuredPort, fallbackPort, 465])];
-
-    let smtpSent = false;
-    for (const port of portsToTry) {
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port,
-        secure: port === 465,
-        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
-        connectionTimeout: 8_000,
-        greetingTimeout: 5_000,
-      });
-      try {
-        await transporter.sendMail({ from, to: toArr.join(", "), subject, html });
-        logger.info({ to: toArr, subject, host: process.env.SMTP_HOST, port }, "Email sent via SMTP");
-        smtpSent = true;
-        break;
-      } catch (smtpErr) {
-        if (port !== portsToTry[portsToTry.length - 1]) {
-          logger.warn({ port, err: smtpErr }, `SMTP port ${port} failed, retrying on port ${portsToTry[portsToTry.indexOf(port) + 1]}`);
-        } else {
-          logger.warn({ err: smtpErr, to: toArr, subject }, "SMTP send failed on all ports — falling back to Brevo");
-        }
-      }
-    }
-    if (smtpSent) return "smtp";
-  }
-
-  // --- Brevo (Sendinblue) fallback ---
+  // --- Brevo (primary) ---
   if (process.env.BREVO_API_KEY) {
     try {
       await sendViaBrevo({ to: toArr, subject, html, from });
       logger.info({ to: toArr, subject }, "Email sent via Brevo");
       return "brevo";
     } catch (brevoErr) {
-      logger.warn({ err: brevoErr, to: toArr, subject }, "Brevo send failed");
-      throw brevoErr;
+      logger.warn({ err: brevoErr, to: toArr, subject }, "Brevo send failed — falling back to SMTP");
+    }
+  }
+
+  // --- SMTP (fallback) ---
+  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD) {
+    try {
+      await sendViaSmtp({ to: toArr, subject, html, from });
+      return "smtp";
+    } catch (smtpErr) {
+      logger.warn({ err: smtpErr, to: toArr, subject }, "SMTP send failed on all ports");
+      throw smtpErr;
     }
   }
 
   // --- No transport configured ---
-  const err = "Email skipped: set SMTP_HOST + SMTP_USER + SMTP_PASSWORD or BREVO_API_KEY to enable emails";
+  const err = "Email not sent: set BREVO_API_KEY or SMTP_HOST + SMTP_USER + SMTP_PASSWORD to enable emails";
   logger.warn({ to: toArr, subject }, err);
   throw new Error(err);
 }

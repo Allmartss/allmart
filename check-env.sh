@@ -155,18 +155,25 @@ check_optional TELEGRAM_CHAT_ID
 check_optional TELEGRAM_WEBHOOK_SECRET
 
 echo ""
-echo -e "  ${CYAN}Email (SMTP):${RESET}"
-check_optional SMTP_HOST "email sending will be disabled"
+echo -e "  ${CYAN}Email — Brevo API (primary):${RESET}"
+check_optional BREVO_API_KEY "Brevo email disabled; SMTP will be used as fallback"
+
+echo ""
+echo -e "  ${CYAN}Email — SMTP (fallback):${RESET}"
+check_optional SMTP_HOST "SMTP email disabled"
 check_optional SMTP_PORT
 check_optional SMTP_USER
 check_optional SMTP_PASSWORD
-check_optional BREVO_API_KEY "Brevo email API fallback (alternative to SMTP)"
 
 echo ""
 echo -e "  ${CYAN}AI features:${RESET}"
 check_optional GROQ_API_KEY "AI assistant will be disabled"
 check_optional NVIDIA_API_KEY
 check_optional AI_INTEGRATIONS_OPENAI_BASE_URL
+
+echo ""
+echo -e "  ${CYAN}GitHub:${RESET}"
+check_optional GITHUB_TOKEN "GitHub API integration disabled"
 
 echo ""
 echo -e "  ${CYAN}Other:${RESET}"

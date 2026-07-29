@@ -13,7 +13,7 @@ import fs from "fs";
 import { requireRole } from "../lib/auth";
 import { logger } from "../lib/logger";
 import { LOCAL_UPLOADS_DIR } from "../lib/localStorageFallback";
-import { sendEmail } from "./email";
+import { sendEmail, sendViaBrevo, sendViaSmtp } from "./email";
 
 const router: IRouter = Router();
 
@@ -180,6 +180,31 @@ async function checkBrevo(): Promise<ServiceCheck> {
     const data = await brevo.account.getAccount() as { plan?: { type?: string }[] };
     const plan = data?.plan?.[0]?.type ?? "unknown";
     return { ...base, status: "ok", detail: `account OK · plan: ${plan}` };
+  } catch (err) {
+    return { ...base, status: "fail", detail: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+async function checkGitHub(): Promise<ServiceCheck> {
+  const base: Omit<ServiceCheck, "status" | "detail"> = {
+    service: "GitHub API",
+    key: "github",
+    envVars: ["GITHUB_TOKEN"],
+    configured: !!process.env.GITHUB_TOKEN,
+  };
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) return { ...base, status: "skip", detail: "GITHUB_TOKEN not set" };
+
+  try {
+    const r = await fetch("https://api.github.com/user", {
+      headers: { Authorization: `Bearer ${token}`, "User-Agent": "allmart-health" },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (r.ok) {
+      const data = (await r.json()) as { login?: string };
+      return { ...base, status: "ok", detail: `@${data.login ?? "unknown"}` };
+    }
+    return { ...base, status: "fail", detail: `HTTP ${r.status}` };
   } catch (err) {
     return { ...base, status: "fail", detail: err instanceof Error ? err.message : String(err) };
   }
@@ -427,19 +452,20 @@ router.get("/admin/health-watch", requireRole("admin"), async (req: Request, res
   const t0 = Date.now();
 
   try {
-    const [supabaseR, smtpR, brevoR, s3R, stripeR, telegramR, groqR, nvidiaR, storefrontR] = await Promise.allSettled([
+    const [supabaseR, brevoR, smtpR, s3R, stripeR, telegramR, groqR, nvidiaR, githubR, storefrontR] = await Promise.allSettled([
       checkSupabase(),
-      checkSmtp(),
       checkBrevo(),
+      checkSmtp(),
       checkS3(),
       checkStripe(),
       checkTelegram(),
       checkGroq(),
       checkNvidia(),
+      checkGitHub(),
       checkStorefront(),
     ]);
 
-    const settled = [supabaseR, smtpR, brevoR, s3R, stripeR, telegramR, groqR, nvidiaR, storefrontR];
+    const settled = [supabaseR, brevoR, smtpR, s3R, stripeR, telegramR, groqR, nvidiaR, githubR, storefrontR];
     const checks: ServiceCheck[] = [
       checkApiSelf(),
       checkEnvVars(),
@@ -479,6 +505,10 @@ router.get("/admin/health-watch", requireRole("admin"), async (req: Request, res
 /**
  * POST /admin/email/ping
  * Sends a test email to ADMIN_EMAIL env var. Admin-only.
+ * Body: { provider?: "brevo" | "smtp" | "auto" }
+ *   "brevo" — force Brevo only (useful to test Brevo independently)
+ *   "smtp"  — force SMTP only
+ *   "auto"  — default: Brevo first, SMTP fallback
  */
 router.post("/admin/email/ping", requireRole("admin"), async (req: Request, res: Response) => {
   const to = process.env.ADMIN_EMAIL;
@@ -486,17 +516,36 @@ router.post("/admin/email/ping", requireRole("admin"), async (req: Request, res:
     res.status(400).json({ error: "ADMIN_EMAIL is not set in your environment." });
     return;
   }
+  const { provider: forceProvider } = req.body as { provider?: "brevo" | "smtp" | "auto" };
+
+  const subject = "AllMart — Admin email ping";
+  const html = `<div style="font-family:sans-serif;padding:24px;max-width:480px">
+    <h2 style="color:#1a56e8;margin:0 0 12px">AllMart</h2>
+    <p>✅ Health-watch ping from your AllMart admin panel.</p>
+    <p style="color:#555;font-size:13px">
+      Provider: <strong>${forceProvider ?? "auto"}</strong><br>
+      Sent at: ${new Date().toISOString()}<br>
+      Server: ${process.env.APP_URL ?? "unknown"}
+    </p>
+  </div>`;
+
   try {
-    const provider = await sendEmail({
-      to,
-      subject: "AllMart — Admin email ping",
-      html: `<div style="font-family:sans-serif;padding:24px;max-width:480px">
-        <h2 style="color:#1a56e8;margin:0 0 12px">AllMart</h2>
-        <p>✅ This is a health-watch ping from your AllMart admin panel.</p>
-        <p style="color:#555;font-size:13px">Sent at: ${new Date().toISOString()}<br>Server: ${process.env.APP_URL ?? "unknown"}</p>
-      </div>`,
-    });
-    res.json({ ok: true, to, provider });
+    if (forceProvider === "brevo") {
+      const from = process.env.SMTP_USER
+        ? `AllMart <${process.env.SMTP_USER}>`
+        : "AllMart <noreply@allmart.com>";
+      await sendViaBrevo({ to: [to], subject, html, from });
+      res.json({ ok: true, to, provider: "brevo" });
+    } else if (forceProvider === "smtp") {
+      const from = process.env.SMTP_USER
+        ? `AllMart <${process.env.SMTP_USER}>`
+        : "AllMart <noreply@allmart.com>";
+      await sendViaSmtp({ to: [to], subject, html, from });
+      res.json({ ok: true, to, provider: "smtp" });
+    } else {
+      const provider = await sendEmail({ to, subject, html });
+      res.json({ ok: true, to, provider });
+    }
   } catch (err) {
     res.status(500).json({ error: "Email failed", detail: err instanceof Error ? err.message : String(err) });
   }

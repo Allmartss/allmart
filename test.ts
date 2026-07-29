@@ -179,7 +179,7 @@ async function checkSmtp() {
   console.log(`           • VPS (HostVds etc.): set SMTP_PORT=2525 — widely unblocked.`);
   console.log(`           • Gmail: use an App Password, not your login password.`);
   console.log(`             Create one at  https://myaccount.google.com/apppasswords`);
-  console.log(`           • Alternative: use Brevo (BREVO_API_KEY) or Resend (RESEND_API_KEY).${c.reset}\n`);
+  console.log(`           • Alternative: use Brevo API (BREVO_API_KEY).${c.reset}\n`);
 }
 
 async function checkStripe() {
@@ -385,9 +385,9 @@ function checkEnvVars() {
       hint: "Brevo disabled",
     },
     {
-      label: "Resend email",
-      vars: ["RESEND_API_KEY"],
-      hint: "Resend disabled",
+      label: "GitHub API",
+      vars: ["GITHUB_TOKEN"],
+      hint: "GitHub integration disabled",
     },
     {
       label: "AI features",

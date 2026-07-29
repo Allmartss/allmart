@@ -66,6 +66,7 @@ const SERVICE_ICONS: Record<string, React.ElementType> = {
   telegram: Bot,
   groq: Cpu,
   nvidia: Zap,
+  github: Globe,
   "local-storage": FolderOpen,
   storefront: Globe,
 };
@@ -110,28 +111,25 @@ interface AdminEmailPingButtonProps {
   brevoConfigured: boolean;
 }
 
-function AdminEmailPingButton({ adminEmail, smtpConfigured, brevoConfigured }: AdminEmailPingButtonProps) {
+type ProviderKey = "brevo" | "smtp" | "auto";
+
+function usePingSender(provider: ProviderKey) {
   const [state, setState] = useState<"idle" | "sending" | "ok" | "fail">("idle");
   const [err, setErr] = useState("");
-  const [usedProvider, setUsedProvider] = useState<"smtp" | "brevo" | null>(null);
-
-  // Derive the expected provider label for display before sending
-  const providerLabel =
-    smtpConfigured && brevoConfigured
-      ? "SMTP → Brevo"
-      : smtpConfigured
-        ? "SMTP"
-        : brevoConfigured
-          ? "Brevo"
-          : null;
+  const [usedProvider, setUsedProvider] = useState<string | null>(null);
 
   async function ping() {
     setState("sending");
     setErr("");
     setUsedProvider(null);
     try {
-      const r = await fetch("/api/admin/email/ping", { method: "POST", credentials: "include" });
-      const data = (await r.json()) as { ok?: boolean; to?: string; provider?: "smtp" | "brevo"; error?: string; detail?: string };
+      const r = await fetch("/api/admin/email/ping", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ provider }),
+      });
+      const data = (await r.json()) as { ok?: boolean; to?: string; provider?: string; error?: string; detail?: string };
       if (r.ok && data.ok) {
         setUsedProvider(data.provider ?? null);
         setState("ok");
@@ -146,31 +144,43 @@ function AdminEmailPingButton({ adminEmail, smtpConfigured, brevoConfigured }: A
     }
   }
 
-  if (!adminEmail) return (
-    <p className="mt-2 text-xs text-muted-foreground flex items-center gap-1.5">
-      <TestTube2 className="h-3.5 w-3.5" />
-      Set <code className="bg-muted px-1 rounded">ADMIN_EMAIL</code> to enable one-click ping.
-    </p>
-  );
+  return { state, err, usedProvider, ping };
+}
+
+function PingRow({
+  adminEmail,
+  provider,
+  label,
+}: {
+  adminEmail: string;
+  provider: ProviderKey;
+  label: string;
+}) {
+  const { state, err, usedProvider, ping } = usePingSender(provider);
 
   return (
-    <div className="mt-3 border-t border-border/40 pt-3 space-y-2">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
-          <TestTube2 className="h-3.5 w-3.5" />
-          Ping <span className="font-mono font-medium text-foreground">{adminEmail}</span>
-          {providerLabel && state !== "ok" && <ProviderBadge label={`via ${providerLabel}`} />}
-          {state === "ok" && usedProvider && <ProviderBadge label={`via ${usedProvider.toUpperCase()}`} />}
+          <TestTube2 className="h-3.5 w-3.5 shrink-0" />
+          <span className="font-mono font-medium text-foreground truncate max-w-[140px]">{adminEmail}</span>
+          <ProviderBadge label={label} />
         </p>
-        <Button size="sm" variant="outline" onClick={ping} disabled={state === "sending"} className="gap-1.5 shrink-0 h-7 text-xs">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={ping}
+          disabled={state === "sending"}
+          className="gap-1.5 shrink-0 h-7 text-xs"
+        >
           {state === "sending" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-          {state === "sending" ? "Sending…" : "Send ping"}
+          {state === "sending" ? "Sending…" : "Ping"}
         </Button>
       </div>
       {state === "ok" && (
         <p className="flex items-center gap-1.5 text-xs text-emerald-600">
           <CheckCircle2 className="h-3.5 w-3.5" />
-          Ping sent to {adminEmail} via {usedProvider ? usedProvider.toUpperCase() : "email"} ✓
+          Sent via {usedProvider ? usedProvider.toUpperCase() : "email"} ✓
         </p>
       )}
       {state === "fail" && (
@@ -178,6 +188,35 @@ function AdminEmailPingButton({ adminEmail, smtpConfigured, brevoConfigured }: A
           <XCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
           <span className="break-all">{err}</span>
         </p>
+      )}
+    </div>
+  );
+}
+
+function AdminEmailPingButton({ adminEmail, smtpConfigured, brevoConfigured }: AdminEmailPingButtonProps) {
+  if (!adminEmail) return (
+    <p className="mt-2 text-xs text-muted-foreground flex items-center gap-1.5">
+      <TestTube2 className="h-3.5 w-3.5" />
+      Set <code className="bg-muted px-1 rounded">ADMIN_EMAIL</code> to enable one-click ping.
+    </p>
+  );
+
+  const bothConfigured = smtpConfigured && brevoConfigured;
+
+  return (
+    <div className="mt-3 border-t border-border/40 pt-3 space-y-3">
+      {/* When both are configured show individual rows; otherwise one row with auto */}
+      {bothConfigured ? (
+        <>
+          <PingRow adminEmail={adminEmail} provider="brevo" label="via Brevo" />
+          <PingRow adminEmail={adminEmail} provider="smtp" label="via SMTP" />
+        </>
+      ) : brevoConfigured ? (
+        <PingRow adminEmail={adminEmail} provider="brevo" label="via Brevo" />
+      ) : smtpConfigured ? (
+        <PingRow adminEmail={adminEmail} provider="smtp" label="via SMTP" />
+      ) : (
+        <p className="text-xs text-muted-foreground">No email provider configured.</p>
       )}
     </div>
   );
