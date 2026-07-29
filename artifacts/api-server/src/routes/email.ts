@@ -29,8 +29,13 @@ export async function sendEmail(payload: EmailPayload): Promise<void> {
   // --- SMTP (primary) — try configured port, then 465 as fallback, then Resend ---
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD) {
     const configuredPort = Number(process.env.SMTP_PORT ?? "587");
-    // Port 587 (STARTTLS) is commonly blocked by VPS providers. Try 465 (SSL) automatically.
-    const portsToTry = configuredPort === 465 ? [465] : [configuredPort, 465];
+    // Many VPS providers block 587 and 465. Build a fallback list that includes
+    // all common alternatives (2525 is widely open and supported by SendGrid/Mailgun).
+    // If the user pinned a specific port, respect that and don't add extras.
+    const pinnedByUser = !!process.env.SMTP_PORT;
+    const portsToTry: number[] = pinnedByUser
+      ? [configuredPort]
+      : [...new Set([configuredPort, 2525, 465])];
 
     let smtpSent = false;
     for (const port of portsToTry) {

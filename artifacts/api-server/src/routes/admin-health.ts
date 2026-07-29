@@ -134,8 +134,13 @@ async function checkSmtp(): Promise<ServiceCheck> {
     return { ...base, status: "skip", detail: "SMTP_HOST / SMTP_USER / SMTP_PASSWORD not set" };
 
   const configuredPort = Number(SMTP_PORT ?? "587");
-  // Try configured port first; fall back to 465 (SSL) if blocked by VPS firewall
-  const portsToTry = configuredPort === 465 ? [465] : [configuredPort, 465];
+  // Many VPS providers block 587 and 465. Build a fallback list that includes
+  // 2525 (open on most VPS, supported by SendGrid/Mailgun) as a common alternative.
+  // If the user pinned a specific port via SMTP_PORT, respect that and don't add extras.
+  const pinnedByUser = !!SMTP_PORT;
+  const portsToTry: number[] = pinnedByUser
+    ? [configuredPort]
+    : [...new Set([configuredPort, 2525, 465])];
 
   let lastErr = "";
   for (const port of portsToTry) {
@@ -149,13 +154,13 @@ async function checkSmtp(): Promise<ServiceCheck> {
     });
     try {
       await transporter.verify();
-      const note = port !== configuredPort ? ` (port ${configuredPort} blocked — set SMTP_PORT=${port})` : "";
+      const note = port !== configuredPort ? ` (port ${configuredPort} blocked — set SMTP_PORT=${port} to use this port directly)` : "";
       return { ...base, status: "ok", detail: `${SMTP_HOST}:${port} — auth OK${note}` };
     } catch (err) {
       lastErr = err instanceof Error ? err.message : String(err);
     }
   }
-  return { ...base, status: "fail", detail: `Tried ports ${portsToTry.join(" & ")}: ${lastErr}` };
+  return { ...base, status: "fail", detail: `Tried ports ${portsToTry.join(", ")}: ${lastErr}` };
 }
 
 async function checkResend(): Promise<ServiceCheck> {
