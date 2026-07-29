@@ -83,10 +83,10 @@ function ShopDrawerInner() {
     <Sheet>
       <SheetTrigger asChild>
         <button
-          className="h-9 w-9 flex items-center justify-center rounded-xl bg-gradient-to-br from-[#8B7BD8] to-[#6C5BB5] shadow-md shadow-primary/40 hover:brightness-110 active:scale-95 transition-all shrink-0"
+          className="h-9 w-9 flex items-center justify-center rounded-xl overflow-hidden shadow-md shadow-primary/40 hover:brightness-110 active:scale-95 transition-all shrink-0"
           aria-label="Open menu"
         >
-          <span className="text-white font-extrabold text-base leading-none" style={{ fontFamily: "sans-serif" }}>A</span>
+          <img src="/images/allmart-logo.jpg" alt="AllMart" className="h-full w-full object-cover" />
         </button>
       </SheetTrigger>
       <SheetContent side="left" className="w-72 p-0 flex flex-col">
@@ -313,7 +313,7 @@ export default function Home() {
               { href: "/products",          icon: LayoutGrid, label: "Categories" },
               { href: "/products?sort=sale", icon: Zap,        label: "Flash Sale" },
               { href: "/products?freeShipping=true",  icon: Truck,       label: "Free Ship" },
-              { href: "/products?sort=featured", icon: Tag,     label: "Vouchers" },
+              { href: "/referral",                icon: Tag,     label: "Vouchers" },
             ] as const).map(({ href, icon: Icon, label }) => (
               <Link key={href} href={href}>
                 <button className="flex flex-col items-center gap-1.5 w-full group">
