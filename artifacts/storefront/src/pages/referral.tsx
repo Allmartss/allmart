@@ -167,31 +167,6 @@ export default function Referral() {
         )}
       </Card>
 
-      {/* Admin-gifted pending bonus */}
-      {(data?.pendingAdminBonus ?? 0) > 0 && (
-        <Card className="p-6 border-amber-200 bg-amber-50/50 shadow-sm space-y-4">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-amber-500" />
-            <h2 className="font-semibold text-amber-800">You have a bonus gift!</h2>
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-3xl font-bold text-amber-600">{fmt(data.pendingAdminBonus)}</div>
-              <p className="text-xs text-amber-700/70 mt-1">Gifted to you by the store — claim it to add to your balance</p>
-            </div>
-          </div>
-          <Button
-            onClick={claimAdminBonus}
-            disabled={claimingAdmin}
-            className="w-full gap-2 bg-amber-500 hover:bg-amber-600 text-white border-0"
-          >
-            {claimingAdmin
-              ? <><Loader2 className="h-4 w-4 animate-spin" /> Claiming…</>
-              : <><Sparkles className="h-4 w-4" /> Claim {fmt(data.pendingAdminBonus)} gift</>}
-          </Button>
-        </Card>
-      )}
-
       {/* Bonus balance + claim */}
       <Card className="p-6 border-border/50 shadow-sm space-y-4">
         <div className="flex items-center gap-2">
@@ -204,19 +179,43 @@ export default function Referral() {
             <p className="text-xs text-muted-foreground mt-1">Available to use at checkout</p>
           </div>
           <div className="text-right">
-            <div className="text-sm text-muted-foreground">Unclaimed</div>
+            <div className="text-sm text-muted-foreground">Unclaimed referrals</div>
             <div className="text-xl font-semibold text-amber-600">{fmt(data?.unclaimedTotal ?? 0)}</div>
           </div>
         </div>
+
+        {/* Admin-gifted pending bonus claim */}
+        {(data?.pendingAdminBonus ?? 0) > 0 && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50/60 px-4 py-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-amber-500" />
+                <span className="text-sm font-medium text-amber-800">Store gift</span>
+              </div>
+              <span className="text-lg font-bold text-amber-600">{fmt(data.pendingAdminBonus)}</span>
+            </div>
+            <p className="text-xs text-amber-700/70">Gifted to you by the store — claim to add to your balance</p>
+            <Button
+              onClick={claimAdminBonus}
+              disabled={claimingAdmin}
+              className="w-full gap-2 bg-amber-500 hover:bg-amber-600 text-white border-0"
+            >
+              {claimingAdmin
+                ? <><Loader2 className="h-4 w-4 animate-spin" /> Claiming…</>
+                : <><Sparkles className="h-4 w-4" /> Claim {fmt(data.pendingAdminBonus)} gift</>}
+            </Button>
+          </div>
+        )}
+
         {(data?.unclaimedTotal ?? 0) > 0 && (
           <Button onClick={claimBonus} disabled={claiming} className="w-full gap-2 bg-violet-600 hover:bg-violet-700 text-white border-0">
-            {claiming ? <><Loader2 className="h-4 w-4 animate-spin" /> Claiming…</> : <><DollarSign className="h-4 w-4" /> Claim {fmt(data?.unclaimedTotal ?? 0)} bonus</>}
+            {claiming ? <><Loader2 className="h-4 w-4 animate-spin" /> Claiming…</> : <><DollarSign className="h-4 w-4" /> Claim {fmt(data?.unclaimedTotal ?? 0)} referral bonus</>}
           </Button>
         )}
-        {(data?.unclaimedTotal ?? 0) === 0 && (data?.bonusBalance ?? 0) > 0 && (
+        {(data?.unclaimedTotal ?? 0) === 0 && (data?.bonusBalance ?? 0) > 0 && (data?.pendingAdminBonus ?? 0) === 0 && (
           <p className="text-xs text-center text-muted-foreground">Use this balance at checkout — tick "Use bonus balance" in the order summary.</p>
         )}
-        {(data?.unclaimedTotal ?? 0) === 0 && (data?.bonusBalance ?? 0) === 0 && (
+        {(data?.unclaimedTotal ?? 0) === 0 && (data?.bonusBalance ?? 0) === 0 && (data?.pendingAdminBonus ?? 0) === 0 && (
           <p className="text-xs text-center text-muted-foreground">Refer friends to earn bonus credits!</p>
         )}
       </Card>
