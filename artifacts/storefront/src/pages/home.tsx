@@ -305,23 +305,17 @@ export default function Home() {
           <div className="absolute -right-6 -top-6 h-28 w-28 rounded-full bg-primary/20 blur-2xl pointer-events-none" />
 
           {/* Stats row */}
-          <div className="relative z-10 flex items-stretch gap-3 mb-4">
-            {/* Total Spend */}
-            <div className="flex-1 rounded-xl bg-white/10 px-4 py-3">
-              <p className="text-[10px] font-semibold text-white/60 uppercase tracking-wide mb-0.5">Total spend</p>
-              <p className="text-xl font-extrabold text-white leading-tight">
+          <div className="relative z-10 flex items-center justify-between mb-4">
+            <div className="space-y-1">
+              <p className="text-[10px] font-semibold text-white/60 uppercase tracking-wide">Total spend</p>
+              <p className="text-2xl font-extrabold text-white leading-tight">
                 {me ? `$${(userStats?.totalSpend ?? 0).toFixed(2)}` : "$0.00"}
               </p>
+              <p className="text-xs text-violet-300/80">
+                Bonus balance: <span className="font-semibold text-violet-200">{me ? `$${(userStats?.bonusBalance ?? 0).toFixed(2)}` : "$0.00"}</span>
+              </p>
             </div>
-            {/* Bonus Balance */}
-            <Link href="/referral" className="flex-1">
-              <div className="h-full rounded-xl bg-violet-500/30 border border-violet-400/30 px-4 py-3 cursor-pointer hover:bg-violet-500/40 transition-colors">
-                <p className="text-[10px] font-semibold text-violet-200/80 uppercase tracking-wide mb-0.5">Bonus balance</p>
-                <p className="text-xl font-extrabold text-violet-100 leading-tight">
-                  {me ? `$${(userStats?.bonusBalance ?? 0).toFixed(2)}` : "$0.00"}
-                </p>
-              </div>
-            </Link>
+            <div className="text-4xl select-none">🛍️</div>
           </div>
 
           {/* Quick-nav: 4 icon buttons */}
