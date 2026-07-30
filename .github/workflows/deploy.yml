@@ -64,7 +64,7 @@ jobs:
           subject:        "❌ AllMart deploy FAILED — ${{ github.ref_name }}"
           body: |
             Deployment failed — action required.
-
+            
             Branch : ${{ github.ref_name }}
             Commit : ${{ github.sha }}
             Author : ${{ github.actor }}
