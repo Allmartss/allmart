@@ -139,7 +139,7 @@ export default function Landing() {
   const otherProducts = (allProducts ?? []).filter(p => !featuredIds.has(p.id));
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-4rem)]">
+    <div className="flex flex-col min-h-[calc(100vh-4rem)] bg-[#0d0a1f]">
 
       {/* ── Flash Sale sticky countdown banner ── */}
       {showBanner && !bannerDismissed && (
@@ -184,25 +184,25 @@ export default function Landing() {
       )}
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="relative px-6 py-24 md:py-32 lg:py-40 overflow-hidden bg-primary rounded-b-[2.5rem]">
+      <section className="relative px-6 py-10 sm:py-20 md:py-32 lg:py-40 overflow-hidden bg-primary rounded-b-[2.5rem]">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-primary/80 pointer-events-none" />
 
         <div className="container relative z-10 max-w-3xl mx-auto text-center space-y-6">
           <div className="flex justify-center">
-            <BagLogo size={72} />
+            <BagLogo size={56} />
           </div>
 
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 border border-white/20 px-4 py-1.5 text-sm font-medium text-white">
-            <Sparkles className="h-3.5 w-3.5" /> AI-Powered Shopping
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 border border-white/20 px-3 py-1 text-xs sm:text-sm font-medium text-white">
+            <Sparkles className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> AI-Powered Shopping
           </span>
 
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-white leading-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold tracking-tight text-white leading-tight">
             concierge for{" "}
             <span className="italic text-white/80">everything.</span>
           </h1>
 
-          <p className="text-base md:text-lg text-white/70 max-w-xl mx-auto">
+          <p className="text-sm sm:text-base md:text-lg text-white/70 max-w-xl mx-auto">
             Tell our AI what you're looking for and we'll find the perfect match.
           </p>
 
@@ -274,11 +274,11 @@ export default function Landing() {
       <section className="pt-6 pb-10 container max-w-screen-xl mx-auto px-6">
         <div className="flex items-end justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">Featured</h2>
-            <p className="text-muted-foreground mt-0.5 text-sm">Handpicked products, updated regularly.</p>
+            <h2 className="text-2xl font-bold tracking-tight text-white">Featured</h2>
+            <p className="text-white/50 mt-0.5 text-sm">Handpicked products, updated regularly.</p>
           </div>
           <Link href="/account">
-            <Button variant="ghost" className="gap-2 group text-sm">
+            <Button variant="ghost" className="gap-2 group text-sm text-white/70 hover:text-white hover:bg-white/10">
               View all <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
             </Button>
           </Link>
@@ -290,9 +290,9 @@ export default function Landing() {
       {(otherProducts.length > 0 || isProductsLoading) && (
         <section className="pb-12 container max-w-screen-xl mx-auto px-6">
           <div className="flex items-end justify-between mb-5">
-            <h2 className="text-xl font-bold tracking-tight">Best Selling</h2>
+            <h2 className="text-xl font-bold tracking-tight text-white">Best Selling</h2>
             <Link href="/products">
-              <Button variant="ghost" className="gap-2 group text-sm">
+              <Button variant="ghost" className="gap-2 group text-sm text-white/70 hover:text-white hover:bg-white/10">
                 View all <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
