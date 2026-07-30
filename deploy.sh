@@ -43,7 +43,8 @@ echo "==> Building storefront..."
 PORT="${STOREFRONT_PORT}" BASE_PATH="${BASE_PATH}" \
   pnpm --filter @workspace/storefront run build
 
-# ---------------------------------------------------------------------------
+# --------------------------------------------------------------------------- 
+---------------
 # 4. Push database schema
 # ---------------------------------------------------------------------------
 echo "==> Pushing database schema..."
