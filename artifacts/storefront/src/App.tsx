@@ -35,6 +35,7 @@ import UserDashboard from "@/pages/user-dashboard";
 import MyAccount from "@/pages/my-account";
 import Terms from "@/pages/terms";
 import Privacy from "@/pages/privacy";
+import { PopupAdModal } from "@/components/popup-ad-modal";
 
 const queryClient = new QueryClient();
 
@@ -93,6 +94,7 @@ function Router() {
     <Layout>
       <ProfileGate />
       <AuthRedirect />
+      <PopupAdModal />
       <Switch>
         <Route path="/video" component={VideoPreview} />
         <Route path="/" component={Landing} />
@@ -133,6 +135,8 @@ function Router() {
         <Route path="/admin/referrals" component={() => <Admin section="referrals" />} />
         <Route path="/admin/flash-sale" component={() => <Admin section="flash-sale" />} />
         <Route path="/admin/health" component={() => <Admin section="health" />} />
+        <Route path="/admin/pop-ads" component={() => <Admin section="pop-ads" />} />
+        <Route path="/admin/ad-notifications" component={() => <Admin section="ad-notifications" />} />
         <Route path="/pm" component={() => <PMConsole section="dashboard" />} />
         <Route path="/pm/orders" component={() => <PMConsole section="orders" />} />
         <Route path="/pm/catalog" component={() => <PMConsole section="catalog" />} />

@@ -10,6 +10,8 @@ import { BankDetailsManager } from "@/components/bank-details-manager";
 import { AdminProductsManager } from "@/components/admin-products-manager";
 import { PushNotificationForm } from "@/components/push-notification-form";
 import { AdminSupportDesk } from "@/components/admin-support-desk";
+import { AdminPopAds } from "@/components/admin-pop-ads";
+import { AdminAdNotifications } from "@/components/admin-ad-notifications";
 import { AdminCashbackManager } from "@/components/admin-cashback";
 import { AdminLandingPages } from "@/components/admin-landing-pages";
 import { AdminDashboard } from "@/components/admin-dashboard";
@@ -36,6 +38,8 @@ import {
   Gift,
   Zap,
   Activity,
+  Megaphone,
+  MousePointerClick,
 } from "lucide-react";
 
 type Section =
@@ -54,7 +58,9 @@ type Section =
   | "telegram"
   | "referrals"
   | "flash-sale"
-  | "health";
+  | "health"
+  | "pop-ads"
+  | "ad-notifications";
 
 export default function Admin({ section = "dashboard" }: { section?: Section }) {
   const [, setLocation] = useLocation();
@@ -193,6 +199,20 @@ export default function Admin({ section = "dashboard" }: { section?: Section }) 
         <>
           <StaffPageHeader icon={Activity} title="Service health" description="Live status of every connected service — database, email, storage, payments, and AI. Auto-refreshes every 30 s." />
           <AdminHealthWatch />
+        </>
+      )}
+
+      {section === "pop-ads" && (
+        <>
+          <StaffPageHeader icon={MousePointerClick} title="Pop-up ad banner" description="Create a promotional popup shown to visitors when they land on the storefront. Enable or disable it at any time." />
+          <AdminPopAds />
+        </>
+      )}
+
+      {section === "ad-notifications" && (
+        <>
+          <StaffPageHeader icon={Megaphone} title="Ad notifications" description="Send a promotional notification to all users or specific individuals. Appears in their notifications feed." />
+          <AdminAdNotifications />
         </>
       )}
     </div>
