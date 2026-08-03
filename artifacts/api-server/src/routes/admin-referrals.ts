@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, referralsTable, usersTable, settingsTable, adminBonusGiftsTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql as sqlExpr } from "drizzle-orm";
 import { requireRole } from "../lib/auth";
 
 const router: IRouter = Router();
@@ -77,6 +77,10 @@ router.post("/admin/grant-bonus", requireRole("admin"), async (req: Request, res
   const [user] = await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable).where(eq(usersTable.id, userId));
   if (!user) { res.status(404).json({ error: "User not found" }); return; }
   const [gift] = await db.insert(adminBonusGiftsTable).values({ userId, amount, reason: reason ?? null }).returning();
+  // Credit the bonus to the user's spendable balance
+  await db.update(usersTable)
+    .set({ bonusBalance: sqlExpr`bonus_balance + ${amount}` })
+    .where(eq(usersTable.id, userId));
   res.json({ ok: true, userId: user.id, name: user.name, giftId: gift!.id, granted: amount, reason: reason ?? null });
 });
 

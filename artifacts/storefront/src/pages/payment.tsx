@@ -7,6 +7,7 @@ import {
   useGetCurrentUser,
   getGetCartQueryKey,
   getListOrdersQueryKey,
+  getGetCurrentUserQueryKey,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -125,6 +126,7 @@ export default function Payment() {
         localStorage.removeItem(BONUS_KEY);
         queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
         queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
         toast({ title: "Order placed!", description: "Your order is on the way." });
         setLocation(`/orders/${order.id}`);
       },
