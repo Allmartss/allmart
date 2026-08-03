@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  BIMI Logo — AllMart
+  Spec: SVG Tiny PS (version 1.2, baseProfile="tiny-ps")
+  Replace this file with your actual brand mark when ready.
+  Requirements: square viewBox, no external resources, no scripts, no animations.
+-->
+<svg version="1.2" baseProfile="tiny-ps"
+     xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 200 200"
+     width="200" height="200"
+     preserveAspectRatio="xMidYMid meet">
+  <title>AllMart</title>
+
+  <!-- Purple circle background -->
+  <circle cx="100" cy="100" r="100" fill="#7c3aed"/>
+
+  <!-- Bag handles (two arcs, white) -->
+  <path d="M68 86 L68 62 Q68 46 84 46 L116 46 Q132 46 132 62 L132 86"
+        fill="none" stroke="white" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Bag body (white rounded rect) -->
+  <rect x="38" y="86" width="124" height="92" rx="18" ry="18" fill="white"/>
+
+  <!-- Letter A — drawn as paths, no font dependency -->
+  <!-- Left leg -->
+  <path d="M75 162 L100 108 L125 162" fill="none" stroke="#7c3aed" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Crossbar -->
+  <line x1="86" y1="142" x2="114" y2="142" stroke="#7c3aed" stroke-width="9" stroke-linecap="round"/>
+</svg>
