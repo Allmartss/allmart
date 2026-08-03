@@ -8,11 +8,39 @@ export type EmailBlock =
   | { type: "divider" }
   | { type: "product"; productId: number; name: string; price: number; imageUrl: string };
 
+export type CampaignFooter = {
+  message: string;
+  address: string;
+  social: {
+    instagram: string;
+    twitter: string;
+    facebook: string;
+    tiktok: string;
+    youtube: string;
+    linkedin: string;
+    whatsapp: string;
+  };
+  links: { label: string; url: string }[];
+  bgColor: string;
+  textColor: string;
+};
+
+export const DEFAULT_FOOTER: CampaignFooter = {
+  message: "You received this because you have an account at AllMart.",
+  address: "",
+  social: { instagram: "", twitter: "", facebook: "", tiktok: "", youtube: "", linkedin: "", whatsapp: "" },
+  links: [],
+  bgColor: "#f9fafb",
+  textColor: "#9ca3af",
+};
+
 export const emailCampaignsTable = pgTable("email_campaigns", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   subject: text("subject").notNull(),
+  headerLogoUrl: text("header_logo_url").notNull().default(""),
   blocks: jsonb("blocks").$type<EmailBlock[]>().notNull().default([]),
+  footer: jsonb("footer").$type<CampaignFooter>().notNull().default(DEFAULT_FOOTER),
   status: text("status").notNull().default("draft"), // "draft" | "sent"
   recipientType: text("recipient_type").notNull().default("all"), // "all" | "selected"
   recipientIds: jsonb("recipient_ids").$type<number[]>().notNull().default([]),

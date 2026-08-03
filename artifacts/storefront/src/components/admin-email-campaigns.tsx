@@ -9,7 +9,8 @@ import {
   Mail, Plus, Trash2, ArrowUp, ArrowDown, Loader2, Send, Eye,
   Type, Image as ImageIcon, AlignCenter, Minus, ShoppingBag,
   ChevronRight, FileText, CheckSquare, Square, Users, X, RefreshCw,
-  CheckCircle2,
+  CheckCircle2, MapPin, Link as LinkIcon, Instagram, Twitter, Facebook,
+  Youtube, Linkedin,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -22,11 +23,38 @@ type DividerBlock = { type: "divider" };
 type ProductBlock = { type: "product"; productId: number; name: string; price: number; imageUrl: string };
 type EmailBlock   = HeaderBlock | TextBlock | ImageBlock | ButtonBlock | DividerBlock | ProductBlock;
 
+type CampaignFooter = {
+  message: string;
+  address: string;
+  social: {
+    instagram: string;
+    twitter: string;
+    facebook: string;
+    tiktok: string;
+    youtube: string;
+    linkedin: string;
+    whatsapp: string;
+  };
+  links: { label: string; url: string }[];
+  bgColor: string;
+  textColor: string;
+};
+
+const DEFAULT_FOOTER: CampaignFooter = {
+  message: "You received this because you have an account at AllMart.",
+  address: "",
+  social: { instagram: "", twitter: "", facebook: "", tiktok: "", youtube: "", linkedin: "", whatsapp: "" },
+  links: [],
+  bgColor: "#f9fafb",
+  textColor: "#9ca3af",
+};
+
 type Campaign = {
   id: number;
   title: string;
   subject: string;
   blocks: EmailBlock[];
+  footer: CampaignFooter;
   status: "draft" | "sent";
   recipientType: "all" | "selected";
   recipientIds: number[];
@@ -425,6 +453,160 @@ function PreviewModal({ campaignId, onClose }: { campaignId: number; onClose: ()
   );
 }
 
+// ─── Footer editor ────────────────────────────────────────────────────────────
+
+const SOCIAL_FIELDS: { key: keyof CampaignFooter["social"]; label: string; placeholder: string }[] = [
+  { key: "instagram", label: "Instagram",  placeholder: "https://instagram.com/yourstore" },
+  { key: "twitter",   label: "X / Twitter",placeholder: "https://x.com/yourstore" },
+  { key: "facebook",  label: "Facebook",   placeholder: "https://facebook.com/yourstore" },
+  { key: "tiktok",    label: "TikTok",     placeholder: "https://tiktok.com/@yourstore" },
+  { key: "youtube",   label: "YouTube",    placeholder: "https://youtube.com/@yourstore" },
+  { key: "linkedin",  label: "LinkedIn",   placeholder: "https://linkedin.com/company/yourstore" },
+  { key: "whatsapp",  label: "WhatsApp",   placeholder: "https://wa.me/1234567890" },
+];
+
+function FooterEditor({ footer, onChange, disabled }: {
+  footer: CampaignFooter;
+  onChange: (f: CampaignFooter) => void;
+  disabled?: boolean;
+}) {
+  function set<K extends keyof CampaignFooter>(key: K, value: CampaignFooter[K]) {
+    onChange({ ...footer, [key]: value });
+  }
+  function setSocial(key: keyof CampaignFooter["social"], value: string) {
+    onChange({ ...footer, social: { ...footer.social, [key]: value } });
+  }
+  function addLink() {
+    onChange({ ...footer, links: [...(footer.links ?? []), { label: "", url: "" }] });
+  }
+  function updateLink(i: number, field: "label" | "url", value: string) {
+    const next = [...(footer.links ?? [])];
+    next[i] = { ...next[i], [field]: value };
+    onChange({ ...footer, links: next });
+  }
+  function removeLink(i: number) {
+    onChange({ ...footer, links: (footer.links ?? []).filter((_, idx) => idx !== i) });
+  }
+
+  return (
+    <div className="space-y-5">
+
+      {/* Message & address */}
+      <div className="grid grid-cols-1 gap-4">
+        <div className="space-y-1.5">
+          <Label>Footer message / caption</Label>
+          <Textarea rows={2} disabled={disabled}
+            value={footer.message}
+            onChange={e => set("message", e.target.value)}
+            placeholder="e.g. © 2024 AllMart. All rights reserved." />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-muted-foreground" />Business address</Label>
+          <Input disabled={disabled}
+            value={footer.address}
+            onChange={e => set("address", e.target.value)}
+            placeholder="e.g. 123 Market St, New York, NY 10001" />
+        </div>
+      </div>
+
+      {/* Colours */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label>Footer background</Label>
+          <div className="flex gap-2 items-center">
+            <input type="color" disabled={disabled} value={footer.bgColor}
+              onChange={e => set("bgColor", e.target.value)}
+              className="h-9 w-10 rounded border border-input p-0.5 cursor-pointer bg-transparent" />
+            <Input disabled={disabled} value={footer.bgColor}
+              onChange={e => set("bgColor", e.target.value)}
+              className="font-mono text-xs" />
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Footer text color</Label>
+          <div className="flex gap-2 items-center">
+            <input type="color" disabled={disabled} value={footer.textColor}
+              onChange={e => set("textColor", e.target.value)}
+              className="h-9 w-10 rounded border border-input p-0.5 cursor-pointer bg-transparent" />
+            <Input disabled={disabled} value={footer.textColor}
+              onChange={e => set("textColor", e.target.value)}
+              className="font-mono text-xs" />
+          </div>
+        </div>
+      </div>
+
+      {/* Social handles */}
+      <div className="space-y-2">
+        <Label className="flex items-center gap-1.5">Social media handles</Label>
+        <div className="grid grid-cols-2 gap-3">
+          {SOCIAL_FIELDS.map(({ key, label, placeholder }) => (
+            <div key={key} className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">{label}</p>
+              <Input disabled={disabled} value={footer.social?.[key] ?? ""}
+                onChange={e => setSocial(key, e.target.value)}
+                placeholder={placeholder} className="text-xs h-8" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Custom links */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label className="flex items-center gap-1.5"><LinkIcon className="h-3.5 w-3.5 text-muted-foreground" />Custom links</Label>
+          {!disabled && (
+            <Button type="button" variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={addLink}>
+              <Plus className="h-3 w-3" /> Add link
+            </Button>
+          )}
+        </div>
+        {(footer.links ?? []).length === 0 ? (
+          <p className="text-xs text-muted-foreground">No custom links. Add links like Privacy Policy, Terms, Unsubscribe, etc.</p>
+        ) : (
+          <div className="space-y-2">
+            {(footer.links ?? []).map((link, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Input disabled={disabled} value={link.label}
+                  onChange={e => updateLink(i, "label", e.target.value)}
+                  placeholder="Label (e.g. Privacy Policy)" className="text-xs h-8 w-36 shrink-0" />
+                <Input disabled={disabled} value={link.url}
+                  onChange={e => updateLink(i, "url", e.target.value)}
+                  placeholder="https://…" className="text-xs h-8 flex-1" />
+                {!disabled && (
+                  <Button type="button" size="icon" variant="ghost"
+                    className="h-8 w-8 shrink-0 text-destructive hover:bg-destructive/10"
+                    onClick={() => removeLink(i)}>
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Live preview chip strip */}
+      {(Object.values(footer.social ?? {}).some(v => v?.trim()) || (footer.links ?? []).some(l => l.label?.trim())) && (
+        <div className="rounded-xl border border-border/50 bg-muted/20 p-4 text-center space-y-2">
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Footer preview</p>
+          <div className="flex flex-wrap justify-center gap-1.5">
+            {SOCIAL_FIELDS.filter(({ key }) => footer.social?.[key]?.trim()).map(({ key, label }) => (
+              <span key={key} className="rounded-full border border-border/60 px-3 py-1 text-xs text-muted-foreground">{label}</span>
+            ))}
+          </div>
+          <div className="flex flex-wrap justify-center gap-2 text-xs">
+            {(footer.links ?? []).filter(l => l.label?.trim()).map((l, i) => (
+              <span key={i} className="underline text-muted-foreground">{l.label}</span>
+            ))}
+          </div>
+          {footer.address && <p className="text-xs text-muted-foreground">{footer.address}</p>}
+          {footer.message && <p className="text-xs text-muted-foreground">{footer.message}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Campaign editor ──────────────────────────────────────────────────────────
 
 const ADD_BLOCK_TYPES: { type: EmailBlock["type"]; label: string }[] = [
@@ -450,6 +632,7 @@ function CampaignEditor({
   const [title, setTitle]   = useState(campaign?.title ?? "");
   const [subject, setSubject] = useState(campaign?.subject ?? "");
   const [blocks, setBlocks]   = useState<EmailBlock[]>(campaign?.blocks ?? []);
+  const [footer, setFooter]   = useState<CampaignFooter>({ ...DEFAULT_FOOTER, ...(campaign?.footer ?? {}) });
   const [recipientType, setRecipientType] = useState<"all"|"selected">(campaign?.recipientType ?? "all");
   const [recipientIds, setRecipientIds]   = useState<number[]>(campaign?.recipientIds ?? []);
 
@@ -463,6 +646,7 @@ function CampaignEditor({
     setTitle(campaign?.title ?? "");
     setSubject(campaign?.subject ?? "");
     setBlocks(campaign?.blocks ?? []);
+    setFooter({ ...DEFAULT_FOOTER, ...(campaign?.footer ?? {}) });
     setRecipientType(campaign?.recipientType ?? "all");
     setRecipientIds(campaign?.recipientIds ?? []);
   }, [campaign?.id]);
@@ -498,7 +682,7 @@ function CampaignEditor({
       const res   = await fetch(url, {
         method, credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, subject, blocks, recipientType, recipientIds }),
+        body: JSON.stringify({ title, subject, blocks, footer, recipientType, recipientIds }),
       });
       const data = await res.json() as Campaign & { error?: string };
       if (!res.ok) { toast({ title: "Error", description: data.error, variant: "destructive" }); return; }
@@ -624,6 +808,16 @@ function CampaignEditor({
             </div>
           </div>
         )}
+      </Card>
+
+      {/* Footer */}
+      <Card className="p-5 border-border/50 space-y-4">
+        <div className="flex items-center gap-2">
+          <Mail className="h-4 w-4 text-muted-foreground" />
+          <h3 className="font-semibold text-sm">Email footer</h3>
+          <span className="text-xs text-muted-foreground ml-1">— shown below every email</span>
+        </div>
+        <FooterEditor footer={footer} onChange={setFooter} disabled={isSent} />
       </Card>
 
       {/* Recipients */}

@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { db, emailCampaignsTable, usersTable, type EmailBlock } from "@workspace/db";
+import { db, emailCampaignsTable, usersTable, DEFAULT_FOOTER, type EmailBlock, type CampaignFooter } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
 import { requireRole } from "../lib/auth";
 import { sendEmail } from "./email";
@@ -39,8 +39,66 @@ function escHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-export function renderCampaignHtml(subject: string, blocks: EmailBlock[]): string {
+const SOCIAL_LABELS: Record<string, string> = {
+  instagram: "Instagram",
+  twitter: "X / Twitter",
+  facebook: "Facebook",
+  tiktok: "TikTok",
+  youtube: "YouTube",
+  linkedin: "LinkedIn",
+  whatsapp: "WhatsApp",
+};
+
+function renderFooterHtml(footer: CampaignFooter): string {
+  const bg   = footer.bgColor  || "#f9fafb";
+  const fg   = footer.textColor || "#9ca3af";
+
+  // Social links
+  const socialEntries = Object.entries(footer.social ?? {}).filter(([, v]) => v?.trim());
+  const socialHtml = socialEntries.length
+    ? `<p style="margin:0 0 10px;font-size:12px;">
+        ${socialEntries.map(([k, v]) =>
+          `<a href="${escHtml(v as string)}" style="display:inline-block;margin:2px 4px;padding:4px 10px;border-radius:20px;border:1px solid ${fg};color:${fg};text-decoration:none;font-size:11px;">${SOCIAL_LABELS[k] ?? k}</a>`
+        ).join("")}
+       </p>`
+    : "";
+
+  // Custom links
+  const customLinks = (footer.links ?? []).filter(l => l.label?.trim() && l.url?.trim());
+  const linksHtml = customLinks.length
+    ? `<p style="margin:0 0 10px;font-size:11px;">
+        ${customLinks.map((l, i) =>
+          `${i > 0 ? ' <span style="color:' + fg + '">·</span> ' : ''}<a href="${escHtml(l.url)}" style="color:${fg};text-decoration:underline;">${escHtml(l.label)}</a>`
+        ).join("")}
+       </p>`
+    : "";
+
+  // Address
+  const addressHtml = footer.address?.trim()
+    ? `<p style="margin:0 0 8px;font-size:11px;color:${fg};">${escHtml(footer.address)}</p>`
+    : "";
+
+  // Message
+  const messageHtml = footer.message?.trim()
+    ? `<p style="margin:0 0 10px;font-size:12px;color:${fg};">${escHtml(footer.message)}</p>`
+    : "";
+
+  return `<tr><td style="padding:24px 32px;background:${bg};border-top:1px solid #e5e7eb;text-align:center;">
+  ${socialHtml}
+  ${linksHtml}
+  ${addressHtml}
+  ${messageHtml}
+</td></tr>`;
+}
+
+export function renderCampaignHtml(subject: string, blocks: EmailBlock[], footer?: CampaignFooter | null, headerLogoUrl?: string): string {
   const bodyContent = blocks.map(renderBlock).join("\n");
+  const footerData  = { ...DEFAULT_FOOTER, ...(footer ?? {}) };
+  const logoHtml = headerLogoUrl?.trim()
+    ? `<td align="right" style="padding:16px 32px;vertical-align:middle;">
+        <img src="${escHtml(headerLogoUrl)}" alt="Logo" style="display:inline-block;max-height:40px;max-width:140px;object-fit:contain;" />
+      </td>`
+    : "";
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -53,17 +111,18 @@ export function renderCampaignHtml(subject: string, blocks: EmailBlock[]): strin
   <tr><td align="center">
     <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);">
       <!-- Header bar -->
-      <tr><td style="background:#7c3aed;padding:20px 32px;">
-        <span style="font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">AllMart</span>
-      </td></tr>
+      <tr style="background:#7c3aed;">
+        <td style="padding:16px 32px;vertical-align:middle;">
+          <span style="font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">AllMart</span>
+        </td>
+        ${logoHtml}
+      </tr>
       <!-- Body -->
       <tr><td style="padding:32px;">
         ${bodyContent}
       </td></tr>
       <!-- Footer -->
-      <tr><td style="padding:20px 32px;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;">
-        <p style="margin:0;font-size:12px;color:#9ca3af;">You received this because you have an account at AllMart.</p>
-      </td></tr>
+      ${renderFooterHtml(footerData)}
     </table>
   </td></tr>
 </table>
@@ -84,10 +143,12 @@ router.get("/admin/email-campaigns", requireRole("admin"), async (_req: Request,
 
 /** Create a new campaign */
 router.post("/admin/email-campaigns", requireRole("admin"), async (req: Request, res: Response) => {
-  const { title, subject, blocks, recipientType, recipientIds } = req.body as {
+  const { title, subject, headerLogoUrl, blocks, footer, recipientType, recipientIds } = req.body as {
     title?: string;
     subject?: string;
+    headerLogoUrl?: string;
     blocks?: EmailBlock[];
+    footer?: CampaignFooter;
     recipientType?: "all" | "selected";
     recipientIds?: number[];
   };
@@ -99,7 +160,9 @@ router.post("/admin/email-campaigns", requireRole("admin"), async (req: Request,
     .values({
       title: title.trim(),
       subject: subject.trim(),
+      headerLogoUrl: headerLogoUrl ?? "",
       blocks: blocks ?? [],
+      footer: footer ?? DEFAULT_FOOTER,
       recipientType: recipientType ?? "all",
       recipientIds: recipientIds ?? [],
       status: "draft",
@@ -117,10 +180,12 @@ router.put("/admin/email-campaigns/:id", requireRole("admin"), async (req: Reque
   if (!existing) { res.status(404).json({ error: "Not found" }); return; }
   if (existing.status === "sent") { res.status(400).json({ error: "Cannot edit a sent campaign" }); return; }
 
-  const { title, subject, blocks, recipientType, recipientIds } = req.body as {
+  const { title, subject, headerLogoUrl, blocks, footer, recipientType, recipientIds } = req.body as {
     title?: string;
     subject?: string;
+    headerLogoUrl?: string;
     blocks?: EmailBlock[];
+    footer?: CampaignFooter;
     recipientType?: "all" | "selected";
     recipientIds?: number[];
   };
@@ -130,7 +195,9 @@ router.put("/admin/email-campaigns/:id", requireRole("admin"), async (req: Reque
     .set({
       title: title?.trim() ?? existing.title,
       subject: subject?.trim() ?? existing.subject,
+      headerLogoUrl: headerLogoUrl ?? existing.headerLogoUrl ?? "",
       blocks: blocks ?? existing.blocks,
+      footer: footer ?? existing.footer ?? DEFAULT_FOOTER,
       recipientType: recipientType ?? existing.recipientType,
       recipientIds: recipientIds ?? existing.recipientIds,
     })
@@ -153,7 +220,7 @@ router.get("/admin/email-campaigns/:id/preview", requireRole("admin"), async (re
   if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid id" }); return; }
   const [campaign] = await db.select().from(emailCampaignsTable).where(eq(emailCampaignsTable.id, id));
   if (!campaign) { res.status(404).json({ error: "Not found" }); return; }
-  const html = renderCampaignHtml(campaign.subject, campaign.blocks);
+  const html = renderCampaignHtml(campaign.subject, campaign.blocks, campaign.footer, campaign.headerLogoUrl);
   res.setHeader("Content-Type", "text/html");
   res.send(html);
 });
@@ -189,7 +256,7 @@ router.post("/admin/email-campaigns/:id/send", requireRole("admin"), async (req:
     return;
   }
 
-  const html = renderCampaignHtml(campaign.subject, campaign.blocks);
+  const html = renderCampaignHtml(campaign.subject, campaign.blocks, campaign.footer, campaign.headerLogoUrl);
 
   logger.info({ campaignId: id, recipients: recipients.length }, "Sending email campaign");
 
