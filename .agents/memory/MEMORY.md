@@ -1,1 +1,0 @@
-- [Email provider order](email-providers.md) — Brevo is primary, SMTP is fallback; Resend removed entirely
