@@ -115,6 +115,8 @@ function renderFooterHtml(footer: CampaignFooter): string {
 export function renderCampaignHtml(subject: string, blocks: EmailBlock[], footer?: CampaignFooter | null, headerLogoUrl?: string): string {
   const bodyContent = blocks.map(renderBlock).join("\n");
   const footerData  = { ...DEFAULT_FOOTER, ...(footer ?? {}) };
+  const headerBg   = footer?.headerBgColor?.trim()   || "#7c3aed";
+  const headerFg   = footer?.headerTextColor?.trim() || "#ffffff";
   const logoHtml = headerLogoUrl?.trim()
     ? `<td align="right" style="padding:16px 32px;vertical-align:middle;">
         <img src="${escHtml(headerLogoUrl)}" alt="Logo" style="display:inline-block;max-height:40px;max-width:140px;object-fit:contain;" />
@@ -132,9 +134,9 @@ export function renderCampaignHtml(subject: string, blocks: EmailBlock[], footer
   <tr><td align="center">
     <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);">
       <!-- Header bar -->
-      <tr style="background:#7c3aed;">
+      <tr style="background:${headerBg};">
         <td style="padding:16px 32px;vertical-align:middle;">
-          <span style="font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">AllMart</span>
+          <span style="font-size:20px;font-weight:700;color:${headerFg};letter-spacing:-0.3px;">AllMart</span>
         </td>
         ${logoHtml}
       </tr>

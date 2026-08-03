@@ -40,6 +40,8 @@ type CampaignFooter = {
   links: { label: string; url: string }[];
   bgColor: string;
   textColor: string;
+  headerBgColor?: string;
+  headerTextColor?: string;
 };
 
 const DEFAULT_FOOTER: CampaignFooter = {
@@ -49,6 +51,8 @@ const DEFAULT_FOOTER: CampaignFooter = {
   links: [],
   bgColor: "#f9fafb",
   textColor: "#9ca3af",
+  headerBgColor: "#7c3aed",
+  headerTextColor: "#ffffff",
 };
 
 type Campaign = {
@@ -878,6 +882,54 @@ function CampaignEditor({
             <img src={headerLogoUrl} alt="Logo preview" className="h-8 object-contain rounded border border-border/50 mt-1"
               onError={e => (e.currentTarget.style.display = "none")} />
           )}
+        </div>
+
+        {/* Header bar color pickers */}
+        <div className="space-y-2">
+          <Label>Header bar colors</Label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <p className="text-xs text-muted-foreground">Background</p>
+              <div className="flex gap-2 items-center">
+                <input type="color"
+                  value={footer.headerBgColor ?? "#7c3aed"}
+                  onChange={e => setFooter(f => ({ ...f, headerBgColor: e.target.value }))}
+                  disabled={isSent}
+                  className="h-9 w-10 rounded border border-input p-0.5 cursor-pointer bg-transparent" />
+                <Input
+                  value={footer.headerBgColor ?? "#7c3aed"}
+                  onChange={e => setFooter(f => ({ ...f, headerBgColor: e.target.value }))}
+                  disabled={isSent}
+                  className="font-mono text-xs" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-xs text-muted-foreground">Text color</p>
+              <div className="flex gap-2 items-center">
+                <input type="color"
+                  value={footer.headerTextColor ?? "#ffffff"}
+                  onChange={e => setFooter(f => ({ ...f, headerTextColor: e.target.value }))}
+                  disabled={isSent}
+                  className="h-9 w-10 rounded border border-input p-0.5 cursor-pointer bg-transparent" />
+                <Input
+                  value={footer.headerTextColor ?? "#ffffff"}
+                  onChange={e => setFooter(f => ({ ...f, headerTextColor: e.target.value }))}
+                  disabled={isSent}
+                  className="font-mono text-xs" />
+              </div>
+            </div>
+          </div>
+          {/* Live preview strip */}
+          <div className="rounded-lg overflow-hidden border border-border/40 mt-1">
+            <div className="flex items-center justify-between px-4 py-2.5"
+              style={{ background: footer.headerBgColor ?? "#7c3aed" }}>
+              <span className="font-bold text-sm" style={{ color: footer.headerTextColor ?? "#ffffff", letterSpacing: "-0.3px" }}>AllMart</span>
+              {headerLogoUrl && (
+                <img src={headerLogoUrl} alt="logo" className="h-6 object-contain"
+                  onError={e => (e.currentTarget.style.display = "none")} />
+              )}
+            </div>
+          </div>
         </div>
       </Card>
 

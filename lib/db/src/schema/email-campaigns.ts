@@ -26,6 +26,9 @@ export type CampaignFooter = {
   links: { label: string; url: string }[];
   bgColor: string;
   textColor: string;
+  // Email header bar colours (stored here to avoid a schema migration)
+  headerBgColor?: string;
+  headerTextColor?: string;
 };
 
 export const DEFAULT_FOOTER: CampaignFooter = {
@@ -35,6 +38,8 @@ export const DEFAULT_FOOTER: CampaignFooter = {
   links: [],
   bgColor: "#f9fafb",
   textColor: "#9ca3af",
+  headerBgColor: "#7c3aed",
+  headerTextColor: "#ffffff",
 };
 
 export const emailCampaignsTable = pgTable("email_campaigns", {
