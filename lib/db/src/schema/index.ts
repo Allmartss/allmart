@@ -13,3 +13,4 @@ export * from "./landing-pages";
 export * from "./visitors";
 export * from "./admin-bonus-gifts";
 export * from "./email-subscriptions";
+export * from "./email-campaigns";

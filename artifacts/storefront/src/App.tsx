@@ -137,6 +137,7 @@ function Router() {
         <Route path="/admin/health" component={() => <Admin section="health" />} />
         <Route path="/admin/pop-ads" component={() => <Admin section="pop-ads" />} />
         <Route path="/admin/ad-notifications" component={() => <Admin section="ad-notifications" />} />
+        <Route path="/admin/email-campaigns" component={() => <Admin section="email-campaigns" />} />
         <Route path="/pm" component={() => <PMConsole section="dashboard" />} />
         <Route path="/pm/orders" component={() => <PMConsole section="orders" />} />
         <Route path="/pm/catalog" component={() => <PMConsole section="catalog" />} />

@@ -29,6 +29,7 @@ import flashSaleRouter from "./flash-sale";
 import adminHealthRouter from "./admin-health";
 import subscriptionsRouter from "./subscriptions";
 import popupAdRouter from "./popup-ad";
+import emailCampaignsRouter from "./email-campaigns";
 
 const router: IRouter = Router();
 
@@ -62,5 +63,6 @@ router.use(flashSaleRouter);
 router.use(adminHealthRouter);
 router.use(subscriptionsRouter);
 router.use(popupAdRouter);
+router.use(emailCampaignsRouter);
 
 export default router;

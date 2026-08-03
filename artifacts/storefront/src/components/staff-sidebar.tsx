@@ -41,6 +41,7 @@ import {
   Activity,
   Megaphone,
   MousePointerClick,
+  Mail,
 } from "lucide-react";
 
 type NavItem = {
@@ -60,6 +61,7 @@ const ADMIN_ITEMS: NavItem[] = [
   { href: "/admin/landing-pages", label: "Landing pages", icon: Globe },
   { href: "/admin/pop-ads", label: "Pop-up ads", icon: MousePointerClick },
   { href: "/admin/ad-notifications", label: "Ad notifications", icon: Megaphone },
+  { href: "/admin/email-campaigns", label: "Email campaigns", icon: Mail },
   { href: "/admin/notifications", label: "Push notification", icon: Bell },
   { href: "/admin/support", label: "Support desk", icon: HeadphonesIcon },
   { href: "/admin/visitors", label: "Visitors", icon: Eye },

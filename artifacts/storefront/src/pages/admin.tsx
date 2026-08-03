@@ -21,6 +21,7 @@ import { CsvImportExport } from "@/components/csv-import-export";
 import { AdminReferrals } from "@/components/admin-referrals";
 import { AdminFlashSaleManager } from "@/components/admin-flash-sale";
 import { AdminHealthWatch } from "@/components/admin-health-watch";
+import { AdminEmailCampaigns } from "@/components/admin-email-campaigns";
 import {
   ShieldCheck,
   Users as UsersIcon,
@@ -40,6 +41,7 @@ import {
   Activity,
   Megaphone,
   MousePointerClick,
+  Mail,
 } from "lucide-react";
 
 type Section =
@@ -60,7 +62,8 @@ type Section =
   | "flash-sale"
   | "health"
   | "pop-ads"
-  | "ad-notifications";
+  | "ad-notifications"
+  | "email-campaigns";
 
 export default function Admin({ section = "dashboard" }: { section?: Section }) {
   const [, setLocation] = useLocation();
@@ -213,6 +216,13 @@ export default function Admin({ section = "dashboard" }: { section?: Section }) 
         <>
           <StaffPageHeader icon={Megaphone} title="Ad notifications" description="Send a promotional notification to all users or specific individuals. Appears in their notifications feed." />
           <AdminAdNotifications />
+        </>
+      )}
+
+      {section === "email-campaigns" && (
+        <>
+          <StaffPageHeader icon={Mail} title="Email campaigns" description="Design and send promotional emails to all users or selected individuals using customizable content blocks." />
+          <AdminEmailCampaigns />
         </>
       )}
     </div>
