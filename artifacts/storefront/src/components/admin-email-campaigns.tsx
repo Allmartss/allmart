@@ -53,6 +53,7 @@ type Campaign = {
   id: number;
   title: string;
   subject: string;
+  headerLogoUrl: string;
   blocks: EmailBlock[];
   footer: CampaignFooter;
   status: "draft" | "sent";
@@ -629,26 +630,30 @@ function CampaignEditor({
 }) {
   const { toast } = useToast();
 
-  const [title, setTitle]   = useState(campaign?.title ?? "");
-  const [subject, setSubject] = useState(campaign?.subject ?? "");
-  const [blocks, setBlocks]   = useState<EmailBlock[]>(campaign?.blocks ?? []);
-  const [footer, setFooter]   = useState<CampaignFooter>({ ...DEFAULT_FOOTER, ...(campaign?.footer ?? {}) });
+  const [title, setTitle]           = useState(campaign?.title ?? "");
+  const [subject, setSubject]       = useState(campaign?.subject ?? "");
+  const [headerLogoUrl, setHeaderLogoUrl] = useState(campaign?.headerLogoUrl ?? "");
+  const [blocks, setBlocks]         = useState<EmailBlock[]>(campaign?.blocks ?? []);
+  const [footer, setFooter]         = useState<CampaignFooter>({ ...DEFAULT_FOOTER, ...(campaign?.footer ?? {}) });
   const [recipientType, setRecipientType] = useState<"all"|"selected">(campaign?.recipientType ?? "all");
   const [recipientIds, setRecipientIds]   = useState<number[]>(campaign?.recipientIds ?? []);
 
-  const [saving, setSaving]   = useState(false);
-  const [sending, setSending] = useState(false);
+  const [saving, setSaving]     = useState(false);
+  const [sending, setSending]   = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [preview, setPreview] = useState(false);
+  const [preview, setPreview]   = useState(false);
+  const [editMode, setEditMode] = useState(false);
 
   // Reset when campaign changes
   useEffect(() => {
     setTitle(campaign?.title ?? "");
     setSubject(campaign?.subject ?? "");
+    setHeaderLogoUrl(campaign?.headerLogoUrl ?? "");
     setBlocks(campaign?.blocks ?? []);
     setFooter({ ...DEFAULT_FOOTER, ...(campaign?.footer ?? {}) });
     setRecipientType(campaign?.recipientType ?? "all");
     setRecipientIds(campaign?.recipientIds ?? []);
+    setEditMode(false);
   }, [campaign?.id]);
 
   function updateBlock(index: number, updated: EmailBlock) {
