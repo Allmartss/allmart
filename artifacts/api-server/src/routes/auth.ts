@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { SignUpBody, SignInBody } from "@workspace/api-zod";
 import { getUserFromCookie } from "../lib/auth";
 import { sendEmail } from "./email";
+import { loadTemplate, renderTemplate } from "./email-templates";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -114,16 +115,13 @@ router.post("/auth/signup", async (req: Request, res: Response) => {
   res.json(publicUser(user!));
 
   // Welcome email — fire and forget
-  sendEmail({
-    to: user!.email,
-    subject: "Welcome to AllMart 🎉",
-    html: `
-      <div style="font-family:sans-serif;max-width:520px;margin:0 auto">
-        <h2 style="color:#e07b39">Welcome to AllMart, ${user!.name}!</h2>
-        <p>Your account has been created successfully. Start shopping thousands of products across every category.</p>
-        ${signupBonus > 0 ? `<p>🎁 You've received a <strong>${signupBonus} signup bonus</strong> credited to your account!</p>` : ""}
-        <p style="margin-top:24px;color:#888;font-size:12px">If you didn't create this account, please ignore this email.</p>
-      </div>`,
+  loadTemplate("welcome").then(async (template) => {
+    const bonusText = signupBonus > 0
+      ? `🎁 You've received a <strong>${signupBonus} signup bonus</strong> credited to your account!`
+      : "";
+    const html = renderTemplate(template, { name: user!.name, signup_bonus_text: bonusText });
+    const subject = template.subject;
+    await sendEmail({ to: user!.email, subject, html });
   }).catch((err) => { logger.error({ err, to: user!.email }, "Welcome email failed"); });
 });
 
@@ -152,19 +150,9 @@ router.post("/auth/signin", async (req: Request, res: Response) => {
 
   // Login notification — fire and forget
   const loginTime = new Date().toLocaleString("en-NG", { timeZone: "Africa/Lagos", dateStyle: "full", timeStyle: "short" });
-  sendEmail({
-    to: user.email,
-    subject: "New login to your AllMart account",
-    html: `
-      <div style="font-family:sans-serif;max-width:520px;margin:0 auto">
-        <h2 style="color:#e07b39">Login detected</h2>
-        <p>Hi <strong>${user.name}</strong>, a new sign-in to your AllMart account was detected.</p>
-        <table style="border-collapse:collapse;width:100%;margin:16px 0;font-size:14px">
-          <tr><td style="padding:6px 0;color:#888">Time</td><td style="padding:6px 0">${loginTime} (Lagos)</td></tr>
-        </table>
-        <p style="color:#e07b39;font-weight:600">If this wasn't you, please change your password immediately.</p>
-        <p style="margin-top:24px;color:#888;font-size:12px">This is an automated security notification from AllMart.</p>
-      </div>`,
+  loadTemplate("login").then(async (template) => {
+    const html = renderTemplate(template, { name: user.name, login_time: `${loginTime} (Lagos)` });
+    await sendEmail({ to: user.email, subject: template.subject, html });
   }).catch((err) => { logger.error({ err, to: user.email }, "Login notification email failed"); });
 });
 

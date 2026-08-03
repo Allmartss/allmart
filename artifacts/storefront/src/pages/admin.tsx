@@ -22,6 +22,7 @@ import { AdminReferrals } from "@/components/admin-referrals";
 import { AdminFlashSaleManager } from "@/components/admin-flash-sale";
 import { AdminHealthWatch } from "@/components/admin-health-watch";
 import { AdminEmailCampaigns } from "@/components/admin-email-campaigns";
+import { AdminEmailTemplates } from "@/components/admin-email-templates";
 import {
   ShieldCheck,
   Users as UsersIcon,
@@ -42,6 +43,7 @@ import {
   Megaphone,
   MousePointerClick,
   Mail,
+  PenLine,
 } from "lucide-react";
 
 type Section =
@@ -63,7 +65,8 @@ type Section =
   | "health"
   | "pop-ads"
   | "ad-notifications"
-  | "email-campaigns";
+  | "email-campaigns"
+  | "email-templates";
 
 export default function Admin({ section = "dashboard" }: { section?: Section }) {
   const [, setLocation] = useLocation();
@@ -223,6 +226,13 @@ export default function Admin({ section = "dashboard" }: { section?: Section }) 
         <>
           <StaffPageHeader icon={Mail} title="Email campaigns" description="Design and send promotional emails to all users or selected individuals using customizable content blocks." />
           <AdminEmailCampaigns />
+        </>
+      )}
+
+      {section === "email-templates" && (
+        <>
+          <StaffPageHeader icon={PenLine} title="Email templates" description="Edit the content, styling, and subject lines of every transactional email sent by AllMart." />
+          <AdminEmailTemplates />
         </>
       )}
     </div>

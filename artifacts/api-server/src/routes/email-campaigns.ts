@@ -112,7 +112,7 @@ function renderFooterHtml(footer: CampaignFooter): string {
 </td></tr>`;
 }
 
-export function renderCampaignHtml(subject: string, blocks: EmailBlock[], footer?: CampaignFooter | null, headerLogoUrl?: string): string {
+export function renderCampaignHtml(subject: string, blocks: EmailBlock[], footer?: CampaignFooter | null, headerLogoUrl?: string, extraBodyHtml?: string): string {
   const bodyContent = blocks.map(renderBlock).join("\n");
   const footerData  = { ...DEFAULT_FOOTER, ...(footer ?? {}) };
   const headerBg   = footer?.headerBgColor?.trim()   || "#7c3aed";
@@ -143,6 +143,7 @@ export function renderCampaignHtml(subject: string, blocks: EmailBlock[], footer
       <!-- Body -->
       <tr><td style="padding:32px;">
         ${bodyContent}
+        ${extraBodyHtml ?? ""}
       </td></tr>
       <!-- Footer -->
       ${renderFooterHtml(footerData)}

@@ -30,6 +30,7 @@ import adminHealthRouter from "./admin-health";
 import subscriptionsRouter from "./subscriptions";
 import popupAdRouter from "./popup-ad";
 import emailCampaignsRouter from "./email-campaigns";
+import emailTemplatesRouter from "./email-templates";
 
 const router: IRouter = Router();
 
@@ -64,5 +65,6 @@ router.use(adminHealthRouter);
 router.use(subscriptionsRouter);
 router.use(popupAdRouter);
 router.use(emailCampaignsRouter);
+router.use(emailTemplatesRouter);
 
 export default router;

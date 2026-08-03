@@ -2,6 +2,13 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { BrevoClient } from "@getbrevo/brevo";
 import { logger } from "../lib/logger";
 import nodemailer from "nodemailer";
+import {
+  loadTemplate,
+  loadOrderStatuses,
+  renderTemplate,
+  buildOrderTableHtml,
+  buildAlertTableHtml,
+} from "./email-templates";
 
 const router: IRouter = Router();
 
@@ -148,51 +155,37 @@ export async function sendOrderEmail(opts: {
   shippingAddress: string;
 }) {
   const fmt = new Intl.NumberFormat("en-US", { style: "currency", currency: opts.currency }).format(opts.total);
-  const statusMessages: Record<string, string> = {
-    placed: "Your order has been placed and is being processed.",
-    confirmed: "Your payment has been confirmed. Your order is now being prepared.",
-    dispatched: "Great news! Your order is on its way.",
-    delivered: "Your order has been delivered. Enjoy!",
-    cancelled: "Your order has been cancelled.",
-    payment_rejected: "Your payment could not be verified. Please contact support or resubmit your proof of payment.",
-  };
+  const statusMessages = await loadOrderStatuses();
   const msg = statusMessages[opts.orderStatus] ?? `Your order status is now: ${opts.orderStatus}.`;
   const statusLabel = opts.orderStatus.charAt(0).toUpperCase() + opts.orderStatus.slice(1);
 
-  await sendEmail({
-    to: opts.to,
-    subject: `Order ${opts.trackingCode} — ${statusLabel}`,
-    html: `
-      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#fff">
-        <div style="border-bottom:2px solid #1a56e8;padding-bottom:16px;margin-bottom:24px">
-          <h1 style="color:#1a56e8;margin:0;font-size:24px">AllMart</h1>
-        </div>
-        <p style="color:#111;font-size:16px">Hi ${opts.name},</p>
-        <p style="color:#333;font-size:15px">${msg}</p>
-        <table style="width:100%;border-collapse:collapse;margin:20px 0;border:1px solid #eee;border-radius:8px;overflow:hidden">
-          <tr style="background:#f0f5ff">
-            <td style="padding:12px 16px;color:#666;font-size:13px;border-bottom:1px solid #eee">Order ref</td>
-            <td style="padding:12px 16px;font-weight:bold;border-bottom:1px solid #eee">${opts.trackingCode}</td>
-          </tr>
-          <tr>
-            <td style="padding:12px 16px;color:#666;font-size:13px;border-bottom:1px solid #eee">Total</td>
-            <td style="padding:12px 16px;font-weight:bold;border-bottom:1px solid #eee">${fmt}</td>
-          </tr>
-          <tr style="background:#f0f5ff">
-            <td style="padding:12px 16px;color:#666;font-size:13px;border-bottom:1px solid #eee">Shipping to</td>
-            <td style="padding:12px 16px;border-bottom:1px solid #eee">${opts.shippingAddress}</td>
-          </tr>
-          <tr>
-            <td style="padding:12px 16px;color:#666;font-size:13px">Status</td>
-            <td style="padding:12px 16px;text-transform:capitalize;color:#1a56e8;font-weight:600">${opts.orderStatus}</td>
-          </tr>
-        </table>
-        <p style="color:#888;font-size:12px;margin-top:32px;border-top:1px solid #eee;padding-top:16px">
-          — The AllMart Team · support@allmart.com
-        </p>
-      </div>`,
+  const template = await loadTemplate("order");
+  const extraBodyHtml = buildOrderTableHtml({
+    trackingCode: opts.trackingCode,
+    total: fmt,
+    shippingAddress: opts.shippingAddress,
+    orderStatus: opts.orderStatus,
   });
 
+  const html = renderTemplate(
+    { ...template, subject: template.subject },
+    {
+      name: opts.name,
+      tracking_code: opts.trackingCode,
+      order_status: opts.orderStatus,
+      order_status_label: statusLabel,
+      status_message: msg,
+      total: fmt,
+      shipping_address: opts.shippingAddress,
+    },
+    extraBodyHtml,
+  );
+
+  const subject = template.subject
+    .split("{{tracking_code}}").join(opts.trackingCode)
+    .split("{{order_status_label}}").join(statusLabel);
+
+  await sendEmail({ to: opts.to, subject, html });
   logger.info({ to: opts.to, orderStatus: opts.orderStatus }, "Order email sent");
 }
 
@@ -208,49 +201,36 @@ export async function sendAdminPaymentAlert(opts: {
 }) {
   const adminEmail = process.env.ADMIN_EMAIL ?? "admin@allmart.com";
   const fmt = new Intl.NumberFormat("en-US", { style: "currency", currency: opts.currency }).format(opts.total);
+  const resolvedAdminUrl = opts.adminUrl ?? process.env.STOREFRONT_URL ?? "https://allmarts.us";
 
   try {
-    await sendEmail({
-      to: adminEmail,
-      subject: `Payment screenshot uploaded — Order ${opts.trackingCode}`,
-      html: `
-        <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#fff">
-          <div style="border-bottom:2px solid #1a56e8;padding-bottom:16px;margin-bottom:24px">
-            <h1 style="color:#1a56e8;margin:0;font-size:24px">AllMart — Admin Alert</h1>
-          </div>
-          <p style="color:#111;font-size:16px;font-weight:600">A customer has uploaded a payment screenshot and is awaiting verification.</p>
-          <table style="width:100%;border-collapse:collapse;margin:20px 0;border:1px solid #eee;border-radius:8px;overflow:hidden">
-            <tr style="background:#f0f5ff">
-              <td style="padding:12px 16px;color:#666;font-size:13px;border-bottom:1px solid #eee;width:140px">Order ref</td>
-              <td style="padding:12px 16px;font-weight:bold;border-bottom:1px solid #eee">${opts.trackingCode}</td>
-            </tr>
-            <tr>
-              <td style="padding:12px 16px;color:#666;font-size:13px;border-bottom:1px solid #eee">Customer</td>
-              <td style="padding:12px 16px;border-bottom:1px solid #eee">${opts.customerName} (${opts.customerEmail})</td>
-            </tr>
-            <tr style="background:#f0f5ff">
-              <td style="padding:12px 16px;color:#666;font-size:13px;border-bottom:1px solid #eee">Order total</td>
-              <td style="padding:12px 16px;font-weight:bold;border-bottom:1px solid #eee">${fmt}</td>
-            </tr>
-            <tr>
-              <td style="padding:12px 16px;color:#666;font-size:13px;border-bottom:1px solid #eee">Shipping to</td>
-              <td style="padding:12px 16px;border-bottom:1px solid #eee">${opts.shippingAddress}</td>
-            </tr>
-            ${opts.paymentNote ? `
-            <tr style="background:#f0f5ff">
-              <td style="padding:12px 16px;color:#666;font-size:13px">Customer note</td>
-              <td style="padding:12px 16px;font-style:italic">${opts.paymentNote}</td>
-            </tr>` : ""}
-          </table>
-          <a href="${opts.adminUrl ?? "https://allmart.replit.app"}/orders"
-             style="display:inline-block;background:#1a56e8;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:8px">
-            Review in Admin Panel →
-          </a>
-          <p style="color:#888;font-size:12px;margin-top:32px;border-top:1px solid #eee;padding-top:16px">
-            — AllMart automated alert
-          </p>
-        </div>`,
+    const template = await loadTemplate("admin_alert");
+    const extraBodyHtml = buildAlertTableHtml({
+      trackingCode: opts.trackingCode,
+      total: fmt,
+      customerName: opts.customerName,
+      customerEmail: opts.customerEmail,
+      shippingAddress: opts.shippingAddress,
+      paymentNote: opts.paymentNote,
+      adminUrl: resolvedAdminUrl,
     });
+
+    const html = renderTemplate(
+      template,
+      {
+        tracking_code: opts.trackingCode,
+        total: fmt,
+        customer_name: opts.customerName,
+        customer_email: opts.customerEmail,
+        shipping_address: opts.shippingAddress,
+      },
+      extraBodyHtml,
+    );
+
+    const subject = template.subject
+      .split("{{tracking_code}}").join(opts.trackingCode);
+
+    await sendEmail({ to: adminEmail, subject, html });
   } catch (err) {
     logger.error({ err }, "Admin payment alert email failed");
   }

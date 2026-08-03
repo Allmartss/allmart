@@ -3,6 +3,7 @@ import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { randomInt } from "crypto";
 import { sendEmail } from "./email";
+import { loadTemplate, renderTemplate, buildVerificationCodeHtml } from "./email-templates";
 import { logger } from "../lib/logger";
 import { getUserFromCookie } from "../lib/auth";
 import { verificationResendLimiter, verificationAttemptLimiter } from "../lib/rate-limit";
@@ -35,19 +36,13 @@ router.post("/auth/send-verification", async (req: Request, res: Response) => {
     emailVerificationExpiry: expiry,
   }).where(eq(usersTable.id, user.id));
 
-  sendEmail({
-    to: user.email,
-    subject: "Your AllMart verification code",
-    html: `
-      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px">
-        <h2 style="color:#e07b39;margin-bottom:8px">Verify your email</h2>
-        <p>Hi <strong>${user.name}</strong>, use the code below to verify your AllMart account.</p>
-        <div style="margin:24px 0;padding:20px;background:#f9f5f1;border-radius:12px;text-align:center">
-          <p style="font-size:36px;font-weight:700;letter-spacing:8px;color:#e07b39;margin:0">${code}</p>
-          <p style="font-size:12px;color:#888;margin:8px 0 0">Expires in 30 minutes</p>
-        </div>
-        <p style="color:#888;font-size:12px">If you didn't request this, you can safely ignore this email.</p>
-      </div>`,
+  loadTemplate("verification").then(async (template) => {
+    const html = renderTemplate(
+      template,
+      { name: user.name, code },
+      buildVerificationCodeHtml(code),
+    );
+    await sendEmail({ to: user.email, subject: template.subject, html });
   }).catch((err) => { logger.error({ err, to: user.email }, "Verification email failed"); });
 
   res.json({ ok: true });
