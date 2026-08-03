@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,17 +10,19 @@ import {
   Type, Image as ImageIcon, AlignCenter, Minus, ShoppingBag,
   ChevronRight, FileText, CheckSquare, Square, Users, X, RefreshCw,
   CheckCircle2, MapPin, Link as LinkIcon, Instagram, Twitter, Facebook,
-  Youtube, Linkedin,
+  Youtube, Linkedin, Edit2, RotateCcw, ArrowLeft, ChevronDown,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+type ProductItem = { productId: number; name: string; price: number; imageUrl: string };
 
 type HeaderBlock  = { type: "header"; text: string; size: "h1" | "h2" | "h3"; align: "left"|"center"|"right"; color: string };
 type TextBlock    = { type: "text"; text: string };
 type ImageBlock   = { type: "image"; url: string; alt: string; link?: string };
 type ButtonBlock  = { type: "button"; text: string; url: string; bgColor: string; align: "left"|"center"|"right" };
 type DividerBlock = { type: "divider" };
-type ProductBlock = { type: "product"; productId: number; name: string; price: number; imageUrl: string };
+type ProductBlock = { type: "product"; products: ProductItem[] };
 type EmailBlock   = HeaderBlock | TextBlock | ImageBlock | ButtonBlock | DividerBlock | ProductBlock;
 
 type CampaignFooter = {
@@ -76,7 +78,7 @@ function blockLabel(b: EmailBlock): string {
     case "image":   return `Image: ${b.alt || b.url.slice(0, 30)}`;
     case "button":  return `Button: ${b.text}`;
     case "divider": return "Divider";
-    case "product": return `Product: ${b.name}`;
+    case "product": return b.products.length === 0 ? "Product card (empty)" : `Products: ${b.products.length} selected`;
     default:        return "Block";
   }
 }
@@ -101,7 +103,7 @@ function defaultBlock(type: EmailBlock["type"]): EmailBlock {
     case "image":   return { type: "image", url: "", alt: "", link: "" };
     case "button":  return { type: "button", text: "Shop Now", url: "https://allmarts.us/products", bgColor: "#7c3aed", align: "center" };
     case "divider": return { type: "divider" };
-    case "product": return { type: "product", productId: 0, name: "", price: 0, imageUrl: "" };
+    case "product": return { type: "product", products: [] };
   }
 }
 
@@ -114,7 +116,7 @@ function HeaderEditor({ block, onChange }: { block: HeaderBlock; onChange: (b: H
         <Label>Headline text</Label>
         <Input value={block.text} onChange={e => onChange({ ...block, text: e.target.value })} placeholder="Your headline…" />
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="space-y-1.5">
           <Label>Size</Label>
           <select value={block.size} onChange={e => onChange({ ...block, size: e.target.value as HeaderBlock["size"] })}
@@ -165,7 +167,7 @@ function ImageEditor({ block, onChange }: { block: ImageBlock; onChange: (b: Ima
       {block.url && (
         <img src={block.url} alt={block.alt || "preview"} className="w-full max-h-40 object-cover rounded-lg border border-border/50" onError={e => (e.currentTarget.style.display = "none")} />
       )}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label>Alt text</Label>
           <Input value={block.alt} onChange={e => onChange({ ...block, alt: e.target.value })} placeholder="Describe the image" />
@@ -182,7 +184,7 @@ function ImageEditor({ block, onChange }: { block: ImageBlock; onChange: (b: Ima
 function ButtonEditor({ block, onChange }: { block: ButtonBlock; onChange: (b: ButtonBlock) => void }) {
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label>Button label</Label>
           <Input value={block.text} onChange={e => onChange({ ...block, text: e.target.value })} placeholder="Shop Now" />
@@ -192,7 +194,7 @@ function ButtonEditor({ block, onChange }: { block: ButtonBlock; onChange: (b: B
           <Input value={block.url} onChange={e => onChange({ ...block, url: e.target.value })} placeholder="https://…" />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label>Align</Label>
           <select value={block.align} onChange={e => onChange({ ...block, align: e.target.value as ButtonBlock["align"] })}
@@ -211,7 +213,6 @@ function ButtonEditor({ block, onChange }: { block: ButtonBlock; onChange: (b: B
           </div>
         </div>
       </div>
-      {/* Preview */}
       <div className={`pt-1 text-${block.align}`}>
         <span className="inline-block rounded-md px-5 py-2 text-sm font-semibold text-white" style={{ background: block.bgColor }}>
           {block.text || "Button"}
@@ -242,36 +243,71 @@ function ProductEditor({ block, onChange }: { block: ProductBlock; onChange: (b:
     !search || p.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  const selectedIds = new Set(block.products.map(p => p.productId));
+
+  function toggleProduct(p: Product) {
+    if (selectedIds.has(p.id)) {
+      onChange({ ...block, products: block.products.filter(item => item.productId !== p.id) });
+    } else {
+      onChange({ ...block, products: [...block.products, { productId: p.id, name: p.name, price: p.price, imageUrl: p.imageUrl }] });
+    }
+  }
+
+  function removeSelected(productId: number) {
+    onChange({ ...block, products: block.products.filter(item => item.productId !== productId) });
+  }
+
   return (
     <div className="space-y-3">
-      <Label>Pick a product from your catalog</Label>
+      <div className="flex items-center justify-between">
+        <Label>Pick products from your catalog</Label>
+        <span className="text-xs text-muted-foreground">{block.products.length} selected</span>
+      </div>
       <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search products…" />
       {loading ? (
-        <div className="text-xs text-muted-foreground">Loading products…</div>
+        <div className="text-xs text-muted-foreground flex items-center gap-2"><Loader2 className="h-3 w-3 animate-spin" />Loading products…</div>
       ) : (
         <div className="max-h-48 overflow-y-auto rounded-lg border border-border/50 divide-y divide-border/30">
-          {filtered.slice(0, 30).map(p => (
-            <button key={p.id} type="button"
-              onClick={() => onChange({ ...block, productId: p.id, name: p.name, price: p.price, imageUrl: p.imageUrl })}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-muted/40 transition-colors text-sm ${block.productId === p.id ? "bg-violet-50 dark:bg-violet-950/20" : ""}`}
-            >
-              <img src={p.imageUrl} alt={p.name} className="h-9 w-9 rounded object-cover shrink-0" onError={e => (e.currentTarget.style.display="none")} />
-              <div className="min-w-0 flex-1">
-                <p className="font-medium truncate">{p.name}</p>
-                <p className="text-muted-foreground text-xs">${Number(p.price).toFixed(2)}</p>
-              </div>
-              {block.productId === p.id && <CheckCircle2 className="h-4 w-4 text-violet-500 shrink-0" />}
-            </button>
-          ))}
+          {filtered.slice(0, 50).map(p => {
+            const isSelected = selectedIds.has(p.id);
+            return (
+              <button key={p.id} type="button"
+                onClick={() => toggleProduct(p)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-muted/40 transition-colors text-sm ${isSelected ? "bg-violet-50 dark:bg-violet-950/20" : ""}`}
+              >
+                <img src={p.imageUrl} alt={p.name} className="h-9 w-9 rounded object-cover shrink-0" onError={e => (e.currentTarget.style.display="none")} />
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium truncate">{p.name}</p>
+                  <p className="text-muted-foreground text-xs">${Number(p.price).toFixed(2)}</p>
+                </div>
+                {isSelected
+                  ? <CheckCircle2 className="h-4 w-4 text-violet-500 shrink-0" />
+                  : <Square className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+                }
+              </button>
+            );
+          })}
           {filtered.length === 0 && <p className="p-3 text-xs text-muted-foreground">No products found</p>}
         </div>
       )}
-      {block.productId > 0 && (
-        <div className="flex items-center gap-3 rounded-lg bg-muted/30 p-3 border border-border/40">
-          <img src={block.imageUrl} alt={block.name} className="h-12 w-12 rounded object-cover" onError={e => (e.currentTarget.style.display="none")} />
-          <div>
-            <p className="font-medium text-sm">{block.name}</p>
-            <p className="text-muted-foreground text-xs">${Number(block.price).toFixed(2)}</p>
+
+      {block.products.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Selected ({block.products.length})</p>
+          <div className="flex flex-col gap-1.5">
+            {block.products.map(item => (
+              <div key={item.productId} className="flex items-center gap-3 rounded-lg bg-muted/30 px-3 py-2 border border-border/40">
+                <img src={item.imageUrl} alt={item.name} className="h-8 w-8 rounded object-cover shrink-0" onError={e => (e.currentTarget.style.display="none")} />
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-xs truncate">{item.name}</p>
+                  <p className="text-muted-foreground text-xs">${Number(item.price).toFixed(2)}</p>
+                </div>
+                <Button type="button" size="icon" variant="ghost" className="h-6 w-6 shrink-0 text-destructive hover:bg-destructive/10"
+                  onClick={() => removeSelected(item.productId)}>
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -295,7 +331,6 @@ function BlockCard({
 
   return (
     <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
-      {/* Block header row */}
       <div className="flex items-center gap-2 px-4 py-2.5 bg-muted/30 border-b border-border/30">
         <div className="flex items-center gap-1.5 text-muted-foreground">
           {blockIcon(block.type)}
@@ -360,7 +395,7 @@ function RecipientSelector({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {(["all", "selected"] as const).map(t => (
           <button key={t} type="button"
             onClick={() => onChange(t, recipientIds)}
@@ -491,8 +526,6 @@ function FooterEditor({ footer, onChange, disabled }: {
 
   return (
     <div className="space-y-5">
-
-      {/* Message & address */}
       <div className="grid grid-cols-1 gap-4">
         <div className="space-y-1.5">
           <Label>Footer message / caption</Label>
@@ -510,8 +543,7 @@ function FooterEditor({ footer, onChange, disabled }: {
         </div>
       </div>
 
-      {/* Colours */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label>Footer background</Label>
           <div className="flex gap-2 items-center">
@@ -536,10 +568,9 @@ function FooterEditor({ footer, onChange, disabled }: {
         </div>
       </div>
 
-      {/* Social handles */}
       <div className="space-y-2">
         <Label className="flex items-center gap-1.5">Social media handles</Label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {SOCIAL_FIELDS.map(({ key, label, placeholder }) => (
             <div key={key} className="space-y-1">
               <p className="text-xs font-medium text-muted-foreground">{label}</p>
@@ -551,7 +582,6 @@ function FooterEditor({ footer, onChange, disabled }: {
         </div>
       </div>
 
-      {/* Custom links */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label className="flex items-center gap-1.5"><LinkIcon className="h-3.5 w-3.5 text-muted-foreground" />Custom links</Label>
@@ -586,7 +616,6 @@ function FooterEditor({ footer, onChange, disabled }: {
         )}
       </div>
 
-      {/* Live preview chip strip */}
       {(Object.values(footer.social ?? {}).some(v => v?.trim()) || (footer.links ?? []).some(l => l.label?.trim())) && (
         <div className="rounded-xl border border-border/50 bg-muted/20 p-4 text-center space-y-2">
           <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Footer preview</p>
@@ -623,17 +652,33 @@ function CampaignEditor({
   campaign,
   onSaved,
   onDeleted,
+  onBack,
 }: {
   campaign: Campaign | null;
   onSaved: (c: Campaign) => void;
   onDeleted: (id: number) => void;
+  onBack?: () => void;
 }) {
   const { toast } = useToast();
 
   const [title, setTitle]           = useState(campaign?.title ?? "");
   const [subject, setSubject]       = useState(campaign?.subject ?? "");
   const [headerLogoUrl, setHeaderLogoUrl] = useState(campaign?.headerLogoUrl ?? "");
-  const [blocks, setBlocks]         = useState<EmailBlock[]>(campaign?.blocks ?? []);
+  const [blocks, setBlocks]         = useState<EmailBlock[]>(() => {
+    // Migrate legacy single-product blocks to new products[] format
+    return (campaign?.blocks ?? []).map(b => {
+      if (b.type === "product") {
+        const pb = b as { type: "product"; products?: ProductItem[]; productId?: number; name?: string; price?: number; imageUrl?: string };
+        if (!pb.products) {
+          const legacy: ProductItem[] = pb.productId
+            ? [{ productId: pb.productId, name: pb.name ?? "", price: pb.price ?? 0, imageUrl: pb.imageUrl ?? "" }]
+            : [];
+          return { type: "product", products: legacy } as ProductBlock;
+        }
+      }
+      return b;
+    });
+  });
   const [footer, setFooter]         = useState<CampaignFooter>({ ...DEFAULT_FOOTER, ...(campaign?.footer ?? {}) });
   const [recipientType, setRecipientType] = useState<"all"|"selected">(campaign?.recipientType ?? "all");
   const [recipientIds, setRecipientIds]   = useState<number[]>(campaign?.recipientIds ?? []);
@@ -641,19 +686,29 @@ function CampaignEditor({
   const [saving, setSaving]     = useState(false);
   const [sending, setSending]   = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [reopening, setReopening] = useState(false);
   const [preview, setPreview]   = useState(false);
-  const [editMode, setEditMode] = useState(false);
+  const [footerCollapsed, setFooterCollapsed] = useState(false);
 
-  // Reset when campaign changes
   useEffect(() => {
     setTitle(campaign?.title ?? "");
     setSubject(campaign?.subject ?? "");
     setHeaderLogoUrl(campaign?.headerLogoUrl ?? "");
-    setBlocks(campaign?.blocks ?? []);
+    setBlocks((campaign?.blocks ?? []).map(b => {
+      if (b.type === "product") {
+        const pb = b as { type: "product"; products?: ProductItem[]; productId?: number; name?: string; price?: number; imageUrl?: string };
+        if (!pb.products) {
+          const legacy: ProductItem[] = pb.productId
+            ? [{ productId: pb.productId, name: pb.name ?? "", price: pb.price ?? 0, imageUrl: pb.imageUrl ?? "" }]
+            : [];
+          return { type: "product", products: legacy } as ProductBlock;
+        }
+      }
+      return b;
+    }));
     setFooter({ ...DEFAULT_FOOTER, ...(campaign?.footer ?? {}) });
     setRecipientType(campaign?.recipientType ?? "all");
     setRecipientIds(campaign?.recipientIds ?? []);
-    setEditMode(false);
   }, [campaign?.id]);
 
   function updateBlock(index: number, updated: EmailBlock) {
@@ -687,7 +742,7 @@ function CampaignEditor({
       const res   = await fetch(url, {
         method, credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, subject, blocks, footer, recipientType, recipientIds }),
+        body: JSON.stringify({ title, subject, headerLogoUrl, blocks, footer, recipientType, recipientIds }),
       });
       const data = await res.json() as Campaign & { error?: string };
       if (!res.ok) { toast({ title: "Error", description: data.error, variant: "destructive" }); return; }
@@ -724,6 +779,45 @@ function CampaignEditor({
     } finally { setSending(false); }
   }
 
+  async function resend() {
+    if (!campaign) return;
+    if (!confirm(`Resend "${campaign.subject}" again to ${campaign.recipientType === "all" ? "all users" : `${campaign.recipientIds.length} user(s)`}?`)) return;
+    setSending(true);
+    try {
+      const res = await fetch(`/api/admin/email-campaigns/${campaign.id}/resend`, {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json() as { successCount?: number; failCount?: number; campaign?: Campaign; error?: string };
+      if (!res.ok) { toast({ title: "Resend failed", description: data.error, variant: "destructive" }); return; }
+      onSaved(data.campaign!);
+      toast({
+        title: "Campaign resent! 🚀",
+        description: `Delivered to ${data.successCount} recipient(s)${data.failCount ? ` · ${data.failCount} failed` : ""}.`,
+      });
+    } catch {
+      toast({ title: "Network error", description: "Please try again.", variant: "destructive" });
+    } finally { setSending(false); }
+  }
+
+  async function reopen() {
+    if (!campaign) return;
+    if (!confirm("Reopen this campaign for editing? It will be set back to draft.")) return;
+    setReopening(true);
+    try {
+      const res = await fetch(`/api/admin/email-campaigns/${campaign.id}/reopen`, {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json() as Campaign & { error?: string };
+      if (!res.ok) { toast({ title: "Error", description: data.error, variant: "destructive" }); return; }
+      onSaved(data);
+      toast({ title: "Reopened", description: "Campaign is now a draft. You can edit and resend." });
+    } catch {
+      toast({ title: "Network error", description: "Please try again.", variant: "destructive" });
+    } finally { setReopening(false); }
+  }
+
   async function deleteCampaign() {
     if (!campaign) return;
     if (!confirm(`Delete "${campaign.title}"? This cannot be undone.`)) return;
@@ -740,12 +834,19 @@ function CampaignEditor({
   const isSent = campaign?.status === "sent";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Mobile back button */}
+      {onBack && (
+        <Button variant="ghost" size="sm" className="gap-2 -ml-1 md:hidden" onClick={onBack}>
+          <ArrowLeft className="h-4 w-4" /> Back to campaigns
+        </Button>
+      )}
+
       {/* Status banner for sent campaigns */}
       {isSent && (
-        <div className="flex items-center gap-3 rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/30 px-4 py-3">
-          <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
-          <div>
+        <div className="flex items-start sm:items-center gap-3 rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/30 px-4 py-3">
+          <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0 mt-0.5 sm:mt-0" />
+          <div className="flex-1 min-w-0">
             <p className="font-medium text-sm text-green-800 dark:text-green-300">Campaign sent</p>
             <p className="text-xs text-green-700 dark:text-green-400">
               Delivered to {campaign.recipientCount} recipient(s) · {campaign.sentAt ? new Date(campaign.sentAt).toLocaleString() : ""}
@@ -754,10 +855,10 @@ function CampaignEditor({
         </div>
       )}
 
-      {/* Meta */}
-      <Card className="p-5 border-border/50 space-y-4">
+      {/* Campaign setup */}
+      <Card className="p-4 sm:p-5 border-border/50 space-y-4">
         <h3 className="font-semibold text-sm">Campaign setup</h3>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label htmlFor="ec-title">Campaign name <span className="text-muted-foreground text-xs">(internal)</span></Label>
             <Input id="ec-title" value={title} onChange={e => setTitle(e.target.value)}
@@ -769,10 +870,19 @@ function CampaignEditor({
               placeholder="e.g. 🔥 Huge discounts inside!" disabled={isSent} />
           </div>
         </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="ec-logo">Header logo URL <span className="text-muted-foreground text-xs">(optional — shown opposite "AllMart" in email header)</span></Label>
+          <Input id="ec-logo" value={headerLogoUrl} onChange={e => setHeaderLogoUrl(e.target.value)}
+            placeholder="https://…/logo.png" disabled={isSent} />
+          {headerLogoUrl && (
+            <img src={headerLogoUrl} alt="Logo preview" className="h-8 object-contain rounded border border-border/50 mt-1"
+              onError={e => (e.currentTarget.style.display = "none")} />
+          )}
+        </div>
       </Card>
 
       {/* Block builder */}
-      <Card className="p-5 border-border/50 space-y-4">
+      <Card className="p-4 sm:p-5 border-border/50 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-sm">Email content</h3>
           <span className="text-xs text-muted-foreground">{blocks.length} block{blocks.length !== 1 ? "s" : ""}</span>
@@ -815,19 +925,30 @@ function CampaignEditor({
         )}
       </Card>
 
-      {/* Footer */}
-      <Card className="p-5 border-border/50 space-y-4">
-        <div className="flex items-center gap-2">
-          <Mail className="h-4 w-4 text-muted-foreground" />
+      {/* Footer — collapsible */}
+      <Card className="border-border/50 overflow-hidden">
+        <button
+          type="button"
+          className="w-full flex items-center gap-2 px-4 sm:px-5 py-4 hover:bg-muted/30 transition-colors"
+          onClick={() => setFooterCollapsed(v => !v)}
+        >
+          <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
           <h3 className="font-semibold text-sm">Email footer</h3>
           <span className="text-xs text-muted-foreground ml-1">— shown below every email</span>
-        </div>
-        <FooterEditor footer={footer} onChange={setFooter} disabled={isSent} />
+          <ChevronDown className={`h-4 w-4 text-muted-foreground ml-auto transition-transform ${footerCollapsed ? "" : "rotate-180"}`} />
+        </button>
+        {!footerCollapsed && (
+          <div className="px-4 sm:px-5 pb-5 border-t border-border/30">
+            <div className="pt-4">
+              <FooterEditor footer={footer} onChange={setFooter} disabled={isSent} />
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Recipients */}
       {!isSent && (
-        <Card className="p-5 border-border/50 space-y-4">
+        <Card className="p-4 sm:p-5 border-border/50 space-y-4">
           <h3 className="font-semibold text-sm flex items-center gap-2"><Users className="h-4 w-4" /> Recipients</h3>
           <RecipientSelector
             recipientType={recipientType}
@@ -838,8 +959,8 @@ function CampaignEditor({
       )}
 
       {/* Actions */}
-      <div className="flex items-center gap-3 flex-wrap">
-        {!isSent && (
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        {!isSent ? (
           <>
             <Button onClick={save} disabled={saving || sending} className="gap-2">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
@@ -851,12 +972,26 @@ function CampaignEditor({
                   <Eye className="h-4 w-4" /> Preview
                 </Button>
                 <Button onClick={send} disabled={saving || sending || blocks.length === 0}
-                  className="gap-2 bg-violet-600 hover:bg-violet-700 text-white ml-auto">
+                  className="gap-2 bg-violet-600 hover:bg-violet-700 text-white sm:ml-auto">
                   {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   {sending ? "Sending…" : `Send to ${recipientType === "all" ? "all users" : `${recipientIds.length} user(s)`}`}
                 </Button>
               </>
             )}
+          </>
+        ) : (
+          <>
+            <Button onClick={() => setPreview(true)} variant="outline" className="gap-2">
+              <Eye className="h-4 w-4" /> Preview
+            </Button>
+            <Button onClick={reopen} disabled={reopening} variant="outline" className="gap-2">
+              {reopening ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit2 className="h-4 w-4" />}
+              {reopening ? "Reopening…" : "Edit"}
+            </Button>
+            <Button onClick={resend} disabled={sending} className="gap-2 bg-violet-600 hover:bg-violet-700 text-white">
+              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+              {sending ? "Sending…" : "Resend"}
+            </Button>
           </>
         )}
         {campaign && (
@@ -882,6 +1017,8 @@ export function AdminEmailCampaigns() {
   const [loading, setLoading]     = useState(true);
   const [selected, setSelected]   = useState<Campaign | null>(null);
   const [isNew, setIsNew]         = useState(false);
+  // Mobile: "list" | "editor"
+  const [mobileView, setMobileView] = useState<"list" | "editor">("list");
 
   const load = useCallback(() => {
     setLoading(true);
@@ -908,17 +1045,27 @@ export function AdminEmailCampaigns() {
     setCampaigns(prev => prev.filter(c => c.id !== id));
     setSelected(null);
     setIsNew(false);
+    setMobileView("list");
   }
 
   function startNew() {
     setSelected(null);
     setIsNew(true);
+    setMobileView("editor");
   }
 
+  function selectCampaign(c: Campaign) {
+    setSelected(c);
+    setIsNew(false);
+    setMobileView("editor");
+  }
+
+  const showEditor = isNew || selected;
+
   return (
-    <div className="flex gap-6 min-h-[600px]">
+    <div className="flex flex-col md:flex-row gap-4 sm:gap-6 min-h-[600px]">
       {/* ── Left panel: campaign list ── */}
-      <div className="w-72 shrink-0 space-y-3">
+      <div className={`md:w-72 md:shrink-0 space-y-3 ${mobileView === "editor" && showEditor ? "hidden md:block" : "block"}`}>
         <div className="flex items-center gap-2">
           <Button size="sm" onClick={startNew} className="gap-1.5 flex-1 h-9">
             <Plus className="h-4 w-4" /> New campaign
@@ -938,9 +1085,9 @@ export function AdminEmailCampaigns() {
         ) : (
           <div className="space-y-1.5">
             {campaigns.map(c => (
-              <button key={c.id} type="button" onClick={() => { setSelected(c); setIsNew(false); }}
+              <button key={c.id} type="button" onClick={() => selectCampaign(c)}
                 className={`w-full text-left rounded-xl border px-4 py-3 transition-all group ${
-                  selected?.id === c.id
+                  selected?.id === c.id && !isNew
                     ? "border-violet-500 bg-violet-50 dark:bg-violet-950/20"
                     : "border-border/50 hover:border-border bg-card"
                 }`}
@@ -967,15 +1114,16 @@ export function AdminEmailCampaigns() {
       </div>
 
       {/* ── Right panel: editor ── */}
-      <div className="flex-1 min-w-0">
-        {isNew || selected ? (
+      <div className={`flex-1 min-w-0 ${mobileView === "list" && !showEditor ? "hidden md:flex" : "block"}`}>
+        {showEditor ? (
           <CampaignEditor
             campaign={isNew ? null : selected}
             onSaved={handleSaved}
             onDeleted={handleDeleted}
+            onBack={() => setMobileView("list")}
           />
         ) : (
-          <div className="flex flex-col items-center justify-center h-full min-h-[400px] rounded-2xl border-2 border-dashed border-border/50 text-center p-10">
+          <div className="hidden md:flex flex-col items-center justify-center h-full min-h-[400px] rounded-2xl border-2 border-dashed border-border/50 text-center p-10">
             <Mail className="h-16 w-16 text-muted-foreground/30 mb-4" />
             <h3 className="font-semibold text-lg">Email campaigns</h3>
             <p className="text-muted-foreground text-sm max-w-xs mt-1">

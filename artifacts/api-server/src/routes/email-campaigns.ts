@@ -28,8 +28,29 @@ function renderBlock(block: EmailBlock): string {
     }
     case "divider":
       return `<div style="padding:8px 0;"><hr style="border:none;border-top:1px solid #e5e7eb;margin:0;" /></div>`;
-    case "product":
-      return `<div style="padding:8px 0;"><table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;"><tr><td style="padding:16px;vertical-align:middle;width:120px;"><img src="${escHtml(block.imageUrl)}" alt="${escHtml(block.name)}" style="width:100px;height:100px;object-fit:cover;border-radius:6px;display:block;" /></td><td style="padding:16px;vertical-align:middle;"><p style="margin:0 0 4px;font-size:16px;font-weight:600;color:#111827;">${escHtml(block.name)}</p><p style="margin:0 0 12px;font-size:20px;font-weight:700;color:#7c3aed;">$${Number(block.price).toFixed(2)}</p><a href="${process.env.STOREFRONT_URL ?? "https://allmarts.us"}/products" style="display:inline-block;background:#7c3aed;color:#ffffff;text-decoration:none;padding:8px 20px;border-radius:6px;font-size:13px;font-weight:600;">Shop Now</a></td></tr></table></div>`;
+    case "product": {
+      // Support both new products[] and legacy single-product fields
+      const pb = block as { type: "product"; products?: { productId: number; name: string; price: number; imageUrl: string }[]; productId?: number; name?: string; price?: number; imageUrl?: string };
+      const items = pb.products && pb.products.length > 0
+        ? pb.products
+        : pb.productId ? [{ productId: pb.productId, name: pb.name ?? "", price: pb.price ?? 0, imageUrl: pb.imageUrl ?? "" }] : [];
+      if (items.length === 0) return "";
+      const shopUrl = process.env.STOREFRONT_URL ?? "https://allmarts.us";
+      if (items.length === 1) {
+        const p = items[0];
+        return `<div style="padding:8px 0;"><table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;"><tr><td style="padding:16px;vertical-align:middle;width:120px;"><img src="${escHtml(p.imageUrl)}" alt="${escHtml(p.name)}" style="width:100px;height:100px;object-fit:cover;border-radius:6px;display:block;" /></td><td style="padding:16px;vertical-align:middle;"><p style="margin:0 0 4px;font-size:16px;font-weight:600;color:#111827;">${escHtml(p.name)}</p><p style="margin:0 0 12px;font-size:20px;font-weight:700;color:#7c3aed;">$${Number(p.price).toFixed(2)}</p><a href="${escHtml(shopUrl)}/products" style="display:inline-block;background:#7c3aed;color:#ffffff;text-decoration:none;padding:8px 20px;border-radius:6px;font-size:13px;font-weight:600;">Shop Now</a></td></tr></table></div>`;
+      }
+      // Multi-product: 2-column grid
+      const rows: string[] = [];
+      for (let i = 0; i < items.length; i += 2) {
+        const pair = items.slice(i, i + 2);
+        const cells = pair.map(p => `<td style="width:50%;padding:8px;vertical-align:top;"><table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;"><tr><td style="padding:12px;text-align:center;"><img src="${escHtml(p.imageUrl)}" alt="${escHtml(p.name)}" style="width:80px;height:80px;object-fit:cover;border-radius:6px;display:inline-block;" /></td></tr><tr><td style="padding:0 12px 12px;text-align:center;"><p style="margin:0 0 4px;font-size:13px;font-weight:600;color:#111827;">${escHtml(p.name)}</p><p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#7c3aed;">$${Number(p.price).toFixed(2)}</p><a href="${escHtml(shopUrl)}/products" style="display:inline-block;background:#7c3aed;color:#ffffff;text-decoration:none;padding:6px 14px;border-radius:6px;font-size:11px;font-weight:600;">Shop Now</a></td></tr></table></td>`).join("");
+        // Pad odd row with empty cell
+        const padded = pair.length < 2 ? cells + `<td style="width:50%;padding:8px;"></td>` : cells;
+        rows.push(`<tr>${padded}</tr>`);
+      }
+      return `<div style="padding:8px 0;"><table width="100%" cellpadding="0" cellspacing="0">${rows.join("")}</table></div>`;
+    }
     default:
       return "";
   }
@@ -223,6 +244,68 @@ router.get("/admin/email-campaigns/:id/preview", requireRole("admin"), async (re
   const html = renderCampaignHtml(campaign.subject, campaign.blocks, campaign.footer, campaign.headerLogoUrl);
   res.setHeader("Content-Type", "text/html");
   res.send(html);
+});
+
+/** Reopen a sent campaign as draft */
+router.post("/admin/email-campaigns/:id/reopen", requireRole("admin"), async (req: Request, res: Response) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const [existing] = await db.select().from(emailCampaignsTable).where(eq(emailCampaignsTable.id, id));
+  if (!existing) { res.status(404).json({ error: "Not found" }); return; }
+  const [updated] = await db
+    .update(emailCampaignsTable)
+    .set({ status: "draft" })
+    .where(eq(emailCampaignsTable.id, id))
+    .returning();
+  res.json(updated);
+});
+
+/** Resend a campaign (even if already sent) */
+router.post("/admin/email-campaigns/:id/resend", requireRole("admin"), async (req: Request, res: Response) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const [campaign] = await db.select().from(emailCampaignsTable).where(eq(emailCampaignsTable.id, id));
+  if (!campaign) { res.status(404).json({ error: "Not found" }); return; }
+  if (!campaign.blocks || campaign.blocks.length === 0) {
+    res.status(400).json({ error: "Campaign has no content blocks" });
+    return;
+  }
+
+  let recipients: { id: number; email: string; name: string }[];
+  if (campaign.recipientType === "selected" && campaign.recipientIds.length > 0) {
+    recipients = await db
+      .select({ id: usersTable.id, email: usersTable.email, name: usersTable.name })
+      .from(usersTable)
+      .where(inArray(usersTable.id, campaign.recipientIds));
+  } else {
+    recipients = await db
+      .select({ id: usersTable.id, email: usersTable.email, name: usersTable.name })
+      .from(usersTable);
+  }
+  if (recipients.length === 0) { res.status(400).json({ error: "No recipients found" }); return; }
+
+  const html = renderCampaignHtml(campaign.subject, campaign.blocks, campaign.footer, campaign.headerLogoUrl);
+  logger.info({ campaignId: id, recipients: recipients.length }, "Resending email campaign");
+
+  let successCount = 0;
+  let failCount = 0;
+  for (let i = 0; i < recipients.length; i += 10) {
+    const batch = recipients.slice(i, i + 10);
+    const results = await Promise.allSettled(
+      batch.map(r => sendEmail({ to: r.email, subject: campaign.subject, html }))
+    );
+    successCount += results.filter(r => r.status === "fulfilled").length;
+    failCount += results.filter(r => r.status === "rejected").length;
+  }
+
+  const [updated] = await db
+    .update(emailCampaignsTable)
+    .set({ status: "sent", sentAt: new Date(), recipientCount: successCount })
+    .where(eq(emailCampaignsTable.id, id))
+    .returning();
+
+  logger.info({ campaignId: id, successCount, failCount }, "Email campaign resent");
+  res.json({ ok: true, successCount, failCount, campaign: updated });
 });
 
 /** Send a campaign */
