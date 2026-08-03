@@ -1,12 +1,15 @@
 import { pgTable, serial, text, integer, jsonb, timestamp } from "drizzle-orm/pg-core";
 
+export type ProductItem = { productId: number; name: string; price: number; imageUrl: string };
+
 export type EmailBlock =
   | { type: "header"; text: string; size: "h1" | "h2" | "h3"; align: "left" | "center" | "right"; color: string }
   | { type: "text"; text: string }
   | { type: "image"; url: string; alt: string; link?: string }
   | { type: "button"; text: string; url: string; bgColor: string; align: "left" | "center" | "right" }
   | { type: "divider" }
-  | { type: "product"; productId: number; name: string; price: number; imageUrl: string };
+  // Multi-product block (new) — products array; old single-product fields kept for backward compat
+  | { type: "product"; products: ProductItem[]; productId?: number; name?: string; price?: number; imageUrl?: string };
 
 export type CampaignFooter = {
   message: string;
