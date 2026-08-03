@@ -42,6 +42,7 @@ import {
   Megaphone,
   MousePointerClick,
   Mail,
+  PenLine,
 } from "lucide-react";
 
 type NavItem = {
@@ -62,6 +63,7 @@ const ADMIN_ITEMS: NavItem[] = [
   { href: "/admin/pop-ads", label: "Pop-up ads", icon: MousePointerClick },
   { href: "/admin/ad-notifications", label: "Ad notifications", icon: Megaphone },
   { href: "/admin/email-campaigns", label: "Email campaigns", icon: Mail },
+  { href: "/admin/email-templates", label: "Email templates", icon: PenLine },
   { href: "/admin/notifications", label: "Push notification", icon: Bell },
   { href: "/admin/support", label: "Support desk", icon: HeadphonesIcon },
   { href: "/admin/visitors", label: "Visitors", icon: Eye },
