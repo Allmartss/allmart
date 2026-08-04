@@ -243,22 +243,25 @@ export default function Landing() {
 
       {/* ── Sticky search bar (appears after hero scrolls away) ────────────── */}
       <div
-        className={`sticky top-14 z-40 border-b border-border/40 bg-background/95 backdrop-blur transition-all duration-300 ${
+        className={`sticky top-14 z-40 border-b border-primary/20 bg-background/98 backdrop-blur transition-all duration-300 shadow-sm shadow-primary/5 ${
           stickyVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0 pointer-events-none"
         }`}
       >
-        <div className="container max-w-2xl mx-auto px-4 py-2">
-          <form onSubmit={handleAskAI} className="flex items-center bg-muted rounded-full px-4 py-2 gap-3 border border-border/50">
-            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+        <div className="container max-w-2xl mx-auto px-4 py-2.5">
+          <form onSubmit={handleAskAI} className="flex items-center bg-primary/5 rounded-full px-4 py-2 gap-3 border border-primary/25 ring-1 ring-primary/10">
+            <Sparkles className="h-4 w-4 text-primary shrink-0" />
             <input
               type="text"
-              placeholder="Search with AI..."
+              placeholder="Ask AI anything — find the perfect product..."
               className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
               value={query}
               onChange={e => setQuery(e.target.value)}
             />
-            <button type="submit" className="flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-[11px] font-semibold text-white">
-              <Sparkles className="h-3 w-3" /> Ask AI
+            <button
+              type="submit"
+              className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-[12px] font-bold text-white hover:bg-primary/90 transition-colors shadow-sm shadow-primary/30"
+            >
+              <ArrowRight className="h-3.5 w-3.5" /> Ask AI
             </button>
           </form>
         </div>
@@ -284,7 +287,7 @@ export default function Landing() {
           <FlashDealsCarousel
             products={flashSale?.products ?? []}
             countdown={{ h, m, s }}
-            colorThemeId={(flashSale as any)?.colorThemeId}
+            colorThemeId={(flashSale as any)?.colorThemeId ?? "purple"}
             minHeight={260}
           />
         </section>

@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import {
   Palette, Layout, AlignLeft, Plus, Trash2, GripVertical,
-  Save, CheckCircle2, RotateCcw, ExternalLink, Paintbrush, ChevronDown, ChevronUp,
+  Save, CheckCircle2, RotateCcw, ExternalLink, Paintbrush, ChevronDown, ChevronUp, RefreshCw,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { hexToHslValues, type SiteConfig, type SiteTheme, type HeaderConfig, type FooterConfig, type NavLink } from "@/hooks/use-site-config";
@@ -752,34 +752,34 @@ function ThemeLibrary({
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export function AdminSiteUiEditor() {
-  const [config, setConfig] = useState<SiteConfig | null>(null);
-  const [loading, setLoading] = useState(true);
   const [editingTheme, setEditingTheme] = useState<SiteTheme | null>(null);
   const [creatingTheme, setCreatingTheme] = useState(false);
   const [tab, setTab] = useState("themes");
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
-  async function load() {
-    try {
+  const {
+    data: config,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery<SiteConfig>({
+    queryKey: ["admin-site-ui"],
+    queryFn: async () => {
       const res = await fetch("/api/admin/site-ui", { credentials: "include" });
-      if (!res.ok) throw new Error();
-      setConfig(await res.json() as SiteConfig);
-    } catch {
-      toast({ title: "Error", description: "Could not load site UI config.", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => { void load(); }, []);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json() as Promise<SiteConfig>;
+    },
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
+    staleTime: 0,
+  });
 
   function refreshAll() {
     void queryClient.invalidateQueries({ queryKey: ["site-config"] });
-    void load();
+    void refetch();
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-4 animate-pulse">
         <div className="h-10 bg-muted rounded-xl w-80" />
@@ -788,10 +788,15 @@ export function AdminSiteUiEditor() {
     );
   }
 
-  if (!config) {
+  if (isError || !config) {
     return (
-      <div className="p-4 text-sm text-destructive">
-        Failed to load site UI configuration. Try refreshing the page.
+      <div className="flex flex-col items-start gap-3 p-5 rounded-xl border border-destructive/30 bg-destructive/5">
+        <p className="text-sm text-destructive font-medium">
+          Could not load site UI configuration.
+        </p>
+        <Button size="sm" variant="outline" onClick={() => void refetch()} className="gap-2">
+          <RefreshCw className="h-3.5 w-3.5" /> Retry
+        </Button>
       </div>
     );
   }
