@@ -417,13 +417,13 @@ export default function Home() {
           <div>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-[15px] font-bold text-foreground dark:text-white flex items-center gap-1.5">
-                <Zap className="h-4 w-4 text-amber-500 fill-amber-500" /> Flash Deals
+                <Zap className="h-4 w-4 text-violet-500 fill-violet-500" /> Flash Deals
               </h2>
               <Link href="/products?sort=sale">
-                <span className="text-xs font-semibold text-foreground/50 dark:text-white/50 hover:text-foreground dark:hover:text-white transition-colors">View all</span>
+                <span className="text-xs font-semibold text-violet-500 hover:text-violet-400 transition-colors">View all</span>
               </Link>
             </div>
-            <FlashDealsCarousel products={saleProducts} countdown={{ h, m, s }} />
+            <FlashDealsCarousel products={saleProducts} countdown={{ h, m, s }} colorThemeId="purple" />
           </div>
         )}
 
