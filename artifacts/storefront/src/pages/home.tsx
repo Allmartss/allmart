@@ -1,8 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import {
-  useGetStorefrontSummary,
   useListProducts,
   useListCategories,
   useGetCurrentUser,
@@ -12,17 +11,17 @@ import {
 import type { Product } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import {
-  ArrowRight, Search, Sparkles, ChevronDown, ChevronUp,
-  Store, ShoppingCart, LayoutGrid, Zap, Truck, Tag,
+  ArrowRight, Search, Sparkles,
+  Store, ShoppingCart, LayoutGrid, Zap, Tag,
   Watch, Mountain, Footprints, Heart, Laptop, Shirt, Dumbbell,
   UtensilsCrossed, BookOpen, Gamepad2, HeartPulse, Plane, PawPrint,
-  Gem, Home as HomeIcon, Music2, Car, Sun, Moon, PackageCheck,
+  Gem, Home as HomeIcon, Music2, Car, Sun, Moon,
 } from "lucide-react";
-import { ProductCard } from "@/components/product-card";
 import { SaleCard } from "@/components/sale-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StaffSidebarTrigger } from "@/components/staff-sidebar";
 import { NotificationsBell } from "@/components/notifications-bell";
+import { FlashDealsCarousel } from "@/components/flash-deal-card";
 import {
   Sheet,
   SheetContent,
@@ -54,6 +53,7 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
   cars:        Car,
   toys:        Gamepad2,
 };
+
 const CATEGORY_COLORS = [
   "from-pink-500 to-rose-500",
   "from-orange-400 to-amber-500",
@@ -64,6 +64,7 @@ const CATEGORY_COLORS = [
   "from-red-400 to-orange-500",
   "from-green-400 to-emerald-500",
 ];
+
 function getCategoryIcon(slug: string): LucideIcon {
   const key = slug.toLowerCase().replace(/[^a-z]/g, "");
   return CATEGORY_ICONS[key] ?? LayoutGrid;
@@ -84,7 +85,7 @@ function ShopDrawerInner() {
     <Sheet>
       <SheetTrigger asChild>
         <button
-          className="h-9 w-9 flex items-center justify-center rounded-xl overflow-hidden shadow-md shadow-primary/40 hover:brightness-110 active:scale-95 transition-all shrink-0"
+          className="h-9 w-9 flex items-center justify-center rounded-full overflow-hidden shadow-sm hover:opacity-90 active:scale-95 transition-all shrink-0"
           aria-label="Open menu"
         >
           <img src="/images/allmart-logo.jpg" alt="AllMart" className="h-full w-full object-cover" />
@@ -151,17 +152,43 @@ function useCountdown(endsAt: string | null) {
   return { h, m, s, expired: endMs !== null && left <= 0 };
 }
 
-// ── Discount pill helper ───────────────────────────────────────────────────────
-function discountPct(product: Product): number | null {
-  const orig = (product as any).originalPrice ?? (product as any).compareAtPrice;
-  if (!orig || orig <= product.price) return null;
-  return Math.round(100 - (product.price / orig) * 100);
+// ── Total Spend Card ───────────────────────────────────────────────────────────
+function TotalSpendCard({
+  me,
+  userStats,
+}: {
+  me: any;
+  userStats?: { totalSpend: number; bonusBalance: number; pendingAdminBonus: number };
+}) {
+  return (
+    <div
+      className="rounded-2xl px-5 py-4 flex items-center justify-between shadow-sm"
+      style={{ background: "linear-gradient(135deg, #1e1150 0%, #2d1a7a 100%)" }}
+    >
+      <div>
+        <p className="text-[10px] font-semibold text-white/50 uppercase tracking-wider mb-0.5">Total Spend</p>
+        <p className="text-2xl font-extrabold text-white leading-tight">
+          {me ? `$${(userStats?.totalSpend ?? 0).toFixed(2)}` : "$0.00"}
+        </p>
+        <p className="text-[11px] text-violet-300/80 mt-0.5">
+          Bonus: <span className="font-semibold text-violet-200">{me ? `$${(userStats?.bonusBalance ?? 0).toFixed(2)}` : "$0.00"}</span>
+        </p>
+      </div>
+      <div className="flex flex-col items-center gap-1">
+        <div className="text-3xl select-none">🛍️</div>
+        <Link href="/referral">
+          <span className="text-[10px] font-bold text-violet-300/80 hover:text-violet-200 transition-colors">Vouchers →</span>
+        </Link>
+      </div>
+    </div>
+  );
 }
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function Home() {
   const [, setLocation] = useLocation();
   const [query, setQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState("all");
 
   const { data: categories } = useListCategories();
   const { data: allProducts, isLoading: isProductsLoading } = useListProducts();
@@ -178,9 +205,9 @@ export default function Home() {
   const isStaff = me && (me.role === "admin" || me.role === "pm");
   const cartItemCount = cart?.items?.reduce((acc, item) => acc + item.quantity, 0) || 0;
 
-  const freeShippingProducts = (allProducts ?? []).filter((p: any) => p.freeShipping === true);
   const flashSaleLive = !!flashSale?.enabled && (flashSale?.products?.length ?? 0) > 0;
   const { h, m, s } = useCountdown(flashSaleLive ? flashSale!.endsAt : null);
+  const saleProducts = flashSale?.products ?? [];
 
   const [darkMode, setDarkMode] = useState(() => document.documentElement.classList.contains("dark"));
   const toggleDark = () => {
@@ -212,47 +239,65 @@ export default function Home() {
       .map(c => ({ slug: c.slug, name: c.name, products: map.get(c.slug) ?? [] }));
   })();
 
-  // Sale products — only the ones admin selected for the flash sale
-  const saleProducts = flashSale?.products ?? [];
+  // Filter pills: All + top categories
+  const filterPills = [
+    { id: "all", label: "All" },
+    ...categoryGroups.slice(0, 5).map(c => ({ id: c.slug, label: c.name })),
+  ];
+
+  // Filtered best selling products
+  const bestSellingProducts = (() => {
+    if (!allProducts) return [];
+    if (activeCategory === "all") return allProducts;
+    return allProducts.filter(p => p.category === activeCategory);
+  })();
+
+  const firstName = me?.name?.split(" ")[0] ?? "there";
 
   return (
-    <div className="flex flex-col min-h-[100dvh] bg-[#F4F3FF] dark:bg-[#0D0B1A]">
+    <div className="flex flex-col min-h-[100dvh] bg-[#F7F6F3] dark:bg-[#0D0B1A]">
 
-      {/* ── Header — white bar, actions only ────────────────────────────────── */}
-      <section className="bg-white dark:bg-[#0B0A14] border-b border-border/40 dark:border-white/5 px-4 pb-4 pt-safe">
-        {/* Top bar: logo | spacer | actions */}
-        <div className="flex items-center gap-3 pt-3 pb-1">
+      {/* ── Header ──────────────────────────────────────────────────────────────── */}
+      <section className="bg-white dark:bg-[#0B0A14] px-4 pb-3 pt-safe border-b border-black/5 dark:border-white/5">
+        <div className="flex items-center gap-3 pt-3">
+          {/* Avatar / menu trigger */}
           <ShopDrawerInner />
 
-          <div className="flex-1" />
+          {/* Greeting */}
+          <div className="flex-1 min-w-0">
+            {me ? (
+              <>
+                <p className="text-[11px] text-foreground/40 dark:text-white/40 font-medium leading-none mb-0.5">Hi, {firstName}</p>
+                <p className="text-[11px] text-foreground/60 dark:text-white/50 leading-none">Welcome back</p>
+              </>
+            ) : (
+              <p className="text-[12px] text-foreground/50 dark:text-white/50 font-medium">Welcome to AllMart</p>
+            )}
+          </div>
 
           {/* Right actions */}
           <div className="flex items-center gap-2 shrink-0">
-            {/* Theme toggle */}
             <button
               onClick={toggleDark}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-black/5 dark:bg-white/15 hover:bg-black/10 dark:hover:bg-white/25 transition-colors"
-              aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
+              aria-label={darkMode ? "Light mode" : "Dark mode"}
             >
-              {darkMode ? <Sun className="h-4 w-4 text-foreground/70 dark:text-white" /> : <Moon className="h-4 w-4 text-foreground/70 dark:text-white" />}
+              {darkMode ? <Sun className="h-3.5 w-3.5 text-foreground/60 dark:text-white/70" /> : <Moon className="h-3.5 w-3.5 text-foreground/60 dark:text-white/70" />}
             </button>
 
-            {/* Notifications */}
             {me && !isStaff && (
-              <span className="[&_button]:bg-transparent [&_button]:hover:bg-black/5 dark:[&_button]:hover:bg-white/10 [&_svg]:text-foreground/70 dark:[&_svg]:text-white/80">
+              <span className="[&_button]:bg-transparent [&_button]:hover:bg-black/5 dark:[&_button]:hover:bg-white/10 [&_svg]:text-foreground/60 dark:[&_svg]:text-white/70">
                 <NotificationsBell enabled={true} variant="home" />
               </span>
             )}
 
-            {/* Staff admin access */}
             {me && isStaff && (
               <StaffSidebarTrigger role={me.role as "admin" | "pm"} name={me.name} />
             )}
 
-            {/* Sign in (guests only) */}
             {!me && (
               <Link href="/account">
-                <button className="flex h-9 items-center gap-1 rounded-full bg-primary hover:bg-primary/90 px-4 text-[13px] font-semibold text-white transition-colors">
+                <button className="flex h-8 items-center gap-1 rounded-full bg-primary hover:bg-primary/90 px-3 text-[12px] font-semibold text-white transition-colors">
                   Sign in
                 </button>
               </Link>
@@ -260,8 +305,8 @@ export default function Home() {
 
             {/* Cart */}
             <Link href="/cart">
-              <button className="relative flex h-9 w-9 items-center justify-center rounded-full border border-border/60 dark:border-white/25 hover:border-border dark:hover:border-white/40 transition-colors">
-                <ShoppingCart className="h-4 w-4 text-foreground/70 dark:text-white/80" />
+              <button className="relative flex h-8 w-8 items-center justify-center rounded-full border border-black/10 dark:border-white/20 hover:border-black/20 dark:hover:border-white/40 transition-colors bg-white dark:bg-white/5">
+                <ShoppingCart className="h-3.5 w-3.5 text-foreground/60 dark:text-white/70" />
                 {cartItemCount > 0 && (
                   <span className="absolute -right-1 -top-1 flex h-[14px] w-[14px] items-center justify-center rounded-full bg-orange-400 text-[9px] font-bold text-white">
                     {cartItemCount > 9 ? "9+" : cartItemCount}
@@ -273,96 +318,88 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Purple card — houses the search bar ─────────────────────────────── */}
-      <section className="bg-primary px-4 pt-5 pb-8 rounded-b-[28px] shadow-lg shadow-primary/30">
-        <form onSubmit={handleSearch}>
-          <div className="flex items-center bg-white/15 focus-within:bg-white/22 rounded-2xl px-4 py-2.5 gap-3 border border-white/20 transition-colors">
-            <Search className="h-4 w-4 text-white/60 shrink-0" />
-            <input
-              type="text"
-              placeholder="Search for products..."
-              className="flex-1 bg-transparent text-sm text-white placeholder:text-white/60 outline-none"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-            />
-            {query && (
-              <button type="submit" className="shrink-0 flex h-6 items-center gap-1 rounded-full bg-white/20 px-2.5 text-[11px] font-semibold text-white hover:bg-white/30 transition-colors">
-                <Sparkles className="h-3 w-3" /> Ask
-              </button>
-            )}
+      {/* ── Hero: Find Your Perfect Product ─────────────────────────────────────── */}
+      <section className="bg-white dark:bg-[#0B0A14] px-4 pb-4 pt-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1">
+            <h1 className="text-[22px] font-black text-foreground dark:text-white leading-tight tracking-tight">
+              Find{" "}
+              <span
+                className="inline-block rounded-full px-2.5 py-0.5 text-[18px] font-black text-amber-800 dark:text-amber-300 relative -top-0.5"
+                style={{ background: "#E8D9B0" }}
+              >
+                Your
+              </span>
+              <br />
+              Perfect Product.
+            </h1>
           </div>
-        </form>
-        <p className="text-xs font-semibold text-white/80 leading-tight mt-3 text-center">
-          Find your perfect product <span className="text-white">With AI</span>
-        </p>
-      </section>
-
-      {/* ── Body ──────────────────────────────────────────────────────────────── */}
-      <div className="max-w-screen-xl mx-auto w-full px-4 space-y-6 py-5 pb-12">
-
-        {/* Stats + Quick-nav banner */}
-        <div className="relative overflow-hidden rounded-2xl bg-[#1e1150] dark:bg-[#160d40] px-5 py-4 shadow-xl">
-          <div className="absolute -right-6 -top-6 h-28 w-28 rounded-full bg-primary/20 blur-2xl pointer-events-none" />
-
-          {/* Stats row */}
-          <div className="relative z-10 flex items-center justify-between mb-4">
-            <div className="space-y-1">
-              <p className="text-[10px] font-semibold text-white/60 uppercase tracking-wide">Total spend</p>
-              <p className="text-2xl font-extrabold text-white leading-tight">
-                {me ? `$${(userStats?.totalSpend ?? 0).toFixed(2)}` : "$0.00"}
-              </p>
-              <p className="text-xs text-violet-300/80">
-                Bonus balance: <span className="font-semibold text-violet-200">{me ? `$${(userStats?.bonusBalance ?? 0).toFixed(2)}` : "$0.00"}</span>
-              </p>
-            </div>
-            <div className="text-right">
-              <div className="text-4xl select-none">🛍️</div>
-              <p className="text-xs font-bold text-white/80 mt-1">Mega Sale</p>
-            </div>
-          </div>
-
-          {/* Quick-nav: 4 icon buttons */}
-          <div className="relative z-10 grid grid-cols-4 gap-2">
-            {([
-              { href: "/products",                    icon: LayoutGrid, label: "Categories" },
-              { href: "/products?sort=sale",          icon: Zap,        label: "Flash Sale" },
-              { href: "/products?freeShipping=true",  icon: Truck,      label: "Free Ship" },
-              { href: "/referral",                    icon: Tag,        label: "Vouchers" },
-            ] as const).map(({ href, icon: Icon, label }) => (
-              <Link key={href} href={href}>
-                <button className="flex flex-col items-center gap-1.5 w-full group">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 group-hover:bg-white/20 transition-colors">
-                    <Icon className="h-4 w-4 text-white" />
-                  </span>
-                  <span className="text-[9px] text-center font-medium text-white/70 leading-tight">
-                    {label}
-                  </span>
-                </button>
-              </Link>
-            ))}
-          </div>
+          {/* Search button */}
+          <Link href="/products">
+            <button className="mt-1 flex h-9 w-9 items-center justify-center rounded-full border border-black/10 dark:border-white/15 bg-white dark:bg-white/5 hover:bg-black/5 transition-colors shrink-0">
+              <Search className="h-4 w-4 text-foreground/60 dark:text-white/60" />
+            </button>
+          </Link>
         </div>
 
-        {/* Popular Categories – horizontal scroll, icon pills */}
+        {/* Filter pills */}
+        <div className="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-hide" style={{ scrollbarWidth: "none" }}>
+          {filterPills.map(pill => (
+            <button
+              key={pill.id}
+              onClick={() => setActiveCategory(pill.id)}
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-colors ${
+                activeCategory === pill.id
+                  ? "bg-foreground dark:bg-white text-white dark:text-black"
+                  : "bg-black/6 dark:bg-white/10 text-foreground/70 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/15"
+              }`}
+            >
+              {pill.label}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Body ──────────────────────────────────────────────────────────────────── */}
+      <div className="max-w-screen-xl mx-auto w-full px-4 space-y-6 py-5 pb-14">
+
+        {/* Total Spend Card */}
+        {me && (
+          <TotalSpendCard me={me} userStats={userStats} />
+        )}
+
+        {/* Popular Categories */}
         {categoryGroups.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-bold text-foreground">Popular Categories</h2>
+              <h2 className="text-[15px] font-bold text-foreground dark:text-white">Popular Categories</h2>
               <Link href="/products">
-                <span className="text-xs font-semibold text-primary hover:underline">See all</span>
+                <span className="text-xs font-semibold text-foreground/50 dark:text-white/50 hover:text-foreground dark:hover:text-white transition-colors">View all</span>
               </Link>
             </div>
-            <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-hide" style={{ scrollbarWidth: "none" }}>
-              {categoryGroups.map(({ slug, name }, idx) => {
+            <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide" style={{ scrollbarWidth: "none" }}>
+              {categoryGroups.map(({ slug, name, products }, idx) => {
                 const Icon = getCategoryIcon(slug);
                 const gradient = CATEGORY_COLORS[idx % CATEGORY_COLORS.length];
+                // Use the first product image of the category if available
+                const firstImg = products.find(p => p.imageUrl)?.imageUrl;
                 return (
                   <Link key={slug} href={`/products?category=${slug}`}>
-                    <button className="flex flex-col items-center gap-1 shrink-0 group">
-                      <span className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${gradient} shadow-sm group-hover:opacity-90 transition-opacity`}>
-                        <Icon className="h-4 w-4 text-white" />
-                      </span>
-                      <span className="text-[9px] font-medium text-foreground/70 max-w-[44px] text-center leading-tight truncate">
+                    <button className="flex flex-col items-center gap-1.5 shrink-0 group">
+                      <div className="h-16 w-16 rounded-2xl overflow-hidden bg-muted shadow-sm group-hover:shadow-md transition-shadow">
+                        {firstImg ? (
+                          <img
+                            src={firstImg}
+                            alt={name}
+                            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className={`h-full w-full flex items-center justify-center bg-gradient-to-br ${gradient}`}>
+                            <Icon className="h-6 w-6 text-white" />
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-[11px] font-medium text-foreground/70 dark:text-white/60 max-w-[64px] text-center leading-tight">
                         {name}
                       </span>
                     </button>
@@ -373,133 +410,32 @@ export default function Home() {
           </div>
         )}
 
-        {/* Flash Sale — only shown once admin has configured & enabled one */}
+        {/* Flash Deals — only when live */}
         {flashSaleLive && (
           <div>
-            {/* Title + countdown + see-all — all on one line */}
             <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <h2 className="text-base font-bold flex items-center gap-1 shrink-0">
-                  <Zap className="h-4 w-4 text-yellow-400 fill-yellow-400" /> Flash Sale
-                </h2>
-                <span className="text-[10px] text-foreground/55 shrink-0">Ends in</span>
-                <div className="flex items-center gap-1">
-                  {[h, m, s].map((unit, i) => (
-                    <span key={i} className="flex items-center gap-1">
-                      <span className="flex h-5 min-w-[22px] items-center justify-center rounded bg-primary text-white text-[10px] font-bold px-1">
-                        {unit}
-                      </span>
-                      {i < 2 && <span className="text-primary font-bold text-[10px] leading-none">:</span>}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <Link href="/products?sort=sale">
-                <span className="text-xs font-semibold text-primary hover:underline shrink-0 ml-2">See all</span>
-              </Link>
-            </div>
-
-            {/* Products */}
-            {isProductsLoading ? (
-              <div className="flex gap-3 overflow-x-auto pb-1">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="shrink-0 w-36 space-y-2">
-                    <Skeleton className="h-36 w-36 rounded-2xl" />
-                    <Skeleton className="h-3 w-28" />
-                    <Skeleton className="h-3 w-20" />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide" style={{ scrollbarWidth: "none" }}>
-                {saleProducts.map(p => {
-                  const pct = discountPct(p) ?? (10 + (p.id % 20));
-                  return (
-                    <Link key={p.id} href={`/products/${p.id}`}>
-                      <div className="relative shrink-0 w-36 group cursor-pointer">
-                        <span className="absolute top-2 left-2 z-10 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                          -{pct}%
-                        </span>
-                        <div className="overflow-hidden rounded-2xl bg-muted aspect-square mb-2">
-                          {p.imageUrl ? (
-                            <img
-                              src={p.imageUrl}
-                              alt={p.name}
-                              className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                          ) : (
-                            <div className="h-full w-full flex items-center justify-center text-muted-foreground">
-                              <ShoppingCart className="h-8 w-8" />
-                            </div>
-                          )}
-                        </div>
-                        <p className="text-xs font-semibold text-foreground leading-tight line-clamp-2 mb-0.5">{p.name}</p>
-                        <p className="text-sm font-bold text-primary">
-                          {p.currency === "NGN" ? "₦" : p.currency}{p.price.toLocaleString()}
-                        </p>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Free Shipping — simple header + product scroll */}
-        {freeShippingProducts.length > 0 && (
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-bold text-foreground flex items-center gap-1.5">
-                <Truck className="h-4 w-4 text-emerald-500" />
-                Free Shipping
+              <h2 className="text-[15px] font-bold text-foreground dark:text-white flex items-center gap-1.5">
+                <Zap className="h-4 w-4 text-amber-500 fill-amber-500" /> Flash Deals
               </h2>
-              <Link href="/products?freeShipping=true">
-                <span className="text-xs font-semibold text-primary hover:underline">See all</span>
+              <Link href="/products?sort=sale">
+                <span className="text-xs font-semibold text-foreground/50 dark:text-white/50 hover:text-foreground dark:hover:text-white transition-colors">View all</span>
               </Link>
             </div>
-            <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide" style={{ scrollbarWidth: "none" }}>
-              {freeShippingProducts.map(p => (
-                <Link key={p.id} href={`/products/${p.id}`}>
-                  <div className="relative shrink-0 w-36 group cursor-pointer">
-                    <span className="absolute top-2 left-2 z-10 rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white flex items-center gap-0.5 shadow">
-                      <Truck className="h-2.5 w-2.5" /> Free
-                    </span>
-                    <div className="overflow-hidden rounded-2xl bg-muted aspect-square mb-2">
-                      {p.imageUrl ? (
-                        <img
-                          src={p.imageUrl}
-                          alt={p.name}
-                          className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center text-muted-foreground">
-                          <PackageCheck className="h-8 w-8" />
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-xs font-semibold text-foreground leading-tight line-clamp-2 mb-0.5">{p.name}</p>
-                    <p className="text-sm font-bold text-primary">
-                      {p.currency === "NGN" ? "₦" : "$"}{p.price.toLocaleString()}
-                    </p>
-                  </div>
-                </Link>
-              ))}
-            </div>
+            <FlashDealsCarousel products={saleProducts} countdown={{ h, m, s }} />
           </div>
         )}
 
-        {/* Best Selling — flat grid, 4 per row, SaleCard style */}
+        {/* Best Selling */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-bold text-foreground">Best Selling</h2>
+            <h2 className="text-[15px] font-bold text-foreground dark:text-white">Best Selling</h2>
             <Link href="/products">
-              <span className="text-xs font-semibold text-primary hover:underline">See all</span>
+              <span className="text-xs font-semibold text-foreground/50 dark:text-white/50 hover:text-foreground dark:hover:text-white transition-colors">View all</span>
             </Link>
           </div>
           {isProductsLoading ? (
-            <div className="grid grid-cols-4 gap-2">
-              {Array.from({ length: 8 }).map((_, i) => (
+            <div className="grid grid-cols-3 gap-2">
+              {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="space-y-2">
                   <Skeleton className="aspect-square rounded-2xl" />
                   <Skeleton className="h-3 w-3/4" />
@@ -507,14 +443,14 @@ export default function Home() {
                 </div>
               ))}
             </div>
-          ) : (allProducts ?? []).length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground">
-              <p className="text-base font-medium">No products yet.</p>
-              <p className="text-sm mt-1">Add some products in the admin panel to get started.</p>
+          ) : bestSellingProducts.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <p className="text-sm font-medium">No products yet.</p>
+              <p className="text-xs mt-1">Add products in the admin panel.</p>
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-2">
-              {(allProducts ?? []).map(p => (
+              {bestSellingProducts.map(p => (
                 <SaleCard key={p.id} product={p} variant="flash" />
               ))}
             </div>

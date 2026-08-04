@@ -127,6 +127,7 @@ export default function Payment() {
         queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
         queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
+        queryClient.invalidateQueries({ queryKey: ["me-stats"] });
         toast({ title: "Order placed!", description: "Your order is on the way." });
         setLocation(`/orders/${order.id}`);
       },

@@ -40,10 +40,12 @@ type ReferralSettings = {
   referralNote: string;
 };
 
-function useFetch<T>(url: string) {
+function useFetch<T>(url: string, options?: { refetchInterval?: number }) {
   return useQuery<T>({
     queryKey: [url],
     queryFn: () => fetch(url, { credentials: "include" }).then(r => r.json()),
+    refetchOnWindowFocus: true,
+    ...(options?.refetchInterval ? { refetchInterval: options.refetchInterval } : {}),
   });
 }
 
@@ -140,7 +142,7 @@ export function AdminReferrals() {
   const queryClient = useQueryClient();
   const { data: records = [], isLoading: loadingRecords } = useFetch<ReferralRecord[]>("/api/admin/referrals");
   const { data: settings, isLoading: loadingSettings } = useFetch<ReferralSettings>("/api/admin/referral-settings");
-  const { data: bonusGrants = [], isLoading: loadingGrants } = useFetch<BonusGrant[]>("/api/admin/bonus-grants");
+  const { data: bonusGrants = [], isLoading: loadingGrants, refetch: refetchGrants, isFetching: isFetchingGrants } = useFetch<BonusGrant[]>("/api/admin/bonus-grants", { refetchInterval: 30_000 });
 
   const [referrerBonus, setReferrerBonus] = useState("");
   const [signupBonus, setSignupBonus] = useState("");
@@ -376,10 +378,11 @@ export function AdminReferrals() {
             variant="ghost"
             size="icon"
             className="h-7 w-7 ml-auto text-muted-foreground hover:text-foreground"
-            onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/admin/bonus-grants"] })}
+            onClick={() => refetchGrants()}
             title="Refresh balances"
+            disabled={isFetchingGrants}
           >
-            <RefreshCw className="h-3.5 w-3.5" />
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetchingGrants ? "animate-spin" : ""}`} />
           </Button>
         </div>
 
@@ -394,11 +397,12 @@ export function AdminReferrals() {
                 <thead>
                   <tr className="border-b border-border/30">
                     <th className="text-left pb-2 font-medium text-muted-foreground">User</th>
-                    <th className="text-right pb-2 font-medium text-muted-foreground">Amount</th>
+                    <th className="text-right pb-2 font-medium text-muted-foreground">Granted</th>
+                    <th className="text-right pb-2 font-medium text-muted-foreground">Current Balance</th>
                     <th className="text-left pb-2 font-medium text-muted-foreground pl-3">Reason</th>
                     <th className="text-center pb-2 font-medium text-muted-foreground">Status</th>
                     <th className="text-right pb-2 font-medium text-muted-foreground">Expires</th>
-                    <th className="text-right pb-2 font-medium text-muted-foreground">Granted</th>
+                    <th className="text-right pb-2 font-medium text-muted-foreground">Date</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -412,6 +416,11 @@ export function AdminReferrals() {
                           <div className="text-muted-foreground">{g.userEmail}</div>
                         </td>
                         <td className="py-2.5 pr-3 text-right font-semibold text-violet-600">{fmt(g.amount)}</td>
+                        <td className="py-2.5 pr-3 text-right">
+                          <span className={`font-semibold ${g.currentBalance <= 0 ? "text-muted-foreground line-through" : "text-emerald-600"}`}>
+                            {fmt(g.currentBalance)}
+                          </span>
+                        </td>
                         <td className="py-2.5 px-3 text-muted-foreground max-w-[140px] truncate">
                           {g.reason ?? <span className="italic opacity-40">—</span>}
                         </td>
