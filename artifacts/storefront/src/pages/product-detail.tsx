@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useRoute, useLocation, Link } from "wouter";
-import { SaleCard } from "@/components/sale-card";
+import { BestSellingCard } from "@/components/sale-card";
 import { useGetProduct, useAddCartItem, getGetCartQueryKey, useListProducts, useListCategories } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -370,18 +370,18 @@ export default function ProductDetail() {
       {(allProductsList ?? []).filter(p => p.id !== product?.id).length > 0 && (
         <div className="px-4 pt-4">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-bold">New Arrivals</h2>
+            <h2 className="text-[15px] font-bold">New Arrivals</h2>
             <Link href="/products?sort=new">
-              <span className="text-xs font-semibold text-primary hover:underline cursor-pointer">See all</span>
+              <span className="text-xs font-semibold text-foreground/50 hover:text-foreground transition-colors cursor-pointer">View All →</span>
             </Link>
           </div>
-          <div className="flex gap-2.5 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+          <div className="grid grid-cols-3 gap-3">
             {[...(allProductsList ?? [])]
               .filter(p => p.id !== product?.id)
               .sort((a, b) => b.id - a.id)
-              .slice(0, 10)
+              .slice(0, 6)
               .map(p => (
-                <SaleCard key={p.id} product={p} variant="scroll" width={130} />
+                <BestSellingCard key={p.id} product={p} />
               ))}
           </div>
         </div>
@@ -390,17 +390,28 @@ export default function ProductDetail() {
       {/* ── Shop by Category ── */}
       {(allCategoriesList ?? []).length > 0 && (
         <div className="px-4 pt-4 pb-4">
-          <h2 className="text-base font-bold mb-3">Shop by Category</h2>
+          <h2 className="text-[15px] font-bold mb-3">Shop by Category</h2>
           <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
             {(allCategoriesList ?? []).map((cat, i) => {
               const Icon = CAT_ICONS[cat.slug.toLowerCase().replace(/[^a-z]/g, "")] ?? LayoutGrid;
+              const firstImg = (allProductsList ?? []).find(p => p.category === cat.slug && p.imageUrl)?.imageUrl;
               return (
                 <Link key={cat.slug} href={`/products?category=${cat.slug}`}>
                   <button className="flex flex-col items-center gap-1.5 shrink-0 group">
-                    <span className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${CAT_GRADIENTS[i % CAT_GRADIENTS.length]} shadow-sm group-hover:opacity-90 transition-opacity`}>
-                      <Icon className="h-6 w-6 text-white" />
-                    </span>
-                    <span className="text-[10px] font-medium text-foreground/70 max-w-[56px] text-center leading-tight truncate">{cat.name}</span>
+                    <div className="h-16 w-16 rounded-2xl overflow-hidden bg-muted shadow-sm group-hover:shadow-md transition-shadow">
+                      {firstImg ? (
+                        <img
+                          src={firstImg}
+                          alt={cat.name}
+                          className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className={`h-full w-full flex items-center justify-center bg-gradient-to-br ${CAT_GRADIENTS[i % CAT_GRADIENTS.length]}`}>
+                          <Icon className="h-6 w-6 text-white" />
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-[11px] font-medium text-foreground/70 max-w-[64px] text-center leading-tight">{cat.name}</span>
                   </button>
                 </Link>
               );
