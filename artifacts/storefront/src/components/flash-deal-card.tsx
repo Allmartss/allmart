@@ -83,10 +83,12 @@ export function FlashDealCard({
   product,
   countdown,
   colorThemeId,
+  minHeight = 188,
 }: {
   product: Product;
   countdown: { h: string; m: string; s: string };
   colorThemeId?: string | null;
+  minHeight?: number;
 }) {
   const pct = discountPctFlash(product);
   const theme = getTheme(colorThemeId);
@@ -95,13 +97,13 @@ export function FlashDealCard({
     <Link href={`/products/${product.id}`}>
       <div
         className="relative rounded-2xl overflow-hidden cursor-pointer"
-        style={{ background: theme.bg, minHeight: "188px" }}
+        style={{ background: theme.bg, minHeight: `${minHeight}px` }}
       >
         {/* Glow */}
         <div className="absolute inset-0 pointer-events-none" style={{ background: theme.glow }} />
 
         {/* Left content */}
-        <div className="relative z-10 p-4 pr-40 flex flex-col justify-between h-full min-h-[188px]">
+        <div className="relative z-10 p-4 pr-40 flex flex-col justify-between h-full" style={{ minHeight: `${minHeight}px` }}>
           <div>
             <span className={`inline-block rounded-full bg-white/10 border border-white/15 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider mb-2 ${theme.badge}`}>
               Limited Time Offer
@@ -161,10 +163,12 @@ export function FlashDealsCarousel({
   products,
   countdown,
   colorThemeId,
+  minHeight,
 }: {
   products: Product[];
   countdown: { h: string; m: string; s: string };
   colorThemeId?: string | null;
+  minHeight?: number;
 }) {
   const [idx, setIdx] = useState(0);
 
@@ -178,7 +182,7 @@ export function FlashDealsCarousel({
 
   return (
     <div className="relative">
-      <FlashDealCard product={products[idx]} countdown={countdown} colorThemeId={colorThemeId} />
+      <FlashDealCard product={products[idx]} countdown={countdown} colorThemeId={colorThemeId} minHeight={minHeight} />
       {products.length > 1 && (
         <div className="flex justify-center gap-1.5 mt-2.5">
           {products.map((_, i) => (

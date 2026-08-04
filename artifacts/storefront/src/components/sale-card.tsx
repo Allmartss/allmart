@@ -74,22 +74,22 @@ export function BestSellingCard({ product }: { product: Product }) {
 
         {/* ── Info ── */}
         <div className="px-3 pt-2.5 pb-3 flex flex-col gap-1.5 flex-1">
-          <p className="text-[12px] font-semibold leading-tight line-clamp-2 text-gray-800 dark:text-white">
+          <p className="text-[10px] font-semibold leading-tight line-clamp-2 text-gray-800 dark:text-white">
             {product.name}
           </p>
 
           {/* Rating */}
-          <div className="flex items-center gap-1">
-            <Star className="h-3 w-3 fill-amber-400 text-amber-400 shrink-0" />
-            <span className="text-[11px] font-semibold text-amber-500">{product.rating.toFixed(1)}</span>
-            <span className="text-[11px] text-gray-400 dark:text-white/40">({reviewCount})</span>
+          <div className="flex items-center gap-0.5">
+            <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400 shrink-0" />
+            <span className="text-[9px] font-semibold text-amber-500">{product.rating.toFixed(1)}</span>
+            <span className="text-[9px] text-gray-400 dark:text-white/40">({reviewCount})</span>
           </div>
 
           {/* Price */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[13px] font-bold text-gray-900 dark:text-white">{price}</span>
+          <div className="flex items-center gap-1 flex-wrap">
+            <span className="text-[11px] font-bold text-gray-900 dark:text-white">{price}</span>
             {hasDiscount && origPrice && (
-              <span className="text-[11px] text-gray-400 dark:text-white/35 line-through">{origPrice}</span>
+              <span className="text-[9px] text-gray-400 dark:text-white/35 line-through">{origPrice}</span>
             )}
           </div>
 
@@ -97,7 +97,7 @@ export function BestSellingCard({ product }: { product: Product }) {
           <button
             onClick={handleAddToCart}
             disabled={addToCart.isPending}
-            className="mt-auto w-full flex items-center justify-center gap-1.5 rounded-lg py-2 text-[11px] font-semibold text-white transition-colors disabled:opacity-60"
+            className="mt-auto w-full flex items-center justify-center gap-1 rounded-lg py-1.5 text-[9px] font-semibold text-white transition-colors disabled:opacity-60"
             style={{ background: added ? "#6d28d9" : "#7c3aed" }}
             aria-label="Add to cart"
           >

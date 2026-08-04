@@ -136,7 +136,7 @@ export default function Landing() {
 
       {/* ── Flash Sale sticky countdown banner ── */}
       {showBanner && !bannerDismissed && (
-        <div className="sticky top-14 z-50 w-full bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 shadow-md">
+        <div className="sticky top-14 z-50 w-full bg-gradient-to-r from-purple-600 via-violet-600 to-purple-700 shadow-md">
           <div className="flex items-center gap-2 px-3 py-2">
             {/* Close button — left on mobile */}
             <button
@@ -285,6 +285,7 @@ export default function Landing() {
             products={flashSale?.products ?? []}
             countdown={{ h, m, s }}
             colorThemeId={(flashSale as any)?.colorThemeId}
+            minHeight={260}
           />
         </section>
       )}
