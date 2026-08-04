@@ -14,7 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Zap, Check, ArrowRight, ShoppingCart } from "lucide-react";
+import { Loader2, Zap, Check } from "lucide-react";
+import { FLASH_COLOR_THEMES, type FlashColorThemeId, FlashDealCard as SharedFlashDealCard } from "@/components/flash-deal-card";
 
 function toLocalInputValue(iso: string | null): string {
   if (!iso) return "";
@@ -24,69 +25,9 @@ function toLocalInputValue(iso: string | null): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function discountPct(product: Product): number {
-  const orig = (product as any).originalPrice ?? (product as any).compareAtPrice;
-  if (!orig || orig <= product.price) return 10 + (product.id % 40);
-  return Math.round(100 - (product.price / orig) * 100);
-}
+// ── Sliding preview carousel (uses shared FlashDealCard) ──────────────────────
 
-// ── Dark flash card (same design as storefront) ────────────────────────────────
-function FlashPreviewCard({ product }: { product: Product }) {
-  const pct = discountPct(product);
-  return (
-    <div
-      className="relative rounded-2xl overflow-hidden"
-      style={{
-        background: "linear-gradient(135deg, #1a1506 0%, #2d2208 60%, #3d2f0a 100%)",
-        minHeight: "148px",
-      }}
-    >
-      <div className="absolute inset-0 pointer-events-none"
-        style={{ background: "radial-gradient(ellipse at 80% 50%, rgba(180,130,40,0.18) 0%, transparent 70%)" }}
-      />
-      <div className="relative z-10 p-4 pr-36 flex flex-col justify-between h-full min-h-[148px]">
-        <div>
-          <span className="inline-block rounded-full bg-white/10 border border-white/15 px-2.5 py-0.5 text-[9px] font-semibold text-amber-200/80 uppercase tracking-wider mb-2">
-            Limited Time Offer
-          </span>
-          <p className="text-2xl font-black text-white leading-none mb-0.5">
-            Up to {pct}% Off
-          </p>
-          <p className="text-[11px] text-amber-200/60 font-medium mb-1 truncate">{product.name}</p>
-          <p className="text-[11px] text-white/40 mb-3">On selected items</p>
-        </div>
-        <div
-          className="inline-flex items-center gap-1.5 rounded-full bg-amber-400 px-4 py-1.5 text-[11px] font-bold text-black w-fit"
-        >
-          Shop Now <ArrowRight className="h-3 w-3" />
-        </div>
-      </div>
-      <div className="absolute right-0 top-0 bottom-0 w-36 flex items-end justify-end overflow-hidden">
-        <div className="absolute inset-y-0 left-0 w-10 z-10"
-          style={{ background: "linear-gradient(to right, #1a1506, transparent)" }}
-        />
-        {product.imageUrl ? (
-          <img
-            src={product.imageUrl}
-            alt={product.name}
-            className="h-full w-full object-cover object-center"
-            style={{ filter: "brightness(0.92) contrast(1.05)" }}
-          />
-        ) : (
-          <div className="h-full w-full flex items-center justify-center">
-            <ShoppingCart className="h-10 w-10 text-amber-400/40" />
-          </div>
-        )}
-        <div className="absolute bottom-0 left-0 right-0 h-10"
-          style={{ background: "linear-gradient(to top, #1a1506, transparent)" }}
-        />
-      </div>
-    </div>
-  );
-}
-
-// ── Sliding preview carousel ───────────────────────────────────────────────────
-function FlashPreviewCarousel({ products }: { products: Product[] }) {
+function FlashPreviewCarousel({ products, colorThemeId }: { products: Product[]; colorThemeId: string }) {
   const [idx, setIdx] = useState(0);
 
   useEffect(() => {
@@ -107,9 +48,11 @@ function FlashPreviewCarousel({ products }: { products: Product[] }) {
     );
   }
 
+  const fakeCountdown = { h: "02", m: "30", s: "00" };
+
   return (
     <div className="space-y-2">
-      <FlashPreviewCard product={products[idx]} />
+      <SharedFlashDealCard product={products[idx]} countdown={fakeCountdown} colorThemeId={colorThemeId} />
       {products.length > 1 && (
         <div className="flex items-center justify-between">
           <div className="flex gap-1.5">
@@ -117,7 +60,7 @@ function FlashPreviewCarousel({ products }: { products: Product[] }) {
               <button
                 key={i}
                 onClick={() => setIdx(i)}
-                className={`rounded-full transition-all ${i === idx ? "w-4 h-1.5 bg-amber-500" : "w-1.5 h-1.5 bg-foreground/20"}`}
+                className={`rounded-full transition-all ${i === idx ? "w-4 h-1.5 bg-white/60" : "w-1.5 h-1.5 bg-foreground/20"}`}
               />
             ))}
           </div>
@@ -150,12 +93,17 @@ export function AdminFlashSaleManager() {
   const [enabled, setEnabled] = useState(false);
   const [endsAtLocal, setEndsAtLocal] = useState("");
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [colorThemeId, setColorThemeId] = useState<FlashColorThemeId>("amber");
 
   useEffect(() => {
     if (!config) return;
     setEnabled(config.enabled);
     setEndsAtLocal(toLocalInputValue(config.endsAt));
     setSelectedIds(config.productIds ?? []);
+    const saved = (config as any).colorThemeId;
+    if (saved && FLASH_COLOR_THEMES.some(t => t.id === saved)) {
+      setColorThemeId(saved as FlashColorThemeId);
+    }
   }, [config]);
 
   const toggleProduct = (id: number) => {
@@ -177,7 +125,8 @@ export function AdminFlashSaleManager() {
           enabled,
           endsAt: endsAtLocal ? new Date(endsAtLocal).toISOString() : null,
           productIds: selectedIds,
-        },
+          colorThemeId,
+        } as any,
       });
       queryClient.invalidateQueries({ queryKey: getGetFlashSaleQueryKey() });
       queryClient.invalidateQueries({ queryKey: getGetAdminFlashSaleQueryKey() });
@@ -230,6 +179,32 @@ export function AdminFlashSaleManager() {
             onChange={e => setEndsAtLocal(e.target.value)}
           />
         </div>
+
+        {/* Color theme picker */}
+        <div className="space-y-2">
+          <Label>Card color theme</Label>
+          <div className="flex flex-wrap gap-2">
+            {FLASH_COLOR_THEMES.map(theme => (
+              <button
+                key={theme.id}
+                type="button"
+                onClick={() => setColorThemeId(theme.id as FlashColorThemeId)}
+                className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-all ${
+                  colorThemeId === theme.id
+                    ? "border-primary ring-2 ring-primary/30 bg-primary/5"
+                    : "border-border hover:bg-muted"
+                }`}
+              >
+                <span
+                  className="h-4 w-4 rounded-full shrink-0"
+                  style={{ background: theme.bg }}
+                />
+                {theme.label}
+                {colorThemeId === theme.id && <Check className="h-3.5 w-3.5 text-primary" />}
+              </button>
+            ))}
+          </div>
+        </div>
       </Card>
 
       {/* Live card preview */}
@@ -238,7 +213,7 @@ export function AdminFlashSaleManager() {
           <h3 className="font-semibold text-base mb-0.5">Storefront card preview</h3>
           <p className="text-xs text-muted-foreground">This is how each selected product will appear on the home page, rotating as a carousel.</p>
         </div>
-        <FlashPreviewCarousel products={selectedProducts} />
+        <FlashPreviewCarousel products={selectedProducts} colorThemeId={colorThemeId} />
       </Card>
 
       {/* Product selector */}

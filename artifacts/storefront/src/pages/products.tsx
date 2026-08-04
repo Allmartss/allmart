@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation, useSearch, Link } from "wouter";
 import {
   useListProducts,
@@ -14,7 +14,7 @@ import {
   Search, X, LayoutGrid,
   Watch, Mountain, Footprints, Heart, Laptop, Shirt, Dumbbell,
   UtensilsCrossed, BookOpen, Gamepad2, HeartPulse, Plane, PawPrint,
-  Gem, Home as HomeIcon, Music2, Car, ArrowRight,
+  Gem, Home as HomeIcon, Music2, Car, ArrowRight, ChevronLeft, ChevronRight, Tag,
 } from "lucide-react";
 
 // ── Category icon + colour mapping ─────────────────────────────────────────────
@@ -54,6 +54,135 @@ const CATEGORY_COLORS = [
 function getCategoryIcon(slug: string): LucideIcon {
   const key = slug.toLowerCase().replace(/[^a-z]/g, "");
   return CATEGORY_ICONS[key] ?? LayoutGrid;
+}
+
+// ── Featured Slider (828×582: image 500px left, content 328px right) ─────────
+type FeaturedProduct = { id: number; name: string; description?: string | null; imageUrl?: string | null; price: number; originalPrice?: number | null; currency?: string | null; category?: string | null };
+
+function FeaturedSlider({ products }: { products: FeaturedProduct[] }) {
+  const [current, setCurrent] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const items = products.slice(0, 10);
+
+  const next = useCallback(() => setCurrent(c => (c + 1) % Math.max(items.length, 1)), [items.length]);
+  const prev = useCallback(() => setCurrent(c => (c - 1 + Math.max(items.length, 1)) % Math.max(items.length, 1)), [items.length]);
+
+  useEffect(() => {
+    if (items.length < 2 || paused) return;
+    const id = setInterval(next, 4500);
+    return () => clearInterval(id);
+  }, [next, items.length, paused]);
+
+  if (items.length === 0) return null;
+
+  const p = items[current]!;
+  const fmt = (n: number) => {
+    const sym = p.currency === "NGN" ? "₦" : (p.currency ?? "$");
+    return `${sym}${n.toLocaleString()}`;
+  };
+  const discountPct = p.originalPrice && p.originalPrice > p.price
+    ? Math.round((1 - p.price / p.originalPrice) * 100)
+    : null;
+
+  return (
+    <div className="mb-10">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold tracking-tight">Featured</h2>
+        {items.length > 1 && (
+          <div className="flex gap-1.5">
+            {items.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrent(i)}
+                className={`rounded-full transition-all duration-300 ${i === current ? "w-6 h-1.5 bg-primary" : "w-1.5 h-1.5 bg-primary/25"}`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Card: 828×582 proportions — fluid on mobile, capped at 828px */}
+      <div
+        className="relative w-full overflow-hidden rounded-2xl border border-border/50 bg-card shadow-sm"
+        style={{ maxWidth: "828px", aspectRatio: "828/582" }}
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+      >
+        <Link href={`/products/${p.id}`} className="flex h-full w-full">
+
+          {/* Image side — 500px / 828px ≈ 60.4% */}
+          <div className="relative overflow-hidden bg-muted/20" style={{ width: "60.4%" }}>
+            {p.imageUrl ? (
+              <img
+                key={p.id}
+                src={p.imageUrl}
+                alt={p.name}
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 hover:scale-105"
+              />
+            ) : (
+              <div className="h-full w-full flex items-center justify-center bg-muted">
+                <Tag className="h-12 w-12 text-muted-foreground/30" />
+              </div>
+            )}
+            {discountPct && (
+              <div className="absolute top-3 left-3 bg-primary text-primary-foreground font-bold text-xs px-2.5 py-1 rounded-full shadow flex items-center gap-1">
+                <Tag className="h-3 w-3" /> -{discountPct}%
+              </div>
+            )}
+          </div>
+
+          {/* Content side — 328px / 828px ≈ 39.6% */}
+          <div className="flex flex-col justify-between p-5 sm:p-8" style={{ width: "39.6%" }}>
+            <div className="flex flex-col gap-2 sm:gap-3">
+              <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-primary">
+                {p.category ?? "Featured"}
+              </span>
+              <h3 className="font-serif text-base sm:text-xl lg:text-2xl font-bold leading-snug line-clamp-3">
+                {p.name}
+              </h3>
+              {p.description && (
+                <p className="text-muted-foreground text-[11px] sm:text-sm line-clamp-3 sm:line-clamp-4">
+                  {p.description}
+                </p>
+              )}
+              <div className="flex items-baseline gap-2 flex-wrap mt-1">
+                <span className="text-base sm:text-xl font-bold text-primary">{fmt(p.price)}</span>
+                {p.originalPrice && p.originalPrice > p.price && (
+                  <span className="text-xs sm:text-sm text-muted-foreground line-through">{fmt(p.originalPrice)}</span>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={e => e.preventDefault()}
+              className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors w-fit"
+            >
+              Shop now <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </Link>
+
+        {/* Prev / Next arrows */}
+        {items.length > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={(e) => { e.preventDefault(); prev(); }}
+              className="absolute left-3 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-background/80 border border-border/40 flex items-center justify-center hover:bg-background shadow transition-colors z-10"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => { e.preventDefault(); next(); }}
+              className="absolute right-[39.6%] top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-background/80 border border-border/40 flex items-center justify-center hover:bg-background shadow transition-colors z-10"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function Products() {
@@ -190,6 +319,11 @@ export default function Products() {
             );
           })}
         </div>
+      )}
+
+      {/* ── Featured Slider ── */}
+      {(summary?.featured ?? []).length > 0 && (
+        <FeaturedSlider products={summary!.featured} />
       )}
 
       {/* ── New Arrivals ── */}

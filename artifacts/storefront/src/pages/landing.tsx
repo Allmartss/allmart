@@ -1,15 +1,15 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { X } from "lucide-react";
+import { X, ArrowRight, Search, Sparkles, Send, Zap, ShoppingBag, CheckCircle2 } from "lucide-react";
 import {
   useGetStorefrontSummary,
   useListCategories,
-  useListProducts,
   useGetFlashSale,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, Search, Sparkles, Send, Zap } from "lucide-react";
+import { BagLogo } from "@/components/bag-logo";
+import { FlashDealsCarousel } from "@/components/flash-deal-card";
 
 function useCountdown(endsAt: string | null) {
   const endMs = endsAt ? new Date(endsAt).getTime() : null;
@@ -25,12 +25,6 @@ function useCountdown(endsAt: string | null) {
   const s = Math.floor((left % 60_000) / 1_000).toString().padStart(2, "0");
   return { h, m, s, expired: endMs !== null && left <= 0 };
 }
-import { BagLogo } from "@/components/bag-logo";
-import { ProductCard } from "@/components/product-card";
-import { SaleCard } from "@/components/sale-card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { FeaturedCarousel } from "@/components/featured-carousel";
-import { CheckCircle2 } from "lucide-react";
 
 function SubscribeForm() {
   const [email, setEmail] = useState("");
@@ -105,9 +99,8 @@ export default function Landing() {
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const heroSearchRef = useRef<HTMLDivElement>(null);
 
-  const { data: summary, isLoading: isSummaryLoading } = useGetStorefrontSummary();
+  const { data: summary } = useGetStorefrontSummary();
   const { data: categories, isLoading: isCategoriesLoading } = useListCategories();
-  const { data: allProducts, isLoading: isProductsLoading } = useListProducts();
   const { data: flashSale } = useGetFlashSale();
 
   const flashLive = !!flashSale?.enabled;
@@ -133,10 +126,6 @@ export default function Landing() {
     }
     setLocation("/account");
   };
-
-  // Products NOT in the featured list, to show as "More products"
-  const featuredIds = new Set((summary?.featured ?? []).map(p => p.id));
-  const otherProducts = (allProducts ?? []).filter(p => !featuredIds.has(p.id));
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-4rem)]">
@@ -244,6 +233,16 @@ export default function Landing() {
               ))}
             </div>
           )}
+
+          {/* Shop Now button */}
+          <div className="pt-2 flex justify-center">
+            <Link href="/products">
+              <button className="inline-flex items-center gap-2 rounded-full bg-white text-primary font-semibold text-sm px-6 py-2.5 hover:bg-white/90 active:scale-95 transition-all shadow-lg shadow-black/20">
+                <ShoppingBag className="h-4 w-4" />
+                Shop Now
+              </button>
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -271,50 +270,27 @@ export default function Landing() {
       </div>
 
 
-      {/* ── Featured Carousel ─────────────────────────────────────────────── */}
-      <section className="pt-6 pb-10 container max-w-screen-xl mx-auto px-6">
-        <div className="flex items-end justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-white">Featured</h2>
-            <p className="text-white/50 mt-0.5 text-sm">Handpicked products, updated regularly.</p>
-          </div>
-          <Link href="/account">
-            <Button variant="ghost" className="gap-2 group text-sm text-white/70 hover:text-white hover:bg-white/10">
-              View all <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-            </Button>
-          </Link>
-        </div>
-        <FeaturedCarousel />
-      </section>
-
-      {/* ── All Products ──────────────────────────────────────────────────── */}
-      {(otherProducts.length > 0 || isProductsLoading) && (
-        <section className="pb-12 container max-w-screen-xl mx-auto px-6">
-          <div className="flex items-end justify-between mb-5">
-            <h2 className="text-xl font-bold tracking-tight text-white">Best Selling</h2>
-            <Link href="/products">
+      {/* ── Flash Sale (replaces Featured) ────────────────────────────────── */}
+      {flashLive && !expired && (
+        <section className="pt-6 pb-10 container max-w-screen-xl mx-auto px-6">
+          <div className="flex items-end justify-between mb-4">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                <Zap className="h-5 w-5 text-amber-400 fill-amber-400" /> Flash Sale
+              </h2>
+              <p className="text-white/50 mt-0.5 text-sm">Limited time deals — ends soon.</p>
+            </div>
+            <Link href="/products?sort=sale">
               <Button variant="ghost" className="gap-2 group text-sm text-white/70 hover:text-white hover:bg-white/10">
                 View all <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
           </div>
-          {isProductsLoading ? (
-            <div className="grid grid-cols-3 gap-2.5">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="space-y-3">
-                  <Skeleton className="aspect-square rounded-2xl" />
-                  <Skeleton className="h-3 w-2/3" />
-                  <Skeleton className="h-3 w-1/2" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-2.5">
-              {otherProducts.slice(0, 9).map(product => (
-                <SaleCard key={product.id} product={product} variant="grid" />
-              ))}
-            </div>
-          )}
+          <FlashDealsCarousel
+            products={flashSale?.products ?? []}
+            countdown={{ h, m, s }}
+            colorThemeId={(flashSale as any)?.colorThemeId}
+          />
         </section>
       )}
 
