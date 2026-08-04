@@ -182,6 +182,7 @@ export default function Landing() {
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-primary/80 pointer-events-none" />
 
         <div className="container relative z-10 max-w-3xl mx-auto text-center space-y-4">
+          <p className="text-xs font-light tracking-[0.25em] text-white/60 uppercase mb-1">AllMart</p>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 border border-white/20 px-4 py-1.5 text-sm font-medium text-white">
             <Sparkles className="h-3.5 w-3.5" /> AI-Powered Shopping
           </span>
