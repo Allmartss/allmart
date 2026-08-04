@@ -229,6 +229,9 @@ router.get("/api/admin/site-ui", requireRole("admin"), async (_req: Request, res
   const allThemes = themes.length ? themes : DEFAULT_THEMES;
   const activeTheme = allThemes.find((t) => t.id === activeThemeId) ?? null;
 
+  // Prevent 304 / empty-body responses — admin data must always be fresh
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.set("Pragma", "no-cache");
   res.json({ header, footer, themes: allThemes, activeTheme, activeThemeId });
 });
 

@@ -765,7 +765,10 @@ export function AdminSiteUiEditor() {
   } = useQuery<SiteConfig>({
     queryKey: ["admin-site-ui"],
     queryFn: async () => {
-      const res = await fetch("/api/admin/site-ui", { credentials: "include" });
+      const res = await fetch("/api/admin/site-ui", {
+        credentials: "include",
+        cache: "no-store",
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json() as Promise<SiteConfig>;
     },
