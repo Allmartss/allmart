@@ -177,7 +177,7 @@ export default function Landing() {
       )}
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="relative px-3 overflow-hidden bg-primary rounded-b-[1.5rem] flex items-center" style={{ minHeight: "55svh", maxHeight: "55svh" }}>
+      <section className="relative px-4 overflow-hidden bg-primary rounded-b-[3.5rem] flex items-center" style={{ minHeight: "50svh", maxHeight: "50svh" }}>
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-primary/80 pointer-events-none" />
 
@@ -186,25 +186,25 @@ export default function Landing() {
             <Sparkles className="h-3.5 w-3.5" /> AI-Powered Shopping
           </span>
 
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-white leading-none whitespace-nowrap">
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white leading-none whitespace-nowrap">
             concierge for <span className="italic text-white/80">everything.</span>
           </h1>
 
           {/* AI search — observed for sticky trigger */}
           <div ref={heroSearchRef}>
-            <form onSubmit={handleAskAI} className="relative max-w-[75%] mx-auto mt-5 group">
+            <form onSubmit={handleAskAI} className="relative max-w-[100%] mx-auto mt-3 group">
               <div className="absolute inset-0 bg-white/10 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-              <div className="relative flex items-center bg-white rounded-full p-2 shadow-xl">
-                <Search className="h-5 w-5 text-muted-foreground ml-4 shrink-0" />
+              <div className="relative flex items-center bg-white rounded-full px-4 shadow-xl">
+                <Search className="h-4 w-4 text-muted-foreground ml-4 shrink-0" />
                 <Input
                   type="text"
                   placeholder="Tell me what you need..."
-                  className="flex-1 border-0 bg-transparent text-base shadow-none focus-visible:ring-0 px-3 h-12 placeholder:text-muted-foreground/60"
+                  className="flex-1 border-0 bg-transparent text-base shadow-none focus-visible:ring-0 px-3 h-4 placeholder:text-muted-foreground/60"
                   value={query}
                   onChange={e => setQuery(e.target.value)}
                 />
                 <Button type="submit" size="lg" className="rounded-full h-11 px-6 font-semibold gap-2 shrink-0">
-                  Ask AI <ArrowRight className="h-4 w-4" />
+                  Ask AI <ArrowRight className="h-3 w3-" />
                 </Button>
               </div>
             </form>
@@ -212,7 +212,7 @@ export default function Landing() {
 
           {/* Trending */}
           {summary?.trendingSearches && summary.trendingSearches.length > 0 && (
-            <div className="pt-1 flex items-center gap-1.5 overflow-x-auto scrollbar-none max-w-xl mx-auto">
+            <div className="pt-1 flex items-center gap-1 overflow-x-auto scrollbar-none max-w-xl mx-auto">
               <span className="text-[10px] text-white/40 shrink-0 font-medium">Trending:</span>
               {summary.trendingSearches.map(term => (
                 <button
@@ -221,7 +221,7 @@ export default function Landing() {
                     sessionStorage.setItem("initial_assistant_query", `I'm looking for ${term}`);
                     setLocation("/account");
                   }}
-                  className="text-[10px] px-2.5 py-1 rounded-full bg-white/10 border border-white/15 text-white/70 hover:bg-white/20 transition-all whitespace-nowrap shrink-0"
+                  className="text-[7px] px-2.5 py-1 rounded-full bg-white/10 border border-white/15 text-white/70 hover:bg-white/20 transition-all whitespace-nowrap shrink-0"
                 >
                   {term}
                 </button>
@@ -293,7 +293,7 @@ export default function Landing() {
       {/* ── Best Selling Products ─────────────────────────────────────────── */}
       <section className="pt-6 pb-2 container max-w-screen-xl mx-auto px-3">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold tracking-tight text-foreground">Best Selling Products</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-foreground">Best Selling </h2>
           <Link href="/products">
             <Button variant="ghost" className="gap-1 group text-sm text-muted-foreground hover:text-foreground">
               View All Products <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
