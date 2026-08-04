@@ -335,13 +335,13 @@ function BlockCard({
 
   return (
     <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-2.5 bg-muted/30 border-b border-border/30">
-        <div className="flex items-center gap-1.5 text-muted-foreground">
+      <div className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-muted/30 border-b border-border/30">
+        <div className="flex items-center gap-1.5 text-muted-foreground shrink-0">
           {blockIcon(block.type)}
-          <span className="text-xs font-medium uppercase tracking-wide">{block.type}</span>
+          <span className="text-xs font-medium uppercase tracking-wide hidden sm:inline">{block.type}</span>
         </div>
-        <span className="text-xs text-muted-foreground truncate flex-1">{blockLabel(block)}</span>
-        <div className="flex items-center gap-1 ml-auto">
+        <span className="text-xs text-muted-foreground truncate flex-1 min-w-0">{blockLabel(block)}</span>
+        <div className="flex items-center gap-0.5 sm:gap-1 ml-auto shrink-0">
           <Button type="button" size="icon" variant="ghost" className="h-6 w-6" disabled={index === 0} onClick={onMoveUp}><ArrowUp className="h-3 w-3" /></Button>
           <Button type="button" size="icon" variant="ghost" className="h-6 w-6" disabled={index === total - 1} onClick={onMoveDown}><ArrowDown className="h-3 w-3" /></Button>
           <Button type="button" size="icon" variant="ghost" className="h-6 w-6" onClick={() => setExpanded(v => !v)}>
@@ -600,16 +600,16 @@ function FooterEditor({ footer, onChange, disabled }: {
         ) : (
           <div className="space-y-2">
             {(footer.links ?? []).map((link, i) => (
-              <div key={i} className="flex items-center gap-2">
+              <div key={i} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <Input disabled={disabled} value={link.label}
                   onChange={e => updateLink(i, "label", e.target.value)}
-                  placeholder="Label (e.g. Privacy Policy)" className="text-xs h-8 w-36 shrink-0" />
+                  placeholder="Label (e.g. Privacy Policy)" className="text-xs h-8 w-full sm:w-36 sm:shrink-0" />
                 <Input disabled={disabled} value={link.url}
                   onChange={e => updateLink(i, "url", e.target.value)}
-                  placeholder="https://…" className="text-xs h-8 flex-1" />
+                  placeholder="https://…" className="text-xs h-8 w-full sm:flex-1" />
                 {!disabled && (
                   <Button type="button" size="icon" variant="ghost"
-                    className="h-8 w-8 shrink-0 text-destructive hover:bg-destructive/10"
+                    className="h-8 w-8 self-end sm:self-auto shrink-0 text-destructive hover:bg-destructive/10"
                     onClick={() => removeLink(i)}>
                     <X className="h-3.5 w-3.5" />
                   </Button>
@@ -1011,7 +1011,7 @@ function CampaignEditor({
       )}
 
       {/* Actions */}
-      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         {!isSent ? (
           <>
             <Button onClick={save} disabled={saving || sending} className="gap-2">
@@ -1021,12 +1021,16 @@ function CampaignEditor({
             {campaign && (
               <>
                 <Button onClick={() => setPreview(true)} variant="outline" className="gap-2" disabled={blocks.length === 0}>
-                  <Eye className="h-4 w-4" /> Preview
+                  <Eye className="h-4 w-4" />
+                  <span className="hidden xs:inline">Preview</span>
                 </Button>
                 <Button onClick={send} disabled={saving || sending || blocks.length === 0}
-                  className="gap-2 bg-violet-600 hover:bg-violet-700 text-white sm:ml-auto">
+                  className="gap-2 bg-violet-600 hover:bg-violet-700 text-white">
                   {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  {sending ? "Sending…" : `Send to ${recipientType === "all" ? "all users" : `${recipientIds.length} user(s)`}`}
+                  <span className="hidden sm:inline">
+                    {sending ? "Sending…" : `Send to ${recipientType === "all" ? "all users" : `${recipientIds.length} user(s)`}`}
+                  </span>
+                  <span className="sm:hidden">{sending ? "Sending…" : "Send"}</span>
                 </Button>
               </>
             )}
@@ -1034,7 +1038,8 @@ function CampaignEditor({
         ) : (
           <>
             <Button onClick={() => setPreview(true)} variant="outline" className="gap-2">
-              <Eye className="h-4 w-4" /> Preview
+              <Eye className="h-4 w-4" />
+              <span className="hidden xs:inline">Preview</span>
             </Button>
             <Button onClick={reopen} disabled={reopening} variant="outline" className="gap-2">
               {reopening ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit2 className="h-4 w-4" />}
@@ -1047,9 +1052,9 @@ function CampaignEditor({
           </>
         )}
         {campaign && (
-          <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 gap-2 ml-auto" onClick={deleteCampaign} disabled={deleting}>
+          <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 gap-1.5 ml-auto" onClick={deleteCampaign} disabled={deleting}>
             {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-            Delete
+            <span className="hidden sm:inline">Delete</span>
           </Button>
         )}
       </div>
