@@ -230,7 +230,7 @@ export default function UserDashboard() {
           <Link href="/home" className="flex items-center gap-2 flex-1 min-w-0">
             <BagLogo size={30} />
             <div>
-              <p className="text-base font-extrabold text-foreground tracking-tight leading-none">AllMart</p>
+              <p style={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontStyle: "italic" }} className="text-base text-foreground leading-none">AllMart</p>
               <p className="text-[11px] text-muted-foreground leading-none mt-0.5">Shop Everything</p>
             </div>
           </Link>

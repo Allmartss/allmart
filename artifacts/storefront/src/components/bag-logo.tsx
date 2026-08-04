@@ -6,7 +6,7 @@ export function BagLogo({ size = 72 }: { size?: number }) {
   const bodyW   = size;
   const bodyH   = Math.round(size * 0.97);
   const radius  = Math.round(size * 0.2);
-  const fontSize = Math.round(size * 0.52);
+  const fontSize = Math.round(size * 0.82);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
@@ -33,10 +33,16 @@ export function BagLogo({ size = 72 }: { size?: number }) {
         display: "flex", alignItems: "center", justifyContent: "center",
         boxShadow: "0 12px 32px rgba(139,123,216,0.40)",
         position: "relative", zIndex: 2,
+        overflow: "hidden",
       }}>
         <span style={{
-          fontSize, fontWeight: 800, color: "#fff",
-          fontFamily: "sans-serif", letterSpacing: -2, lineHeight: 1,
+          fontSize,
+          fontWeight: 700,
+          color: "#fff",
+          fontFamily: '"Playfair Display", Georgia, serif',
+          letterSpacing: 0,
+          lineHeight: 1,
+          display: "block",
         }}>A</span>
       </div>
     </div>

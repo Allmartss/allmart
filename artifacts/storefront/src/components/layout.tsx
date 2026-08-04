@@ -286,8 +286,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="container flex h-13 max-w-screen-2xl items-center gap-2 px-4">
             {/* Logo */}
-            <Link href="/" className="flex items-center shrink-0 mr-2">
+            <Link href="/" className="flex items-center gap-1.5 shrink-0 mr-2">
               <BagLogo size={32} />
+              <span style={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontStyle: "italic", fontSize: 16 }} className="text-foreground">AllMart</span>
             </Link>
 
             {/* Primary nav */}

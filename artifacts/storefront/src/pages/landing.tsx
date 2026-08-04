@@ -335,7 +335,7 @@ export default function Landing() {
             <div className="space-y-4">
               <div className="flex items-center gap-2.5">
                 <BagLogo size={36} />
-                <span className="text-lg font-bold">AllMart</span>
+                <span style={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontStyle: "italic", fontSize: 20 }}>AllMart</span>
               </div>
               <p className="text-sm text-white/60 leading-relaxed">
                 AllMart is an all-in-one marketplace where a single account lets you buy and sell seamlessly connecting quality products, trusted sellers, and smooth shopping anytime, anywhere.
