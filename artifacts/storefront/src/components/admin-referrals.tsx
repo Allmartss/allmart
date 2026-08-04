@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Users, Settings2, CheckCircle2, Gift, Search, X, ChevronDown, RefreshCw, History } from "lucide-react";
+import { Loader2, Save, Users, Settings2, CheckCircle2, Gift, Search, X, ChevronDown, RefreshCw, History, Clock, AlertTriangle } from "lucide-react";
 
 type UserRow = { id: number; name: string; email: string };
 
@@ -18,6 +18,8 @@ type BonusGrant = {
   amount: number;
   reason: string | null;
   claimed: boolean;
+  expired: boolean;
+  expiresAt: string | null;
   createdAt: string;
   currentBalance: number;
 };
@@ -152,6 +154,7 @@ export function AdminReferrals() {
   const [grantTarget, setGrantTarget] = useState<UserRow | null>(null);
   const [grantAmount, setGrantAmount] = useState("");
   const [grantReason, setGrantReason] = useState("");
+  const [grantExpiry, setGrantExpiry] = useState("");
   const [granting, setGranting] = useState(false);
 
   useEffect(() => {
@@ -203,22 +206,26 @@ export function AdminReferrals() {
     }
     setGranting(true);
     try {
+      const body: Record<string, unknown> = { userId: grantTarget.id, amount, reason: grantReason || undefined };
+      if (grantExpiry) body.expiresAt = new Date(grantExpiry).toISOString();
+
       const res = await fetch("/api/admin/grant-bonus", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: grantTarget.id, amount, reason: grantReason || undefined }),
+        body: JSON.stringify(body),
       });
-      const data = await res.json() as { ok?: boolean; newBalance?: number; error?: string };
+      const data = await res.json() as { ok?: boolean; error?: string };
       if (!res.ok) { toast({ title: "Error", description: data.error, variant: "destructive" }); return; }
       toast({
-        title: "Bonus granted!",
-        description: `${grantTarget.name} now has $${(data.newBalance ?? 0).toFixed(2)} bonus balance.`,
+        title: "Bonus gift sent!",
+        description: `${grantTarget.name} will see the gift on their referral page and must claim it.`,
       });
       await queryClient.invalidateQueries({ queryKey: ["/api/admin/bonus-grants"] });
       setGrantTarget(null);
       setGrantAmount("");
       setGrantReason("");
+      setGrantExpiry("");
     } catch {
       toast({ title: "Network error", variant: "destructive" });
     } finally {
@@ -316,14 +323,34 @@ export function AdminReferrals() {
             </div>
           </div>
 
+          <div className="space-y-1.5">
+            <Label htmlFor="grant-expiry" className="flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+              Expiry date <span className="text-muted-foreground font-normal">(optional — gift cannot be claimed after this date)</span>
+            </Label>
+            <Input
+              id="grant-expiry"
+              type="date"
+              value={grantExpiry}
+              min={new Date().toISOString().split("T")[0]}
+              onChange={e => setGrantExpiry(e.target.value)}
+              className="max-w-xs"
+            />
+          </div>
+
           {/* Preview */}
           {grantTarget && Number(grantAmount) > 0 && (
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-violet-50 border border-violet-200 text-sm">
-              <Gift className="h-4 w-4 text-violet-600 shrink-0" />
+            <div className="flex items-start gap-2 p-3 rounded-xl bg-violet-50 border border-violet-200 text-sm">
+              <Gift className="h-4 w-4 text-violet-600 shrink-0 mt-0.5" />
               <span className="text-violet-700">
-                <span className="font-semibold">{fmt(Number(grantAmount))}</span> will be added to{" "}
-                <span className="font-semibold">{grantTarget.name}</span>'s bonus balance.
-                They can apply it at checkout.
+                <span className="font-semibold">{fmt(Number(grantAmount))}</span> gift will appear on{" "}
+                <span className="font-semibold">{grantTarget.name}</span>'s referral page.
+                They must click <strong>Claim</strong> to add it to their balance.
+                {grantExpiry && (
+                  <span className="block text-xs mt-1 text-violet-500">
+                    Expires {new Date(grantExpiry).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}.
+                  </span>
+                )}
               </span>
             </div>
           )}
@@ -337,6 +364,92 @@ export function AdminReferrals() {
             {granting ? "Granting…" : "Grant bonus"}
           </Button>
         </form>
+      </Card>
+
+      {/* Bonus grants history */}
+      <Card className="p-6 border-border/50 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <History className="h-4 w-4 text-violet-500" />
+          <h3 className="font-semibold">Bonus grant history</h3>
+          <span className="text-xs text-muted-foreground ml-1">{bonusGrants.length} total</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 ml-auto text-muted-foreground hover:text-foreground"
+            onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/admin/bonus-grants"] })}
+            title="Refresh balances"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+
+        {loadingGrants ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>
+        ) : bonusGrants.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No bonuses granted yet.</p>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-border/30">
+                    <th className="text-left pb-2 font-medium text-muted-foreground">User</th>
+                    <th className="text-right pb-2 font-medium text-muted-foreground">Amount</th>
+                    <th className="text-left pb-2 font-medium text-muted-foreground pl-3">Reason</th>
+                    <th className="text-center pb-2 font-medium text-muted-foreground">Status</th>
+                    <th className="text-right pb-2 font-medium text-muted-foreground">Expires</th>
+                    <th className="text-right pb-2 font-medium text-muted-foreground">Granted</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...bonusGrants].reverse().map(g => {
+                    const fmtDate = (iso: string) =>
+                      new Date(iso).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
+                    return (
+                      <tr key={g.id} className={`border-b border-border/20 last:border-0 hover:bg-muted/20 transition-colors ${g.expired ? "opacity-50" : ""}`}>
+                        <td className="py-2.5 pr-3">
+                          <div className="font-medium">{g.userName}</div>
+                          <div className="text-muted-foreground">{g.userEmail}</div>
+                        </td>
+                        <td className="py-2.5 pr-3 text-right font-semibold text-violet-600">{fmt(g.amount)}</td>
+                        <td className="py-2.5 px-3 text-muted-foreground max-w-[140px] truncate">
+                          {g.reason ?? <span className="italic opacity-40">—</span>}
+                        </td>
+                        <td className="py-2.5 text-center">
+                          {g.claimed ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full px-1.5 py-0.5 font-medium">
+                              <CheckCircle2 className="h-2.5 w-2.5" /> Claimed
+                            </span>
+                          ) : g.expired ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] bg-red-50 text-red-600 border border-red-200 rounded-full px-1.5 py-0.5 font-medium">
+                              <AlertTriangle className="h-2.5 w-2.5" /> Expired
+                            </span>
+                          ) : (
+                            <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-1.5 py-0.5 font-medium">
+                              Pending claim
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2.5 pr-3 text-right text-muted-foreground whitespace-nowrap">
+                          {g.expiresAt ? (
+                            <span className={g.expired ? "text-red-500" : ""}>
+                              {fmtDate(g.expiresAt)}
+                            </span>
+                          ) : (
+                            <span className="opacity-30">No limit</span>
+                          )}
+                        </td>
+                        <td className="py-2.5 text-right text-muted-foreground whitespace-nowrap">
+                          {fmtDate(g.createdAt)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </Card>
 
       {/* Referrals table */}

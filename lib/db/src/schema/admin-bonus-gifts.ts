@@ -7,6 +7,7 @@ export const adminBonusGiftsTable = pgTable("admin_bonus_gifts", {
   amount: real("amount").notNull(),
   reason: text("reason"),
   claimed: boolean("claimed").notNull().default(false),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

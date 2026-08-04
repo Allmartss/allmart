@@ -56,6 +56,8 @@ router.get("/referral", async (req: Request, res: Response) => {
     .from(adminBonusGiftsTable)
     .where(eq(adminBonusGiftsTable.userId, user.id));
 
+  const now = new Date();
+
   res.json({
     referralCode: user.referralCode,
     referralLink: user.referralCode ? `${origin}/signup?ref=${user.referralCode}` : null,
@@ -71,13 +73,18 @@ router.get("/referral", async (req: Request, res: Response) => {
       referrerBonus: r.referrerBonus,
       claimed: r.referrerClaimed,
     })),
-    adminGifts: adminGifts.map(g => ({
-      id: g.id,
-      amount: g.amount,
-      reason: g.reason,
-      claimed: g.claimed,
-      createdAt: g.createdAt.toISOString(),
-    })),
+    adminGifts: adminGifts.map(g => {
+      const expired = g.expiresAt ? g.expiresAt < now : false;
+      return {
+        id: g.id,
+        amount: g.amount,
+        reason: g.reason,
+        claimed: g.claimed,
+        expired,
+        expiresAt: g.expiresAt?.toISOString() ?? null,
+        createdAt: g.createdAt.toISOString(),
+      };
+    }),
   });
 });
 
@@ -121,6 +128,11 @@ router.post("/bonus/claim-admin/:giftId", async (req: Request, res: Response) =>
 
   if (!gift) { res.status(404).json({ error: "Gift not found" }); return; }
   if (gift.claimed) { res.status(400).json({ error: "Already claimed" }); return; }
+
+  // Check expiry
+  if (gift.expiresAt && gift.expiresAt < new Date()) {
+    res.status(400).json({ error: "This gift has expired and can no longer be claimed." }); return;
+  }
 
   await db.update(adminBonusGiftsTable).set({ claimed: true }).where(eq(adminBonusGiftsTable.id, giftId));
 

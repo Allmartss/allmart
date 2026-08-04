@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, referralsTable, usersTable, settingsTable, adminBonusGiftsTable } from "@workspace/db";
-import { eq, sql as sqlExpr } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { requireRole } from "../lib/auth";
 
 const router: IRouter = Router();
@@ -65,29 +65,42 @@ router.get("/admin/referrals", requireRole("admin"), async (_req: Request, res: 
   })));
 });
 
-/** Grant a manual bonus to a specific user — adds to their bonusBalance */
+/**
+ * Grant a manual bonus to a specific user.
+ * The bonus is created as UNCLAIMED — the user must visit their referral page
+ * and click "Claim" to add it to their spendable balance.
+ * An optional expiresAt date can be set; expired gifts cannot be claimed.
+ */
 router.post("/admin/grant-bonus", requireRole("admin"), async (req: Request, res: Response) => {
-  const { userId, amount, reason } = req.body as { userId?: number; amount?: number; reason?: string };
+  const { userId, amount, reason, expiresAt } = req.body as {
+    userId?: number; amount?: number; reason?: string; expiresAt?: string;
+  };
   if (!userId || !Number.isFinite(userId)) {
     res.status(400).json({ error: "userId is required" }); return;
   }
   if (!amount || !Number.isFinite(amount) || amount <= 0) {
     res.status(400).json({ error: "amount must be a positive number" }); return;
   }
-  const [user] = await db.select({ id: usersTable.id, name: usersTable.name, bonusBalance: usersTable.bonusBalance })
+
+  const [user] = await db.select({ id: usersTable.id, name: usersTable.name })
     .from(usersTable).where(eq(usersTable.id, userId));
   if (!user) { res.status(404).json({ error: "User not found" }); return; }
 
-  // Insert gift record — mark claimed=true immediately since balance is credited right away
-  const [gift] = await db.insert(adminBonusGiftsTable)
-    .values({ userId, amount, reason: reason ?? null, claimed: true })
-    .returning();
+  const expiryDate = expiresAt ? new Date(expiresAt) : null;
+  if (expiryDate && isNaN(expiryDate.getTime())) {
+    res.status(400).json({ error: "Invalid expiresAt date" }); return;
+  }
 
-  // Credit the bonus to the user's spendable balance
-  const [updated] = await db.update(usersTable)
-    .set({ bonusBalance: sqlExpr`bonus_balance + ${amount}` })
-    .where(eq(usersTable.id, userId))
-    .returning({ bonusBalance: usersTable.bonusBalance });
+  // Insert as unclaimed — balance is NOT credited yet. User must claim it.
+  const [gift] = await db.insert(adminBonusGiftsTable)
+    .values({
+      userId,
+      amount,
+      reason: reason ?? null,
+      claimed: false,
+      expiresAt: expiryDate,
+    })
+    .returning();
 
   res.json({
     ok: true,
@@ -96,11 +109,11 @@ router.post("/admin/grant-bonus", requireRole("admin"), async (req: Request, res
     giftId: gift!.id,
     granted: amount,
     reason: reason ?? null,
-    newBalance: updated!.bonusBalance,
+    expiresAt: expiryDate?.toISOString() ?? null,
   });
 });
 
-/** List all admin-granted bonuses with each user's current bonus balance */
+/** List all admin-granted bonuses with each user's current bonus balance. */
 router.get("/admin/bonus-grants", requireRole("admin"), async (_req: Request, res: Response) => {
   const gifts = await db
     .select({
@@ -109,6 +122,7 @@ router.get("/admin/bonus-grants", requireRole("admin"), async (_req: Request, re
       amount: adminBonusGiftsTable.amount,
       reason: adminBonusGiftsTable.reason,
       claimed: adminBonusGiftsTable.claimed,
+      expiresAt: adminBonusGiftsTable.expiresAt,
       createdAt: adminBonusGiftsTable.createdAt,
       userName: usersTable.name,
       userEmail: usersTable.email,
@@ -118,17 +132,23 @@ router.get("/admin/bonus-grants", requireRole("admin"), async (_req: Request, re
     .leftJoin(usersTable, eq(adminBonusGiftsTable.userId, usersTable.id))
     .orderBy(adminBonusGiftsTable.createdAt);
 
-  res.json(gifts.map(g => ({
-    id: g.id,
-    userId: g.userId,
-    userName: g.userName ?? "Unknown",
-    userEmail: g.userEmail ?? "",
-    amount: g.amount,
-    reason: g.reason,
-    claimed: g.claimed,
-    createdAt: g.createdAt.toISOString(),
-    currentBalance: g.currentBalance ?? 0,
-  })));
+  const now = new Date();
+  res.json(gifts.map(g => {
+    const expired = g.expiresAt ? g.expiresAt < now : false;
+    return {
+      id: g.id,
+      userId: g.userId,
+      userName: g.userName ?? "Unknown",
+      userEmail: g.userEmail ?? "",
+      amount: g.amount,
+      reason: g.reason,
+      claimed: g.claimed,
+      expired,
+      expiresAt: g.expiresAt?.toISOString() ?? null,
+      createdAt: g.createdAt.toISOString(),
+      currentBalance: g.currentBalance ?? 0,
+    };
+  }));
 });
 
 export default router;
