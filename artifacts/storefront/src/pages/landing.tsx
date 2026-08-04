@@ -173,7 +173,7 @@ export default function Landing() {
       )}
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="relative px-6 py-24 md:py-32 lg:py-40 overflow-hidden bg-primary rounded-b-[2.5rem]">
+      <section className="relative px-3 py-24 md:py-32 lg:py-40 overflow-hidden bg-primary rounded-b-[1.5rem]">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-primary/80 pointer-events-none" />
 
@@ -272,8 +272,8 @@ export default function Landing() {
 
       {/* ── Flash Sale (replaces Featured) ────────────────────────────────── */}
       {flashLive && !expired && (
-        <section className="pt-3 pb-10 container max-w-screen-xl mx-auto px-6">
-          <div className="flex items-end justify-between mb-4">
+        <section className="pt-1 pb-5 container max-w-screen-xl mx-auto px-3">
+          <div className="flex items-end justify-between mb-3">
             <div>
               <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
                 <Zap className="h-5 w-5 text-amber-400 fill-amber-400" /> Flash Sale
