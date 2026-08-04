@@ -17,7 +17,7 @@ import {
   UtensilsCrossed, BookOpen, Gamepad2, HeartPulse, Plane, PawPrint,
   Gem, Home as HomeIcon, Music2, Car, Sun, Moon,
 } from "lucide-react";
-import { SaleCard } from "@/components/sale-card";
+import { SaleCard, BestSellingCard } from "@/components/sale-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StaffSidebarTrigger } from "@/components/staff-sidebar";
 import { NotificationsBell } from "@/components/notifications-bell";
@@ -451,7 +451,7 @@ export default function Home() {
           ) : (
             <div className="grid grid-cols-3 gap-2">
               {bestSellingProducts.map(p => (
-                <SaleCard key={p.id} product={p} variant="flash" />
+                <BestSellingCard key={p.id} product={p} />
               ))}
             </div>
           )}
