@@ -430,18 +430,21 @@ export default function Home() {
         {/* Best Selling */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[15px] font-bold text-foreground dark:text-white">Best Selling</h2>
+            <h2 className="text-[15px] font-bold text-foreground dark:text-white">Best Selling Products</h2>
             <Link href="/products">
-              <span className="text-xs font-semibold text-foreground/50 dark:text-white/50 hover:text-foreground dark:hover:text-white transition-colors">View all</span>
+              <span className="text-xs font-semibold text-foreground/50 dark:text-white/50 hover:text-foreground dark:hover:text-white transition-colors flex items-center gap-0.5">
+                View All Products →
+              </span>
             </Link>
           </div>
           {isProductsLoading ? (
-            <div className="grid grid-cols-3 gap-2">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="space-y-2">
+            <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="shrink-0 w-[160px] space-y-2">
                   <Skeleton className="aspect-square rounded-2xl" />
                   <Skeleton className="h-3 w-3/4" />
                   <Skeleton className="h-3 w-1/2" />
+                  <Skeleton className="h-7 w-full rounded-lg" />
                 </div>
               ))}
             </div>
@@ -451,7 +454,7 @@ export default function Home() {
               <p className="text-xs mt-1">Add products in the admin panel.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide" style={{ scrollbarWidth: "none" }}>
               {bestSellingProducts.map(p => (
                 <BestSellingCard key={p.id} product={p} />
               ))}

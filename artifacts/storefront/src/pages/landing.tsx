@@ -5,11 +5,14 @@ import {
   useGetStorefrontSummary,
   useListCategories,
   useGetFlashSale,
+  useListProducts,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BagLogo } from "@/components/bag-logo";
 import { FlashDealsCarousel } from "@/components/flash-deal-card";
+import { BestSellingCard } from "@/components/sale-card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function useCountdown(endsAt: string | null) {
   const endMs = endsAt ? new Date(endsAt).getTime() : null;
@@ -102,6 +105,7 @@ export default function Landing() {
   const { data: summary } = useGetStorefrontSummary();
   const { data: categories, isLoading: isCategoriesLoading } = useListCategories();
   const { data: flashSale } = useGetFlashSale();
+  const { data: allProducts, isLoading: isProductsLoading } = useListProducts();
 
   const flashLive = !!flashSale?.enabled;
   const { h, m, s, expired } = useCountdown(flashLive ? (flashSale!.endsAt ?? null) : null);
@@ -293,6 +297,36 @@ export default function Landing() {
           />
         </section>
       )}
+
+      {/* ── Best Selling Products ─────────────────────────────────────────── */}
+      <section className="pt-6 pb-2 container max-w-screen-xl mx-auto px-3">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-bold tracking-tight text-foreground">Best Selling Products</h2>
+          <Link href="/products">
+            <Button variant="ghost" className="gap-1 group text-sm text-muted-foreground hover:text-foreground">
+              View All Products <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            </Button>
+          </Link>
+        </div>
+        {isProductsLoading ? (
+          <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="shrink-0 w-[160px] space-y-2">
+                <Skeleton className="aspect-square rounded-2xl" />
+                <Skeleton className="h-3 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+                <Skeleton className="h-7 w-full rounded-lg" />
+              </div>
+            ))}
+          </div>
+        ) : (allProducts ?? []).length === 0 ? null : (
+          <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: "none" }}>
+            {(allProducts ?? []).map(p => (
+              <BestSellingCard key={p.id} product={p} />
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* ── Footer ────────────────────────────────────────────────────────── */}
       <footer className="bg-[#0d0a1f] text-white mt-4">

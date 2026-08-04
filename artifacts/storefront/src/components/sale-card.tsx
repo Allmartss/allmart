@@ -15,27 +15,23 @@ function fmtPrice(price: number, currency: string) {
 }
 
 // ── BestSellingCard ────────────────────────────────────────────────────────────
-const DOT_PALETTES = [
-  ["#FF6B35", "#E74C3C", "#3498DB", "#2ECC71"],
-  ["#F39C12", "#E74C3C", "#9B59B6", "#1ABC9C"],
-  ["#FF4081", "#FF6D00", "#00BCD4", "#4CAF50"],
-  ["#E91E63", "#FF5722", "#2196F3", "#8BC34A"],
-  ["#F44336", "#FF9800", "#03A9F4", "#4CAF50"],
-  ["#D32F2F", "#F57C00", "#1976D2", "#388E3C"],
-];
-
-const SIZE_LABELS = ["42", "43", "44"];
-
 export function BestSellingCard({ product }: { product: Product }) {
   const [wishlist, setWishlist] = useState(false);
   const [added, setAdded] = useState(false);
   const queryClient = useQueryClient();
   const addToCart = useAddCartItem();
 
-  const dots = DOT_PALETTES[product.id % DOT_PALETTES.length];
+  const hasDiscount =
+    product.originalPrice != null && (product.originalPrice as number) > product.price;
   const price = fmtPrice(product.price, product.currency || "USD");
+  const origPrice = hasDiscount
+    ? fmtPrice(product.originalPrice as number, product.currency || "USD")
+    : null;
 
-  const handleAddToBag = async (e: React.MouseEvent) => {
+  // Simulate review count from id so it's consistent
+  const reviewCount = 40 + ((product.id * 37) % 200);
+
+  const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     try {
@@ -48,86 +44,67 @@ export function BestSellingCard({ product }: { product: Product }) {
 
   return (
     <Link href={`/products/${toSlug(product.name, product.id)}`}>
-      <div className="group cursor-pointer rounded-2xl overflow-hidden bg-[#F0F0F0] dark:bg-[#1C1C28] hover:shadow-md transition-all duration-200 flex flex-col">
+      <div className="group cursor-pointer shrink-0 w-[160px] rounded-2xl overflow-hidden bg-white dark:bg-[#1C1C28] border border-gray-100 dark:border-white/8 hover:shadow-md transition-all duration-200 flex flex-col">
 
-        {/* ── Header: category / name / price / dots ── */}
-        <div className="px-3 pt-3 pb-0">
-          <p className="text-[9px] text-foreground/40 dark:text-white/30 font-medium uppercase tracking-wider leading-none mb-1">
-            {product.category || "Product"}
-          </p>
-          <div className="flex items-start justify-between gap-1 mb-1">
-            <p className="text-[11px] font-bold leading-tight line-clamp-2 text-foreground dark:text-white flex-1 min-w-0">
-              {product.name}
-            </p>
-            <span className="text-[12px] font-extrabold text-foreground dark:text-white shrink-0 ml-1 mt-0.5">
-              {price}
-            </span>
-          </div>
-          {/* Color dots */}
-          <div className="flex items-center gap-1 mb-1">
-            {dots.map((color, i) => (
-              <span
-                key={i}
-                className="h-[9px] w-[9px] rounded-full shrink-0"
-                style={{ background: color }}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* ── Product image ── */}
-        <div className="flex-1 flex items-center justify-center px-3 py-2 min-h-[96px]">
+        {/* ── Image area with heart button ── */}
+        <div className="relative aspect-square bg-[#F5F5F5] dark:bg-[#252535] overflow-hidden">
           {product.imageUrl ? (
             <img
               src={product.imageUrl}
               alt={product.name}
               loading="lazy"
-              className="h-24 w-full object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow"
+              className="h-full w-full object-contain p-3 group-hover:scale-105 transition-transform duration-300"
             />
           ) : (
-            <span className="text-4xl text-foreground/20">🛍</span>
+            <div className="h-full w-full flex items-center justify-center text-3xl text-foreground/20">🛍</div>
           )}
-        </div>
-
-        {/* ── Footer: sizes / heart / add to bag ── */}
-        <div className="px-3 pb-3 flex items-center gap-1">
-          {/* Size chips */}
-          {SIZE_LABELS.map(s => (
-            <span
-              key={s}
-              className="rounded-md bg-black/[0.07] dark:bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold text-foreground/55 dark:text-white/50"
-            >
-              {s}
-            </span>
-          ))}
-
-          {/* Spacer */}
-          <div className="flex-1" />
-
-          {/* Wishlist heart */}
+          {/* Heart button */}
           <button
             onClick={e => { e.preventDefault(); e.stopPropagation(); setWishlist(w => !w); }}
-            className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors shrink-0"
+            className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 dark:bg-black/60 shadow-sm hover:bg-white dark:hover:bg-black/80 transition-colors"
             aria-label="Wishlist"
           >
             <Heart
               className={`h-3.5 w-3.5 transition-colors ${
-                wishlist ? "fill-red-500 text-red-500" : "text-foreground/35 dark:text-white/40"
+                wishlist ? "fill-red-500 text-red-500" : "text-gray-400 dark:text-white/50"
               }`}
             />
           </button>
+        </div>
 
-          {/* Add to Bag */}
+        {/* ── Info ── */}
+        <div className="px-3 pt-2.5 pb-3 flex flex-col gap-1.5 flex-1">
+          <p className="text-[12px] font-semibold leading-tight line-clamp-2 text-gray-800 dark:text-white">
+            {product.name}
+          </p>
+
+          {/* Rating */}
+          <div className="flex items-center gap-1">
+            <Star className="h-3 w-3 fill-amber-400 text-amber-400 shrink-0" />
+            <span className="text-[11px] font-semibold text-amber-500">{product.rating.toFixed(1)}</span>
+            <span className="text-[11px] text-gray-400 dark:text-white/40">({reviewCount})</span>
+          </div>
+
+          {/* Price */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[13px] font-bold text-gray-900 dark:text-white">{price}</span>
+            {hasDiscount && origPrice && (
+              <span className="text-[11px] text-gray-400 dark:text-white/35 line-through">{origPrice}</span>
+            )}
+          </div>
+
+          {/* Add to Cart button */}
           <button
-            onClick={handleAddToBag}
+            onClick={handleAddToCart}
             disabled={addToCart.isPending}
-            className="flex items-center gap-1 rounded-full bg-black/[0.07] dark:bg-white/10 hover:bg-black/12 dark:hover:bg-white/20 px-2 py-1 text-[9px] font-semibold text-foreground/65 dark:text-white/65 transition-colors shrink-0 disabled:opacity-50"
-            aria-label="Add to bag"
+            className="mt-auto w-full flex items-center justify-center gap-1.5 rounded-lg py-2 text-[11px] font-semibold text-white transition-colors disabled:opacity-60"
+            style={{ background: added ? "#4a7c59" : "#4a5741" }}
+            aria-label="Add to cart"
           >
             {added ? (
-              <><Check className="h-2.5 w-2.5" /> Done</>
+              <><Check className="h-3 w-3" /> Added</>
             ) : (
-              <>Add to Bag <ShoppingBag className="h-2.5 w-2.5" /></>
+              <><ShoppingBag className="h-3 w-3" /> Add to Cart</>
             )}
           </button>
         </div>
