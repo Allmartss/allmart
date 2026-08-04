@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -90,7 +90,7 @@ function NavLinksEditor({
     <div className="space-y-2">
       {links.map((link, i) => (
         <div key={i} className="flex items-center gap-2 group">
-          <div className="flex flex-col gap-0.5">
+          <div className="flex flex-col gap-0.5 flex-shrink-0">
             <button
               type="button"
               onClick={() => moveUp(i)}
@@ -99,6 +99,7 @@ function NavLinksEditor({
             >
               <ChevronUp className="h-3 w-3" />
             </button>
+            <GripVertical className="h-3 w-3 text-muted-foreground/40 mx-auto" />
             <button
               type="button"
               onClick={() => moveDown(i)}
@@ -108,19 +109,20 @@ function NavLinksEditor({
               <ChevronDown className="h-3 w-3" />
             </button>
           </div>
-          <GripVertical className="h-4 w-4 text-muted-foreground/40 flex-shrink-0" />
-          <Input
-            value={link.label}
-            onChange={(e) => updateLink(i, "label", e.target.value)}
-            className="h-8 text-sm flex-1"
-            placeholder="Label"
-          />
-          <Input
-            value={link.href}
-            onChange={(e) => updateLink(i, "href", e.target.value)}
-            className="h-8 text-sm flex-1 font-mono"
-            placeholder="/path"
-          />
+          <div className="flex flex-col sm:flex-row flex-1 gap-1.5 min-w-0">
+            <Input
+              value={link.label}
+              onChange={(e) => updateLink(i, "label", e.target.value)}
+              className="h-8 text-sm w-full sm:w-28 sm:flex-shrink-0"
+              placeholder="Label"
+            />
+            <Input
+              value={link.href}
+              onChange={(e) => updateLink(i, "href", e.target.value)}
+              className="h-8 text-sm flex-1 font-mono min-w-0"
+              placeholder="/path"
+            />
+          </div>
           <Button
             type="button"
             variant="ghost"
@@ -370,11 +372,11 @@ function FooterEditor({ config, onSave }: { config: FooterConfig; onSave: () => 
           </Button>
         </div>
         {form.socialLinks.map((s, i) => (
-          <div key={i} className="flex items-center gap-2">
+          <div key={i} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <Input
               value={s.platform}
               onChange={(e) => updateSocialLink(i, "platform", e.target.value)}
-              className="h-8 text-sm w-28 flex-shrink-0"
+              className="h-8 text-sm w-full sm:w-28 sm:flex-shrink-0"
               placeholder="Platform"
             />
             <Input
@@ -387,7 +389,7 @@ function FooterEditor({ config, onSave }: { config: FooterConfig; onSave: () => 
               type="button"
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-destructive hover:bg-destructive/10"
+              className="h-8 w-8 self-end sm:self-auto text-destructive hover:bg-destructive/10 flex-shrink-0"
               onClick={() => removeSocialLink(i)}
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -493,8 +495,8 @@ function ThemeEditor({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end gap-4">
-        <div className="space-y-1.5 flex-1">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-[1fr_8rem]">
+        <div className="space-y-1.5">
           <Label>Theme name</Label>
           <Input
             value={form.name}
@@ -502,7 +504,7 @@ function ThemeEditor({
             placeholder="My custom theme"
           />
         </div>
-        <div className="space-y-1.5 w-32">
+        <div className="space-y-1.5">
           <Label>Border radius</Label>
           <select
             value={form.radius}
@@ -647,9 +649,9 @@ function ThemeLibrary({
   return (
     <div className="space-y-4">
       {activeThemeId && (
-        <div className="flex items-center justify-between p-3 rounded-lg bg-primary/5 border border-primary/20">
+        <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
           <div className="flex items-center gap-2 text-sm">
-            <CheckCircle2 className="h-4 w-4 text-primary" />
+            <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
             <span>Active: <strong>{themes.find((t) => t.id === activeThemeId)?.name ?? activeThemeId}</strong></span>
           </div>
           <Button variant="ghost" size="sm" onClick={deactivate} className="gap-1.5 text-xs h-7">
@@ -807,25 +809,30 @@ export function AdminSiteUiEditor() {
   return (
     <div className="space-y-6">
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="h-10">
-          <TabsTrigger value="themes" className="gap-2">
-            <Palette className="h-4 w-4" /> Themes
-          </TabsTrigger>
-          <TabsTrigger value="create-theme" className="gap-2">
-            <Paintbrush className="h-4 w-4" />
-            {editingTheme ? "Edit theme" : "Create theme"}
-          </TabsTrigger>
-          <TabsTrigger value="header" className="gap-2">
-            <Layout className="h-4 w-4" /> Header
-          </TabsTrigger>
-          <TabsTrigger value="footer" className="gap-2">
-            <AlignLeft className="h-4 w-4" /> Footer
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-1 px-1 pb-0.5">
+          <TabsList className="h-10 min-w-max w-full sm:w-auto">
+            <TabsTrigger value="themes" className="gap-1.5 text-xs sm:text-sm">
+              <Palette className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span>Themes</span>
+            </TabsTrigger>
+            <TabsTrigger value="create-theme" className="gap-1.5 text-xs sm:text-sm">
+              <Paintbrush className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span>{editingTheme ? "Edit" : "New theme"}</span>
+            </TabsTrigger>
+            <TabsTrigger value="header" className="gap-1.5 text-xs sm:text-sm">
+              <Layout className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span>Header</span>
+            </TabsTrigger>
+            <TabsTrigger value="footer" className="gap-1.5 text-xs sm:text-sm">
+              <AlignLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span>Footer</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* ── Themes tab ─────────────────────────────────────────────────── */}
         <TabsContent value="themes" className="mt-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
             <div>
               <h3 className="font-semibold">Theme library</h3>
               <p className="text-sm text-muted-foreground">
@@ -835,7 +842,7 @@ export function AdminSiteUiEditor() {
             <Button
               size="sm"
               variant="outline"
-              className="gap-2"
+              className="gap-2 shrink-0"
               onClick={() => { setEditingTheme(null); setCreatingTheme(true); setTab("create-theme"); }}
             >
               <Plus className="h-3.5 w-3.5" /> New theme
@@ -844,13 +851,9 @@ export function AdminSiteUiEditor() {
           <ThemeLibrary
             themes={config.themes}
             activeThemeId={config.activeThemeId}
-            onActivate={(id) => setConfig((c) => c ? { ...c, activeThemeId: id } : c)}
+            onActivate={() => refreshAll()}
             onEdit={(theme) => { setEditingTheme(theme); setCreatingTheme(false); setTab("create-theme"); }}
-            onDelete={(id) =>
-              setConfig((c) =>
-                c ? { ...c, themes: c.themes.filter((t) => t.id !== id) } : c
-              )
-            }
+            onDelete={() => refreshAll()}
             onRefresh={refreshAll}
           />
         </TabsContent>
