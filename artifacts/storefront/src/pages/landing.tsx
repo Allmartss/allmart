@@ -31,7 +31,6 @@ import { SaleCard } from "@/components/sale-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FeaturedCarousel } from "@/components/featured-carousel";
 import { CheckCircle2 } from "lucide-react";
-import { FlashDealsCarousel } from "@/components/flash-deal-card";
 
 function SubscribeForm() {
   const [email, setEmail] = useState("");
@@ -112,11 +111,8 @@ export default function Landing() {
   const { data: flashSale } = useGetFlashSale();
 
   const flashLive = !!flashSale?.enabled;
-  const flashHasProducts = (flashSale?.products?.length ?? 0) > 0;
   const { h, m, s, expired } = useCountdown(flashLive ? (flashSale!.endsAt ?? null) : null);
   const showBanner = flashLive && !expired;
-  const showFlashCard = flashLive && flashHasProducts && !expired;
-  const saleProducts = flashSale?.products ?? [];
 
   // Show sticky search bar once hero search scrolls out of view
   useEffect(() => {
@@ -274,20 +270,6 @@ export default function Landing() {
         </div>
       </div>
 
-      {/* ── Flash Deals card ──────────────────────────────────────────────── */}
-      {showFlashCard && (
-        <section className="pt-6 pb-2 container max-w-screen-xl mx-auto px-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[15px] font-bold text-white flex items-center gap-1.5">
-              <Zap className="h-4 w-4 text-amber-400 fill-amber-400" /> Flash Deals
-            </h2>
-            <Link href="/account">
-              <span className="text-xs font-semibold text-white/50 hover:text-white transition-colors">View all</span>
-            </Link>
-          </div>
-          <FlashDealsCarousel products={saleProducts} countdown={{ h, m, s }} />
-        </section>
-      )}
 
       {/* ── Featured Carousel ─────────────────────────────────────────────── */}
       <section className="pt-6 pb-10 container max-w-screen-xl mx-auto px-6">
