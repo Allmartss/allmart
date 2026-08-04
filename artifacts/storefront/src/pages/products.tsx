@@ -6,7 +6,7 @@ import {
   useGetStorefrontSummary,
 } from "@workspace/api-client-react";
 import type { Product } from "@workspace/api-client-react";
-import { SaleCard } from "@/components/sale-card";
+import { SaleCard, BestSellingCard } from "@/components/sale-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -293,27 +293,38 @@ export default function Products() {
       </div>
 
       {/* ── Category avatar pills — horizontal scroll ── */}
-      {(categories ?? []).length > 0 && (
+      {categoryGroups.length > 0 && (
         <div className="flex gap-3 overflow-x-auto pb-3 mb-8" style={{ scrollbarWidth: "none" }}>
-          {(categories ?? []).map((cat, idx) => {
-            const Icon = getCategoryIcon(cat.slug);
+          {categoryGroups.map(({ slug, name, products: catProducts }, idx) => {
+            const Icon = getCategoryIcon(slug);
             const gradient = CATEGORY_COLORS[idx % CATEGORY_COLORS.length];
-            const isActive = activeSlug === cat.slug;
+            const isActive = activeSlug === slug;
+            const firstImg = catProducts.find(p => p.imageUrl)?.imageUrl;
             return (
               <button
-                key={cat.slug}
-                onClick={() => scrollToCategory(cat.slug)}
+                key={slug}
+                onClick={() => scrollToCategory(slug)}
                 className="flex flex-col items-center gap-1.5 shrink-0 group"
               >
-                <span
-                  className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${gradient} shadow-md transition-all duration-200 ${
-                    isActive ? "ring-2 ring-offset-2 ring-primary scale-110" : "opacity-80 group-hover:opacity-100 group-hover:scale-105"
+                <div
+                  className={`h-16 w-16 rounded-2xl overflow-hidden bg-muted shadow-sm transition-all duration-200 ${
+                    isActive ? "ring-2 ring-offset-2 ring-primary scale-110 shadow-md" : "group-hover:shadow-md group-hover:scale-105"
                   }`}
                 >
-                  <Icon className="h-5 w-5 text-white" />
-                </span>
-                <span className={`text-[10px] font-medium max-w-[52px] text-center leading-tight truncate transition-colors ${isActive ? "text-primary font-semibold" : "text-foreground/60"}`}>
-                  {cat.name}
+                  {firstImg ? (
+                    <img
+                      src={firstImg}
+                      alt={name}
+                      className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className={`h-full w-full flex items-center justify-center bg-gradient-to-br ${gradient}`}>
+                      <Icon className="h-6 w-6 text-white" />
+                    </div>
+                  )}
+                </div>
+                <span className={`text-[11px] font-medium max-w-[64px] text-center leading-tight transition-colors ${isActive ? "text-primary font-semibold" : "text-foreground/70"}`}>
+                  {name}
                 </span>
               </button>
             );
@@ -346,12 +357,13 @@ export default function Products() {
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i}>
               <Skeleton className="h-6 w-40 mb-4 rounded" />
-              <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-5 xl:grid-cols-6 gap-2">
+              <div className="grid grid-cols-3 gap-3">
                 {Array.from({ length: 6 }).map((_, j) => (
                   <div key={j} className="space-y-2">
                     <Skeleton className="aspect-square rounded-2xl" />
                     <Skeleton className="h-3 w-3/4" />
                     <Skeleton className="h-3 w-1/2" />
+                    <Skeleton className="h-7 w-full rounded-lg" />
                   </div>
                 ))}
               </div>
@@ -377,14 +389,14 @@ export default function Products() {
               className="scroll-mt-6"
             >
               {/* Section header */}
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold capitalize">{name}</h2>
-                <span className="text-xs text-muted-foreground">{products.length} item{products.length !== 1 ? "s" : ""}</span>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-[15px] font-bold capitalize">{name}</h2>
+                <span className="text-xs font-semibold text-foreground/50 hover:text-foreground transition-colors">{products.length} item{products.length !== 1 ? "s" : ""}</span>
               </div>
-              {/* Product grid — 4 per row */}
-              <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-5 xl:grid-cols-6 gap-2">
+              {/* Product grid — 3 per row */}
+              <div className="grid grid-cols-3 gap-3">
                 {products.map(p => (
-                  <SaleCard key={p.id} product={p} variant="grid" />
+                  <BestSellingCard key={p.id} product={p} />
                 ))}
               </div>
             </div>
