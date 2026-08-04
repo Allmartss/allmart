@@ -209,11 +209,18 @@ export default function Account() {
         minHeight: "100%",
         backgroundColor: LAVENDER_BG,
         display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "48px 24px",
+        flexDirection: "column",
       }}
     >
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "48px 24px",
+        }}
+      >
       <div style={{ width: "100%", maxWidth: 420 }}>
 
         {/* Bag logo */}
@@ -536,10 +543,16 @@ export default function Account() {
           <Link href="/terms" style={{ color: PURPLE, textDecoration: "underline" }}>terms</Link>.
         </p>
       </div>
+      </div>{/* end centering wrapper */}
 
       {/* Footer */}
-      <footer style={{ marginTop: 40, textAlign: "center" }}>
-        <div style={{ display: "flex", justifyContent: "center", gap: 24, marginBottom: 12, flexWrap: "wrap" }}>
+      <footer style={{
+        textAlign: "center",
+        padding: "20px 24px 28px",
+        borderTop: "1px solid rgba(139,123,216,0.15)",
+        backgroundColor: "rgba(255,255,255,0.5)",
+      }}>
+        <div style={{ display: "flex", justifyContent: "center", gap: 24, marginBottom: 10, flexWrap: "wrap" }}>
           {[
             { label: "Home", href: "/" },
             { label: "Products", href: "/products" },
