@@ -9,7 +9,6 @@ import {
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { BagLogo } from "@/components/bag-logo";
 import { FlashDealsCarousel } from "@/components/flash-deal-card";
 import { BestSellingCard } from "@/components/sale-card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -181,11 +180,7 @@ export default function Landing() {
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-primary/80 pointer-events-none" />
 
-        <div className="container relative z-10 max-w-3xl mx-auto text-center space-y-6">
-          <div className="flex justify-center">
-            <BagLogo size={72} />
-          </div>
-
+        <div className="container relative z-10 max-w-3xl mx-auto text-center space-y-4">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 border border-white/20 px-4 py-1.5 text-sm font-medium text-white">
             <Sparkles className="h-3.5 w-3.5" /> AI-Powered Shopping
           </span>
@@ -201,7 +196,7 @@ export default function Landing() {
 
           {/* AI search — observed for sticky trigger */}
           <div ref={heroSearchRef}>
-            <form onSubmit={handleAskAI} className="relative max-w-2xl mx-auto mt-6 group">
+            <form onSubmit={handleAskAI} className="relative max-w-[60%] mx-auto mt-6 group">
               <div className="absolute inset-0 bg-white/10 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
               <div className="relative flex items-center bg-white rounded-full p-2 shadow-xl">
                 <Search className="h-5 w-5 text-muted-foreground ml-4 shrink-0" />
