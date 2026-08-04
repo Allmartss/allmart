@@ -1,4 +1,4 @@
-name: Deploy
+name: Deploy to VPS
 
 on:
   push:
@@ -27,3 +27,21 @@ jobs:
             sudo systemctl restart allmart
             sleep 5
             echo "Deploy complete ✓"
+
+      - name: Notify Telegram
+        if: always()
+        uses: appleboy/telegram-action@v1.0.1
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          format: markdown
+          message: |
+            *Deploy status: ${{ job.status }}*
+
+            *Repo:* `${{ github.repository }}`
+            *Branch:* `${{ github.ref_name }}`
+            *Commit:* `${{ github.sha }}`
+            *Author:* ${{ github.actor }}
+            *Message:* ${{ github.event.head_commit.message }}
+
+            [View run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
