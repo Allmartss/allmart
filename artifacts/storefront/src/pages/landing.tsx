@@ -274,7 +274,7 @@ export default function Landing() {
           <div className="flex items-end justify-between mb-3">
             <div>
               <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-                <Zap className="h-5 w-5 text-amber-400 fill-amber-400" /> Flash Sale
+                <Zap className="h-5 w-5 text-amber-300 fill-amber-300" /> Flash Sale
               </h2>
               <p className="text-muted-foreground mt-0.5 text-sm">Limited time deals — ends soon.</p>
             </div>

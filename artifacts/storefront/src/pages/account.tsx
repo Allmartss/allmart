@@ -536,6 +536,30 @@ export default function Account() {
           <Link href="/terms" style={{ color: PURPLE, textDecoration: "underline" }}>terms</Link>.
         </p>
       </div>
+
+      {/* Footer */}
+      <footer style={{ marginTop: 40, textAlign: "center" }}>
+        <div style={{ display: "flex", justifyContent: "center", gap: 24, marginBottom: 12, flexWrap: "wrap" }}>
+          {[
+            { label: "Home", href: "/" },
+            { label: "Products", href: "/products" },
+            { label: "Terms", href: "/terms" },
+            { label: "Privacy", href: "/privacy" },
+            { label: "Help", href: "/help" },
+          ].map(({ label, href }) => (
+            <Link
+              key={href}
+              href={href}
+              style={{ color: TEXT_MUTED, fontSize: 12, textDecoration: "none", fontWeight: 500 }}
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
+        <p style={{ color: TEXT_MUTED, fontSize: 11, margin: 0 }}>
+          © {new Date().getFullYear()} AllMart. All rights reserved.
+        </p>
+      </footer>
     </div>
   );
 }
