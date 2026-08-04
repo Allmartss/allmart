@@ -243,7 +243,7 @@ export default function Landing() {
 
       {/* ── Sticky search bar (appears after hero scrolls away) ────────────── */}
       <div
-        className={`sticky top-14 z-40 border-b border-primary/20 bg-background/98 backdrop-blur transition-all duration-300 shadow-sm shadow-primary/5 ${
+        className={`fixed top-14 left-0 right-0 z-40 border-b border-primary/20 bg-background/98 backdrop-blur transition-all duration-300 shadow-sm shadow-primary/5 ${
           stickyVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0 pointer-events-none"
         }`}
       >
