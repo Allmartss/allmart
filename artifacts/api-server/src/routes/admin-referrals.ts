@@ -74,14 +74,61 @@ router.post("/admin/grant-bonus", requireRole("admin"), async (req: Request, res
   if (!amount || !Number.isFinite(amount) || amount <= 0) {
     res.status(400).json({ error: "amount must be a positive number" }); return;
   }
-  const [user] = await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable).where(eq(usersTable.id, userId));
+  const [user] = await db.select({ id: usersTable.id, name: usersTable.name, bonusBalance: usersTable.bonusBalance })
+    .from(usersTable).where(eq(usersTable.id, userId));
   if (!user) { res.status(404).json({ error: "User not found" }); return; }
-  const [gift] = await db.insert(adminBonusGiftsTable).values({ userId, amount, reason: reason ?? null }).returning();
+
+  // Insert gift record — mark claimed=true immediately since balance is credited right away
+  const [gift] = await db.insert(adminBonusGiftsTable)
+    .values({ userId, amount, reason: reason ?? null, claimed: true })
+    .returning();
+
   // Credit the bonus to the user's spendable balance
-  await db.update(usersTable)
+  const [updated] = await db.update(usersTable)
     .set({ bonusBalance: sqlExpr`bonus_balance + ${amount}` })
-    .where(eq(usersTable.id, userId));
-  res.json({ ok: true, userId: user.id, name: user.name, giftId: gift!.id, granted: amount, reason: reason ?? null });
+    .where(eq(usersTable.id, userId))
+    .returning({ bonusBalance: usersTable.bonusBalance });
+
+  res.json({
+    ok: true,
+    userId: user.id,
+    name: user.name,
+    giftId: gift!.id,
+    granted: amount,
+    reason: reason ?? null,
+    newBalance: updated!.bonusBalance,
+  });
+});
+
+/** List all admin-granted bonuses with each user's current bonus balance */
+router.get("/admin/bonus-grants", requireRole("admin"), async (_req: Request, res: Response) => {
+  const gifts = await db
+    .select({
+      id: adminBonusGiftsTable.id,
+      userId: adminBonusGiftsTable.userId,
+      amount: adminBonusGiftsTable.amount,
+      reason: adminBonusGiftsTable.reason,
+      claimed: adminBonusGiftsTable.claimed,
+      createdAt: adminBonusGiftsTable.createdAt,
+      userName: usersTable.name,
+      userEmail: usersTable.email,
+      currentBalance: usersTable.bonusBalance,
+    })
+    .from(adminBonusGiftsTable)
+    .leftJoin(usersTable, eq(adminBonusGiftsTable.userId, usersTable.id))
+    .orderBy(adminBonusGiftsTable.createdAt);
+
+  res.json(gifts.map(g => ({
+    id: g.id,
+    userId: g.userId,
+    userName: g.userName ?? "Unknown",
+    userEmail: g.userEmail ?? "",
+    amount: g.amount,
+    reason: g.reason,
+    claimed: g.claimed,
+    createdAt: g.createdAt.toISOString(),
+    currentBalance: g.currentBalance ?? 0,
+  })));
 });
 
 export default router;

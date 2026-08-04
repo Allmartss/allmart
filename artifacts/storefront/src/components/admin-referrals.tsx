@@ -6,9 +6,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Users, Settings2, CheckCircle2, Gift, Search, X, ChevronDown } from "lucide-react";
+import { Loader2, Save, Users, Settings2, CheckCircle2, Gift, Search, X, ChevronDown, RefreshCw, History } from "lucide-react";
 
 type UserRow = { id: number; name: string; email: string };
+
+type BonusGrant = {
+  id: number;
+  userId: number;
+  userName: string;
+  userEmail: string;
+  amount: number;
+  reason: string | null;
+  claimed: boolean;
+  createdAt: string;
+  currentBalance: number;
+};
 
 type ReferralRecord = {
   id: number;
@@ -126,6 +138,7 @@ export function AdminReferrals() {
   const queryClient = useQueryClient();
   const { data: records = [], isLoading: loadingRecords } = useFetch<ReferralRecord[]>("/api/admin/referrals");
   const { data: settings, isLoading: loadingSettings } = useFetch<ReferralSettings>("/api/admin/referral-settings");
+  const { data: bonusGrants = [], isLoading: loadingGrants } = useFetch<BonusGrant[]>("/api/admin/bonus-grants");
 
   const [referrerBonus, setReferrerBonus] = useState("");
   const [signupBonus, setSignupBonus] = useState("");
@@ -202,6 +215,7 @@ export function AdminReferrals() {
         title: "Bonus granted!",
         description: `${grantTarget.name} now has $${(data.newBalance ?? 0).toFixed(2)} bonus balance.`,
       });
+      await queryClient.invalidateQueries({ queryKey: ["/api/admin/bonus-grants"] });
       setGrantTarget(null);
       setGrantAmount("");
       setGrantReason("");

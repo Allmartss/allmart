@@ -135,8 +135,10 @@ function Router() {
         <Route path="/admin/referrals" component={() => <Admin section="referrals" />} />
         <Route path="/admin/flash-sale" component={() => <Admin section="flash-sale" />} />
         <Route path="/admin/health" component={() => <Admin section="health" />} />
+        <Route path="/admin/promotions" component={() => <Admin section="promotions" />} />
         <Route path="/admin/pop-ads" component={() => <Admin section="pop-ads" />} />
         <Route path="/admin/ad-notifications" component={() => <Admin section="ad-notifications" />} />
+        <Route path="/admin/notifications" component={() => <Admin section="notifications" />} />
         <Route path="/admin/email-campaigns" component={() => <Admin section="email-campaigns" />} />
         <Route path="/admin/email-templates" component={() => <Admin section="email-templates" />} />
         <Route path="/pm" component={() => <PMConsole section="dashboard" />} />

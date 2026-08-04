@@ -12,6 +12,7 @@ import { PushNotificationForm } from "@/components/push-notification-form";
 import { AdminSupportDesk } from "@/components/admin-support-desk";
 import { AdminPopAds } from "@/components/admin-pop-ads";
 import { AdminAdNotifications } from "@/components/admin-ad-notifications";
+import { AdminPromotions } from "@/components/admin-promotions";
 import { AdminCashbackManager } from "@/components/admin-cashback";
 import { AdminLandingPages } from "@/components/admin-landing-pages";
 import { AdminDashboard } from "@/components/admin-dashboard";
@@ -65,6 +66,7 @@ type Section =
   | "health"
   | "pop-ads"
   | "ad-notifications"
+  | "promotions"
   | "email-campaigns"
   | "email-templates";
 
@@ -219,6 +221,13 @@ export default function Admin({ section = "dashboard" }: { section?: Section }) 
         <>
           <StaffPageHeader icon={Megaphone} title="Ad notifications" description="Send a promotional notification to all users or specific individuals. Appears in their notifications feed." />
           <AdminAdNotifications />
+        </>
+      )}
+
+      {section === "promotions" && (
+        <>
+          <StaffPageHeader icon={Megaphone} title="Promotions" description="Manage pop-up ads and send push or ad notifications to users." />
+          <AdminPromotions />
         </>
       )}
 
