@@ -104,7 +104,8 @@ function renderFooterHtml(footer: CampaignFooter): string {
     ? `<p style="margin:0 0 10px;font-size:12px;color:${fg};">${escHtml(footer.message)}</p>`
     : "";
 
-  return `<tr><td style="padding:24px 32px;background:${bg};border-top:1px solid #e5e7eb;text-align:center;">
+  return `<tr style="background:${bg};">
+<td style="padding:28px 32px;border-top:1px solid rgba(0,0,0,.08);text-align:center;color:${fg};">
   ${socialHtml}
   ${linksHtml}
   ${addressHtml}
@@ -127,7 +128,15 @@ export function renderCampaignHtml(subject: string, blocks: EmailBlock[], footer
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="light" />
 <title>${escHtml(subject)}</title>
+<style>
+  @media (prefers-color-scheme: dark) {
+    body, .email-outer { background-color: #f4f4f5 !important; }
+    .email-card { background-color: #ffffff !important; color: #111827 !important; }
+    .email-body td { background-color: #ffffff !important; color: #111827 !important; }
+  }
+</style>
 </head>
 <body style="margin:0;padding:0;background:#f4f4f5;font-family:Arial,Helvetica,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:32px 16px;">

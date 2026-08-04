@@ -179,7 +179,7 @@ function HeaderEditor({ block, onChange }: { block: HeaderBlock; onChange: (b: H
         <Label>Headline text</Label>
         <Input value={block.text} onChange={e => onChange({ ...block, text: e.target.value })} placeholder="Your headline…" />
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="space-y-1.5">
           <Label>Size</Label>
           <select value={block.size} onChange={e => onChange({ ...block, size: e.target.value as HeaderBlock["size"] })}
@@ -231,7 +231,7 @@ function ImageEditor({ block, onChange }: { block: ImageBlock; onChange: (b: Ima
         <img src={block.url} alt={block.alt || "preview"} className="w-full max-h-40 object-cover rounded-lg border border-border/50"
           onError={e => (e.currentTarget.style.display = "none")} />
       )}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label>Alt text</Label>
           <Input value={block.alt} onChange={e => onChange({ ...block, alt: e.target.value })} placeholder="Describe the image" />
@@ -248,7 +248,7 @@ function ImageEditor({ block, onChange }: { block: ImageBlock; onChange: (b: Ima
 function ButtonEditor({ block, onChange }: { block: ButtonBlock; onChange: (b: ButtonBlock) => void }) {
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label>Button label</Label>
           <Input value={block.text} onChange={e => onChange({ ...block, text: e.target.value })} placeholder="Shop Now" />
@@ -258,7 +258,7 @@ function ButtonEditor({ block, onChange }: { block: ButtonBlock; onChange: (b: B
           <Input value={block.url} onChange={e => onChange({ ...block, url: e.target.value })} placeholder="https://…" />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label>Align</Label>
           <select value={block.align} onChange={e => onChange({ ...block, align: e.target.value as ButtonBlock["align"] })}
@@ -546,18 +546,18 @@ function TemplateEditor({
       )}
 
       {/* Tab bar */}
-      <div className="flex items-center gap-1 border-b border-border/50 mb-6">
+      <div className="flex items-center border-b border-border/50 mb-6 gap-1 overflow-x-auto scrollbar-hide">
         {(["subject", "blocks", "footer"] as EditorTab[]).map(t => (
           <button key={t} type="button" onClick={() => setTab(t)}
-            className={`px-4 py-2.5 text-sm font-medium capitalize border-b-2 transition-colors ${
+            className={`shrink-0 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium capitalize border-b-2 transition-colors whitespace-nowrap ${
               tab === t ? "border-violet-500 text-violet-600 dark:text-violet-400" : "border-transparent text-muted-foreground hover:text-foreground"
             }`}>
             {t === "subject" ? "Subject & header" : t}
           </button>
         ))}
-        <div className="ml-auto">
-          <Button type="button" variant="outline" size="sm" className="gap-1.5 h-8" onClick={() => setPreview(true)}>
-            <Eye className="h-3.5 w-3.5" /> Preview
+        <div className="ml-auto pl-2 shrink-0">
+          <Button type="button" variant="outline" size="sm" className="gap-1.5 h-8 text-xs" onClick={() => setPreview(true)}>
+            <Eye className="h-3.5 w-3.5" /><span className="hidden sm:inline">Preview</span>
           </Button>
         </div>
       </div>
@@ -598,7 +598,7 @@ function TemplateEditor({
             <Input value={template.headerLogoUrl} onChange={e => onChange({ ...template, headerLogoUrl: e.target.value })}
               placeholder="https://…/logo.png" />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Header bar color</Label>
               <div className="flex gap-2 items-center">
@@ -812,10 +812,12 @@ export function AdminEmailTemplates() {
     );
   }
 
+  const currentMeta = TEMPLATE_META.find(m => m.key === selectedKey);
+
   return (
     <div className="grid gap-6 lg:grid-cols-[280px,1fr]">
-      {/* Sidebar — template list */}
-      <div className="space-y-2">
+      {/* Desktop sidebar — template list */}
+      <div className="hidden lg:block space-y-2">
         {TEMPLATE_META.map(({ key, label, description, Icon }) => (
           <button key={key} type="button" onClick={() => setSelectedKey(key)}
             className={`w-full flex items-start gap-3 rounded-xl border p-4 text-left transition-all ${
@@ -832,24 +834,37 @@ export function AdminEmailTemplates() {
         ))}
       </div>
 
+      {/* Mobile template picker — horizontal scroll chips */}
+      <div className="lg:hidden -mx-1">
+        <div className="flex gap-2 overflow-x-auto pb-1 px-1 scrollbar-hide snap-x snap-mandatory">
+          {TEMPLATE_META.map(({ key, label, Icon }) => (
+            <button key={key} type="button" onClick={() => setSelectedKey(key)}
+              className={`flex items-center gap-2 shrink-0 snap-start rounded-full border px-4 py-2 text-sm font-medium transition-all whitespace-nowrap ${
+                selectedKey === key
+                  ? "border-violet-500 bg-violet-50 dark:bg-violet-950/20 text-violet-700 dark:text-violet-300"
+                  : "border-border/50 bg-card text-muted-foreground hover:border-border"
+              }`}>
+              <Icon className="h-4 w-4 shrink-0" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Editor panel */}
-      <Card className="p-6">
-        <div className="flex items-start justify-between mb-6 gap-4">
-          <div>
-            <h2 className="font-semibold">
-              {TEMPLATE_META.find(m => m.key === selectedKey)?.label}
-            </h2>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {TEMPLATE_META.find(m => m.key === selectedKey)?.description}
-            </p>
+      <Card className="p-4 sm:p-6 lg:col-start-2">
+        <div className="flex flex-col gap-3 mb-5 sm:flex-row sm:items-start sm:justify-between sm:mb-6">
+          <div className="min-w-0">
+            <h2 className="font-semibold truncate">{currentMeta?.label}</h2>
+            <p className="text-sm text-muted-foreground mt-0.5 leading-snug">{currentMeta?.description}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Button type="button" variant="outline" size="sm" className="gap-1.5 h-8 text-xs"
+            <Button type="button" variant="outline" size="sm" className="gap-1.5 h-8 text-xs flex-1 sm:flex-none"
               disabled={resetting} onClick={handleReset}>
               {resetting ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
               Reset
             </Button>
-            <Button type="button" size="sm" className="gap-1.5 h-8 text-xs"
+            <Button type="button" size="sm" className="gap-1.5 h-8 text-xs flex-1 sm:flex-none"
               disabled={saving} onClick={handleSave}>
               {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
               Save
