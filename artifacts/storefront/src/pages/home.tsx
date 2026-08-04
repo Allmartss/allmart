@@ -327,8 +327,8 @@ export default function Home() {
             <h1 className="text-[22px] font-black text-foreground dark:text-white leading-tight tracking-tight">
               Find{" "}
               <span
-                className="inline-block rounded-full px-2.5 py-0.5 text-[18px] font-black text-amber-800 dark:text-amber-300 relative -top-0.5"
-                style={{ background: "#E8D9B0" }}
+                className="inline-block rounded-full px-2.5 py-0.5 text-[18px] font-black text-black relative -top-0.5"
+                style={{ background: "#8B7BD8" }}
               >
                 Your
               </span>
