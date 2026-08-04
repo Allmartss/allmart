@@ -203,7 +203,7 @@ async function saveSetting(key: string, value: unknown) {
 }
 
 // ── Public: full site config ───────────────────────────────────────────────
-router.get("/api/site-ui", async (_req: Request, res: Response) => {
+router.get("/site-ui", async (_req: Request, res: Response) => {
   const [header, footer, themes, activeThemeId] = await Promise.all([
     getSetting<HeaderConfig>(KEY_HEADER, DEFAULT_HEADER),
     getSetting<FooterConfig>(KEY_FOOTER, DEFAULT_FOOTER),
@@ -218,7 +218,7 @@ router.get("/api/site-ui", async (_req: Request, res: Response) => {
 });
 
 // ── Admin: full config ─────────────────────────────────────────────────────
-router.get("/api/admin/site-ui", requireRole("admin"), async (_req: Request, res: Response) => {
+router.get("/admin/site-ui", requireRole("admin"), async (_req: Request, res: Response) => {
   const [header, footer, themes, activeThemeId] = await Promise.all([
     getSetting<HeaderConfig>(KEY_HEADER, DEFAULT_HEADER),
     getSetting<FooterConfig>(KEY_FOOTER, DEFAULT_FOOTER),
@@ -236,7 +236,7 @@ router.get("/api/admin/site-ui", requireRole("admin"), async (_req: Request, res
 });
 
 // ── Admin: save header ─────────────────────────────────────────────────────
-router.post("/api/admin/site-ui/header", requireRole("admin"), async (req: Request, res: Response) => {
+router.post("/admin/site-ui/header", requireRole("admin"), async (req: Request, res: Response) => {
   const current = await getSetting<HeaderConfig>(KEY_HEADER, DEFAULT_HEADER);
   const body = req.body as Partial<HeaderConfig>;
   const updated: HeaderConfig = {
@@ -251,7 +251,7 @@ router.post("/api/admin/site-ui/header", requireRole("admin"), async (req: Reque
 });
 
 // ── Admin: save footer ─────────────────────────────────────────────────────
-router.post("/api/admin/site-ui/footer", requireRole("admin"), async (req: Request, res: Response) => {
+router.post("/admin/site-ui/footer", requireRole("admin"), async (req: Request, res: Response) => {
   const current = await getSetting<FooterConfig>(KEY_FOOTER, DEFAULT_FOOTER);
   const body = req.body as Partial<FooterConfig>;
   const updated: FooterConfig = {
@@ -266,14 +266,14 @@ router.post("/api/admin/site-ui/footer", requireRole("admin"), async (req: Reque
 });
 
 // ── Admin: list themes ─────────────────────────────────────────────────────
-router.get("/api/admin/site-ui/themes", requireRole("admin"), async (_req: Request, res: Response) => {
+router.get("/admin/site-ui/themes", requireRole("admin"), async (_req: Request, res: Response) => {
   const themes = await getSettingRaw<SiteTheme[]>(KEY_THEMES, DEFAULT_THEMES);
   const activeThemeId = await getSettingRaw<string | null>(KEY_ACTIVE_THEME, null);
   res.json({ themes: themes.length ? themes : DEFAULT_THEMES, activeThemeId });
 });
 
 // ── Admin: save (create/update) a theme ───────────────────────────────────
-router.post("/api/admin/site-ui/themes", requireRole("admin"), async (req: Request, res: Response) => {
+router.post("/admin/site-ui/themes", requireRole("admin"), async (req: Request, res: Response) => {
   const themes = await getSettingRaw<SiteTheme[]>(KEY_THEMES, DEFAULT_THEMES);
   const all = themes.length ? themes : [...DEFAULT_THEMES];
   const body = req.body as SiteTheme;
@@ -295,7 +295,7 @@ router.post("/api/admin/site-ui/themes", requireRole("admin"), async (req: Reque
 });
 
 // ── Admin: delete a theme ──────────────────────────────────────────────────
-router.delete("/api/admin/site-ui/themes/:id", requireRole("admin"), async (req: Request, res: Response) => {
+router.delete("/admin/site-ui/themes/:id", requireRole("admin"), async (req: Request, res: Response) => {
   const { id } = req.params;
   const themes = await getSettingRaw<SiteTheme[]>(KEY_THEMES, DEFAULT_THEMES);
   const all = themes.length ? themes : [...DEFAULT_THEMES];
@@ -318,7 +318,7 @@ router.delete("/api/admin/site-ui/themes/:id", requireRole("admin"), async (req:
 });
 
 // ── Admin: activate a theme ────────────────────────────────────────────────
-router.post("/api/admin/site-ui/themes/:id/activate", requireRole("admin"), async (req: Request, res: Response) => {
+router.post("/admin/site-ui/themes/:id/activate", requireRole("admin"), async (req: Request, res: Response) => {
   const { id } = req.params;
   const themes = await getSettingRaw<SiteTheme[]>(KEY_THEMES, DEFAULT_THEMES);
   const all = themes.length ? themes : DEFAULT_THEMES;
@@ -334,7 +334,7 @@ router.post("/api/admin/site-ui/themes/:id/activate", requireRole("admin"), asyn
 });
 
 // ── Admin: deactivate (reset to default) ─────────────────────────────────
-router.post("/api/admin/site-ui/themes/deactivate", requireRole("admin"), async (_req: Request, res: Response) => {
+router.post("/admin/site-ui/themes/deactivate", requireRole("admin"), async (_req: Request, res: Response) => {
   await saveSetting(KEY_ACTIVE_THEME, null);
   res.json({ ok: true, activeThemeId: null });
 });
