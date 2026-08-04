@@ -177,7 +177,7 @@ export default function Landing() {
       )}
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="relative px-3 py-10 md:py-14 overflow-hidden bg-primary rounded-b-[1.5rem]">
+      <section className="relative px-3 overflow-hidden bg-primary rounded-b-[1.5rem] flex items-center" style={{ minHeight: "55svh", maxHeight: "55svh" }}>
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-primary/80 pointer-events-none" />
 
@@ -186,18 +186,13 @@ export default function Landing() {
             <Sparkles className="h-3.5 w-3.5" /> AI-Powered Shopping
           </span>
 
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-white leading-tight">
-            concierge for{" "}
-            <span className="italic text-white/80">everything.</span>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-white leading-none whitespace-nowrap">
+            concierge for <span className="italic text-white/80">everything.</span>
           </h1>
-
-          <p className="text-base md:text-lg text-white/70 max-w-xl mx-auto">
-            Tell our AI what you're looking for and we'll find the perfect match.
-          </p>
 
           {/* AI search — observed for sticky trigger */}
           <div ref={heroSearchRef}>
-            <form onSubmit={handleAskAI} className="relative max-w-[60%] mx-auto mt-6 group">
+            <form onSubmit={handleAskAI} className="relative max-w-[75%] mx-auto mt-5 group">
               <div className="absolute inset-0 bg-white/10 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
               <div className="relative flex items-center bg-white rounded-full p-2 shadow-xl">
                 <Search className="h-5 w-5 text-muted-foreground ml-4 shrink-0" />
