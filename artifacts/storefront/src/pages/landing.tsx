@@ -177,7 +177,7 @@ export default function Landing() {
       )}
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="relative px-3 py-24 md:py-32 lg:py-40 overflow-hidden bg-primary rounded-b-[1.5rem]">
+      <section className="relative px-3 py-10 md:py-14 overflow-hidden bg-primary rounded-b-[1.5rem]">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-primary/80 pointer-events-none" />
 

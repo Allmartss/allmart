@@ -98,7 +98,7 @@ export function BestSellingCard({ product }: { product: Product }) {
             onClick={handleAddToCart}
             disabled={addToCart.isPending}
             className="mt-auto w-full flex items-center justify-center gap-1.5 rounded-lg py-2 text-[11px] font-semibold text-white transition-colors disabled:opacity-60"
-            style={{ background: added ? "#4a7c59" : "#4a5741" }}
+            style={{ background: added ? "#15803d" : "#16a34a" }}
             aria-label="Add to cart"
           >
             {added ? (
