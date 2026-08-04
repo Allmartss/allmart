@@ -440,7 +440,7 @@ export default function Home() {
           {isProductsLoading ? (
             <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
               {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="shrink-0 w-[160px] space-y-2">
+                <div key={i} className="shrink-0 w-[160px] space-y-2 flex-none">
                   <Skeleton className="aspect-square rounded-2xl" />
                   <Skeleton className="h-3 w-3/4" />
                   <Skeleton className="h-3 w-1/2" />
@@ -456,7 +456,9 @@ export default function Home() {
           ) : (
             <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide" style={{ scrollbarWidth: "none" }}>
               {bestSellingProducts.map(p => (
-                <BestSellingCard key={p.id} product={p} />
+                <div key={p.id} className="shrink-0 w-[160px]">
+                  <BestSellingCard product={p} />
+                </div>
               ))}
             </div>
           )}

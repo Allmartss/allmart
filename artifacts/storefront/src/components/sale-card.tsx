@@ -44,7 +44,7 @@ export function BestSellingCard({ product }: { product: Product }) {
 
   return (
     <Link href={`/products/${toSlug(product.name, product.id)}`}>
-      <div className="group cursor-pointer shrink-0 w-[160px] rounded-2xl overflow-hidden bg-white dark:bg-[#1C1C28] border border-gray-100 dark:border-white/8 hover:shadow-md transition-all duration-200 flex flex-col">
+      <div className="group cursor-pointer w-full rounded-2xl overflow-hidden bg-white dark:bg-[#1C1C28] border border-gray-100 dark:border-white/8 hover:shadow-md transition-all duration-200 flex flex-col">
 
         {/* ── Image area with heart button ── */}
         <div className="relative aspect-square bg-[#F5F5F5] dark:bg-[#252535] overflow-hidden">

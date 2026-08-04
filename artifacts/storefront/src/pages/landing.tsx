@@ -309,9 +309,9 @@ export default function Landing() {
           </Link>
         </div>
         {isProductsLoading ? (
-          <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="shrink-0 w-[160px] space-y-2">
+          <div className="grid grid-cols-3 gap-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="space-y-2">
                 <Skeleton className="aspect-square rounded-2xl" />
                 <Skeleton className="h-3 w-3/4" />
                 <Skeleton className="h-3 w-1/2" />
@@ -320,7 +320,7 @@ export default function Landing() {
             ))}
           </div>
         ) : (allProducts ?? []).length === 0 ? null : (
-          <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: "none" }}>
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
             {(allProducts ?? []).map(p => (
               <BestSellingCard key={p.id} product={p} />
             ))}
