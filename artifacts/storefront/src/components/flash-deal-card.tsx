@@ -95,13 +95,13 @@ export function FlashDealCard({
     <Link href={`/products/${product.id}`}>
       <div
         className="relative rounded-2xl overflow-hidden cursor-pointer"
-        style={{ background: theme.bg, minHeight: "148px" }}
+        style={{ background: theme.bg, minHeight: "188px" }}
       >
         {/* Glow */}
         <div className="absolute inset-0 pointer-events-none" style={{ background: theme.glow }} />
 
         {/* Left content */}
-        <div className="relative z-10 p-4 pr-36 flex flex-col justify-between h-full min-h-[148px]">
+        <div className="relative z-10 p-4 pr-40 flex flex-col justify-between h-full min-h-[188px]">
           <div>
             <span className={`inline-block rounded-full bg-white/10 border border-white/15 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider mb-2 ${theme.badge}`}>
               Limited Time Offer

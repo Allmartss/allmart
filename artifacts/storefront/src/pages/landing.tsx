@@ -272,16 +272,16 @@ export default function Landing() {
 
       {/* ── Flash Sale (replaces Featured) ────────────────────────────────── */}
       {flashLive && !expired && (
-        <section className="pt-6 pb-10 container max-w-screen-xl mx-auto px-6">
+        <section className="pt-3 pb-10 container max-w-screen-xl mx-auto px-6">
           <div className="flex items-end justify-between mb-4">
             <div>
-              <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+              <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
                 <Zap className="h-5 w-5 text-amber-400 fill-amber-400" /> Flash Sale
               </h2>
-              <p className="text-white/50 mt-0.5 text-sm">Limited time deals — ends soon.</p>
+              <p className="text-muted-foreground mt-0.5 text-sm">Limited time deals — ends soon.</p>
             </div>
             <Link href="/products?sort=sale">
-              <Button variant="ghost" className="gap-2 group text-sm text-white/70 hover:text-white hover:bg-white/10">
+              <Button variant="ghost" className="gap-2 group text-sm text-muted-foreground hover:text-foreground">
                 View all <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
