@@ -11,7 +11,7 @@ import {
   ChevronRight, FileText, X, RotateCcw,
   UserPlus, LogIn, ShieldCheck, Package, Bell,
   MapPin, Link as LinkIcon, ChevronDown, Save,
-  Info, Hash,
+  Info, Hash, ArrowLeft,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -295,13 +295,13 @@ function BlockCard({ block, index, total, onChange, onDelete, onMoveUp, onMoveDo
   const [expanded, setExpanded] = useState(true);
   return (
     <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-2.5 bg-muted/30 border-b border-border/30">
-        <div className="flex items-center gap-1.5 text-muted-foreground">
+      <div className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-muted/30 border-b border-border/30">
+        <div className="flex items-center gap-1.5 text-muted-foreground shrink-0">
           {blockIcon(block.type)}
-          <span className="text-xs font-medium uppercase tracking-wide">{block.type}</span>
+          <span className="text-xs font-medium uppercase tracking-wide hidden sm:inline">{block.type}</span>
         </div>
-        <span className="text-xs text-muted-foreground truncate flex-1">{blockLabel(block)}</span>
-        <div className="flex items-center gap-1 ml-auto">
+        <span className="text-xs text-muted-foreground truncate flex-1 min-w-0">{blockLabel(block)}</span>
+        <div className="flex items-center gap-0.5 sm:gap-1 ml-auto shrink-0">
           <Button type="button" size="icon" variant="ghost" className="h-6 w-6" disabled={index === 0} onClick={onMoveUp}><ArrowUp className="h-3 w-3" /></Button>
           <Button type="button" size="icon" variant="ghost" className="h-6 w-6" disabled={index === total - 1} onClick={onMoveDown}><ArrowDown className="h-3 w-3" /></Button>
           <Button type="button" size="icon" variant="ghost" className="h-6 w-6" onClick={() => setExpanded(v => !v)}>
@@ -433,13 +433,13 @@ function FooterEditor({ footer, onChange }: { footer: CampaignFooter; onChange: 
         ) : (
           <div className="space-y-2">
             {(footer.links ?? []).map((link, i) => (
-              <div key={i} className="flex items-center gap-2">
+              <div key={i} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <Input value={link.label} onChange={e => updateLink(i, "label", e.target.value)}
-                  placeholder="Label" className="text-xs h-8 w-32 shrink-0" />
+                  placeholder="Label" className="text-xs h-8 w-full sm:w-36 sm:shrink-0" />
                 <Input value={link.url} onChange={e => updateLink(i, "url", e.target.value)}
-                  placeholder="https://…" className="text-xs h-8 flex-1" />
+                  placeholder="https://…" className="text-xs h-8 w-full sm:flex-1" />
                 <Button type="button" size="icon" variant="ghost"
-                  className="h-8 w-8 shrink-0 text-destructive hover:bg-destructive/10" onClick={() => removeLink(i)}>
+                  className="h-8 w-8 self-end sm:self-auto shrink-0 text-destructive hover:bg-destructive/10" onClick={() => removeLink(i)}>
                   <X className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -497,7 +497,7 @@ function PreviewModal({ templateKey, templateData, onClose }: {
   );
 }
 
-// ─── Template editor ──────────────────────────────────────────────────────────
+// ─── Add-block types ──────────────────────────────────────────────────────────
 
 const ADD_BLOCK_TYPES: { type: EmailBlock["type"]; label: string }[] = [
   { type: "header",  label: "Header" },
@@ -507,7 +507,7 @@ const ADD_BLOCK_TYPES: { type: EmailBlock["type"]; label: string }[] = [
   { type: "divider", label: "Divider" },
 ];
 
-type EditorTab = "subject" | "blocks" | "footer";
+// ─── Template editor ──────────────────────────────────────────────────────────
 
 function TemplateEditor({
   templateKey,
@@ -515,14 +515,23 @@ function TemplateEditor({
   statusMessages,
   onChange,
   onStatusMessagesChange,
+  onBack,
+  onSave,
+  onReset,
+  saving,
+  resetting,
 }: {
   templateKey: string;
   template: EmailTemplate;
   statusMessages: OrderStatusMessages;
   onChange: (t: EmailTemplate) => void;
   onStatusMessagesChange: (sm: OrderStatusMessages) => void;
+  onBack?: () => void;
+  onSave: () => void;
+  onReset: () => void;
+  saving: boolean;
+  resetting: boolean;
 }) {
-  const [tab, setTab] = useState<EditorTab>("subject");
   const [preview, setPreview] = useState(false);
   const [footerCollapsed, setFooterCollapsed] = useState(false);
   const meta = TEMPLATE_META.find(m => m.key === templateKey);
@@ -540,31 +549,45 @@ function TemplateEditor({
   }
 
   return (
-    <>
+    <div className="space-y-4 sm:space-y-5">
       {preview && (
         <PreviewModal templateKey={templateKey} templateData={template} onClose={() => setPreview(false)} />
       )}
 
-      {/* Tab bar */}
-      <div className="flex items-center border-b border-border/50 mb-6 gap-1 overflow-x-auto scrollbar-hide">
-        {(["subject", "blocks", "footer"] as EditorTab[]).map(t => (
-          <button key={t} type="button" onClick={() => setTab(t)}
-            className={`shrink-0 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium capitalize border-b-2 transition-colors whitespace-nowrap ${
-              tab === t ? "border-violet-500 text-violet-600 dark:text-violet-400" : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}>
-            {t === "subject" ? "Subject & header" : t}
-          </button>
-        ))}
-        <div className="ml-auto pl-2 shrink-0">
-          <Button type="button" variant="outline" size="sm" className="gap-1.5 h-8 text-xs" onClick={() => setPreview(true)}>
-            <Eye className="h-3.5 w-3.5" /><span className="hidden sm:inline">Preview</span>
+      {/* Mobile back button */}
+      {onBack && (
+        <Button variant="ghost" size="sm" className="gap-2 -ml-1 md:hidden" onClick={onBack}>
+          <ArrowLeft className="h-4 w-4" /> Back to templates
+        </Button>
+      )}
+
+      {/* Header row: title + actions */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="font-semibold truncate">{meta?.label}</h2>
+          <p className="text-sm text-muted-foreground mt-0.5 leading-snug">{meta?.description}</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button type="button" variant="outline" size="sm" className="gap-1.5 h-8 text-xs flex-1 sm:flex-none"
+            onClick={() => setPreview(true)}>
+            <Eye className="h-3.5 w-3.5" /><span className="hidden sm:inline">Preview</span><span className="sm:hidden">Preview</span>
+          </Button>
+          <Button type="button" variant="outline" size="sm" className="gap-1.5 h-8 text-xs flex-1 sm:flex-none"
+            disabled={resetting} onClick={onReset}>
+            {resetting ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
+            Reset
+          </Button>
+          <Button type="button" size="sm" className="gap-1.5 h-8 text-xs flex-1 sm:flex-none"
+            disabled={saving} onClick={onSave}>
+            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+            Save
           </Button>
         </div>
       </div>
 
       {/* Variables help */}
       {meta && meta.vars.length > 0 && (
-        <div className="mb-5 rounded-xl bg-violet-50 dark:bg-violet-950/20 border border-violet-200 dark:border-violet-800/40 p-4">
+        <div className="rounded-xl bg-violet-50 dark:bg-violet-950/20 border border-violet-200 dark:border-violet-800/40 p-4">
           <p className="text-xs font-semibold text-violet-700 dark:text-violet-400 flex items-center gap-1.5 mb-2">
             <Hash className="h-3.5 w-3.5" />Available variables — use these in your text blocks
           </p>
@@ -584,23 +607,29 @@ function TemplateEditor({
         </div>
       )}
 
-      {/* Subject & Header tab */}
-      {tab === "subject" && (
-        <div className="space-y-5">
-          <div className="space-y-1.5">
-            <Label>Subject line</Label>
-            <Input value={template.subject} onChange={e => onChange({ ...template, subject: e.target.value })}
-              placeholder="Email subject…" />
-            <p className="text-xs text-muted-foreground">You can use variables like <code className="font-mono">{"{{tracking_code}}"}</code> in the subject.</p>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Logo image URL <span className="text-muted-foreground text-xs">(optional — shown in email header bar)</span></Label>
-            <Input value={template.headerLogoUrl} onChange={e => onChange({ ...template, headerLogoUrl: e.target.value })}
-              placeholder="https://…/logo.png" />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Subject & header card */}
+      <Card className="p-4 sm:p-5 border-border/50 space-y-4">
+        <h3 className="font-semibold text-sm">Subject &amp; header</h3>
+        <div className="space-y-1.5">
+          <Label>Subject line</Label>
+          <Input value={template.subject} onChange={e => onChange({ ...template, subject: e.target.value })}
+            placeholder="Email subject…" />
+          <p className="text-xs text-muted-foreground">You can use variables like <code className="font-mono">{"{{tracking_code}}"}</code> in the subject.</p>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Logo image URL <span className="text-muted-foreground text-xs">(optional — shown in email header bar)</span></Label>
+          <Input value={template.headerLogoUrl} onChange={e => onChange({ ...template, headerLogoUrl: e.target.value })}
+            placeholder="https://…/logo.png" />
+          {template.headerLogoUrl && (
+            <img src={template.headerLogoUrl} alt="Logo preview" className="h-8 object-contain rounded border border-border/50 mt-1"
+              onError={e => (e.currentTarget.style.display = "none")} />
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label>Header bar colors</Label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Header bar color</Label>
+              <p className="text-xs text-muted-foreground">Background</p>
               <div className="flex gap-2 items-center">
                 <input type="color" value={template.footer.headerBgColor ?? "#7c3aed"}
                   onChange={e => onChange({ ...template, footer: { ...template.footer, headerBgColor: e.target.value } })}
@@ -611,7 +640,7 @@ function TemplateEditor({
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>Header text color</Label>
+              <p className="text-xs text-muted-foreground">Text color</p>
               <div className="flex gap-2 items-center">
                 <input type="color" value={template.footer.headerTextColor ?? "#ffffff"}
                   onChange={e => onChange({ ...template, footer: { ...template.footer, headerTextColor: e.target.value } })}
@@ -622,43 +651,50 @@ function TemplateEditor({
               </div>
             </div>
           </div>
-          {/* Live header preview */}
-          <div className="rounded-xl overflow-hidden border border-border/50">
-            <div className="flex items-center justify-between px-6 py-4"
+          {/* Live header preview strip */}
+          <div className="rounded-lg overflow-hidden border border-border/40 mt-1">
+            <div className="flex items-center justify-between px-4 py-2.5"
               style={{ background: template.footer.headerBgColor ?? "#7c3aed" }}>
-              <span className="font-bold text-lg" style={{ color: template.footer.headerTextColor ?? "#ffffff" }}>AllMart</span>
+              <span className="font-bold text-sm" style={{ color: template.footer.headerTextColor ?? "#ffffff", letterSpacing: "-0.3px" }}>AllMart</span>
               {template.headerLogoUrl && (
-                <img src={template.headerLogoUrl} alt="Logo" className="max-h-8 max-w-28 object-contain"
+                <img src={template.headerLogoUrl} alt="Logo" className="max-h-6 max-w-24 object-contain"
                   onError={e => (e.currentTarget.style.display = "none")} />
               )}
             </div>
-            <div className="px-6 py-4 bg-white dark:bg-zinc-900 text-sm text-muted-foreground">
-              Header preview — your content will appear below this bar.
-            </div>
           </div>
         </div>
-      )}
+      </Card>
 
-      {/* Blocks tab */}
-      {tab === "blocks" && (
-        <div className="space-y-4">
-          {template.blocks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center rounded-xl border-2 border-dashed border-border/50">
-              <Mail className="h-8 w-8 text-muted-foreground/40 mb-3" />
-              <p className="text-sm text-muted-foreground">No content blocks yet — add one below.</p>
+      {/* Email content card */}
+      <Card className="p-4 sm:p-5 border-border/50 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-sm">Email content</h3>
+          <span className="text-xs text-muted-foreground">{template.blocks.length} block{template.blocks.length !== 1 ? "s" : ""}</span>
+        </div>
+
+        {template.blocks.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-3 py-10 rounded-xl border-2 border-dashed border-border/50 text-center">
+            <Mail className="h-10 w-10 text-muted-foreground/40" />
+            <div>
+              <p className="font-medium text-sm">No content yet</p>
+              <p className="text-xs text-muted-foreground">Add blocks below to design your email</p>
             </div>
-          ) : (
-            template.blocks.map((block, i) => (
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {template.blocks.map((block, i) => (
               <BlockCard key={i} block={block} index={i} total={template.blocks.length}
                 onChange={b => updateBlock(i, b)}
                 onDelete={() => deleteBlock(i)}
                 onMoveUp={() => moveBlock(i, -1)}
                 onMoveDown={() => moveBlock(i, 1)} />
-            ))
-          )}
+            ))}
+          </div>
+        )}
 
-          {/* Add block buttons */}
-          <div className="flex flex-wrap gap-2 pt-2">
+        <div className="pt-1">
+          <p className="text-xs text-muted-foreground mb-2">Add a block:</p>
+          <div className="flex flex-wrap gap-2">
             {ADD_BLOCK_TYPES.map(({ type, label }) => (
               <Button key={type} type="button" variant="outline" size="sm" className="gap-1.5 h-8 text-xs"
                 onClick={() => addBlock(type)}>
@@ -667,23 +703,32 @@ function TemplateEditor({
             ))}
           </div>
         </div>
-      )}
+      </Card>
 
-      {/* Footer tab */}
-      {tab === "footer" && (
-        <div className="space-y-4">
-          <button type="button" onClick={() => setFooterCollapsed(v => !v)}
-            className="flex w-full items-center justify-between rounded-xl bg-muted/30 px-4 py-3 text-sm font-medium hover:bg-muted/50 transition-colors">
-            Footer settings
-            <ChevronDown className={`h-4 w-4 transition-transform ${footerCollapsed ? "" : "rotate-180"}`} />
-          </button>
-          {!footerCollapsed && <FooterEditor footer={template.footer} onChange={f => onChange({ ...template, footer: f })} />}
-        </div>
-      )}
+      {/* Footer — collapsible card */}
+      <Card className="border-border/50 overflow-hidden">
+        <button
+          type="button"
+          className="w-full flex items-center gap-2 px-4 sm:px-5 py-4 hover:bg-muted/30 transition-colors"
+          onClick={() => setFooterCollapsed(v => !v)}
+        >
+          <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+          <h3 className="font-semibold text-sm">Email footer</h3>
+          <span className="text-xs text-muted-foreground ml-1">— shown below every email</span>
+          <ChevronDown className={`h-4 w-4 text-muted-foreground ml-auto transition-transform ${footerCollapsed ? "" : "rotate-180"}`} />
+        </button>
+        {!footerCollapsed && (
+          <div className="px-4 sm:px-5 pb-5 border-t border-border/30">
+            <div className="pt-4">
+              <FooterEditor footer={template.footer} onChange={f => onChange({ ...template, footer: f })} />
+            </div>
+          </div>
+        )}
+      </Card>
 
-      {/* Order status messages (only for order template) */}
+      {/* Order status messages */}
       {templateKey === "order" && (
-        <div className="mt-8 space-y-4">
+        <Card className="p-4 sm:p-5 border-border/50 space-y-4">
           <div>
             <h3 className="font-semibold text-sm">Order status messages</h3>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -704,9 +749,9 @@ function TemplateEditor({
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       )}
-    </>
+    </div>
   );
 }
 
@@ -727,6 +772,8 @@ export function AdminEmailTemplates() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
+  // Mobile: "list" | "editor"
+  const [mobileView, setMobileView] = useState<"list" | "editor">("list");
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -751,6 +798,11 @@ export function AdminEmailTemplates() {
 
   const currentTemplate = templates[selectedKey] ?? EMPTY_TEMPLATE;
 
+  function selectTemplate(key: string) {
+    setSelectedKey(key);
+    setMobileView("editor");
+  }
+
   async function handleSave() {
     setSaving(true);
     try {
@@ -762,7 +814,6 @@ export function AdminEmailTemplates() {
       });
       if (!res.ok) throw new Error("Save failed");
 
-      // Also save status messages for order template
       if (selectedKey === "order") {
         const res2 = await fetch("/api/admin/email-templates/order_statuses", {
           method: "PUT",
@@ -812,14 +863,12 @@ export function AdminEmailTemplates() {
     );
   }
 
-  const currentMeta = TEMPLATE_META.find(m => m.key === selectedKey);
-
   return (
-    <div className="grid gap-6 lg:grid-cols-[280px,1fr]">
-      {/* Desktop sidebar — template list */}
-      <div className="hidden lg:block space-y-2">
+    <div className="flex flex-col md:flex-row gap-4 sm:gap-6 min-h-[600px]">
+      {/* ── Left panel: template list ── */}
+      <div className={`md:w-72 md:shrink-0 space-y-2 ${mobileView === "editor" ? "hidden md:block" : "block"}`}>
         {TEMPLATE_META.map(({ key, label, description, Icon }) => (
-          <button key={key} type="button" onClick={() => setSelectedKey(key)}
+          <button key={key} type="button" onClick={() => selectTemplate(key)}
             className={`w-full flex items-start gap-3 rounded-xl border p-4 text-left transition-all ${
               selectedKey === key
                 ? "border-violet-500 bg-violet-50 dark:bg-violet-950/20 shadow-sm"
@@ -830,48 +879,13 @@ export function AdminEmailTemplates() {
               <p className={`font-medium text-sm ${selectedKey === key ? "text-violet-700 dark:text-violet-300" : ""}`}>{label}</p>
               <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{description}</p>
             </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground/50 ml-auto mt-0.5 shrink-0 md:hidden" />
           </button>
         ))}
       </div>
 
-      {/* Mobile template picker — horizontal scroll chips */}
-      <div className="lg:hidden -mx-1">
-        <div className="flex gap-2 overflow-x-auto pb-1 px-1 scrollbar-hide snap-x snap-mandatory">
-          {TEMPLATE_META.map(({ key, label, Icon }) => (
-            <button key={key} type="button" onClick={() => setSelectedKey(key)}
-              className={`flex items-center gap-2 shrink-0 snap-start rounded-full border px-4 py-2 text-sm font-medium transition-all whitespace-nowrap ${
-                selectedKey === key
-                  ? "border-violet-500 bg-violet-50 dark:bg-violet-950/20 text-violet-700 dark:text-violet-300"
-                  : "border-border/50 bg-card text-muted-foreground hover:border-border"
-              }`}>
-              <Icon className="h-4 w-4 shrink-0" />
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Editor panel */}
-      <Card className="p-4 sm:p-6 lg:col-start-2">
-        <div className="flex flex-col gap-3 mb-5 sm:flex-row sm:items-start sm:justify-between sm:mb-6">
-          <div className="min-w-0">
-            <h2 className="font-semibold truncate">{currentMeta?.label}</h2>
-            <p className="text-sm text-muted-foreground mt-0.5 leading-snug">{currentMeta?.description}</p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Button type="button" variant="outline" size="sm" className="gap-1.5 h-8 text-xs flex-1 sm:flex-none"
-              disabled={resetting} onClick={handleReset}>
-              {resetting ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
-              Reset
-            </Button>
-            <Button type="button" size="sm" className="gap-1.5 h-8 text-xs flex-1 sm:flex-none"
-              disabled={saving} onClick={handleSave}>
-              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-              Save
-            </Button>
-          </div>
-        </div>
-
+      {/* ── Right panel: editor ── */}
+      <div className={`flex-1 min-w-0 ${mobileView === "list" ? "hidden md:block" : "block"}`}>
         <TemplateEditor
           key={selectedKey}
           templateKey={selectedKey}
@@ -879,8 +893,13 @@ export function AdminEmailTemplates() {
           statusMessages={statusMessages}
           onChange={t => setTemplates(prev => ({ ...prev, [selectedKey]: t }))}
           onStatusMessagesChange={setStatusMessages}
+          onBack={() => setMobileView("list")}
+          onSave={handleSave}
+          onReset={handleReset}
+          saving={saving}
+          resetting={resetting}
         />
-      </Card>
+      </div>
     </div>
   );
 }
