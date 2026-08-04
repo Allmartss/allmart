@@ -9,6 +9,7 @@ import {
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { BagLogo } from "@/components/bag-logo";
 import { FlashDealsCarousel } from "@/components/flash-deal-card";
 import { BestSellingCard } from "@/components/sale-card";
 import { Skeleton } from "@/components/ui/skeleton";
