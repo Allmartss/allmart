@@ -53,11 +53,11 @@ function BagLogo() {
         zIndex: 2,
       }}>
         <span style={{
-          fontSize: 42,
-          fontWeight: 800,
+          fontSize: 52,
+          fontWeight: 700,
           color: WHITE,
-          fontFamily: "sans-serif",
-          letterSpacing: -2,
+          fontFamily: '"Playfair Display", Georgia, serif',
+          letterSpacing: 0,
           lineHeight: 1,
         }}>A</span>
       </div>
