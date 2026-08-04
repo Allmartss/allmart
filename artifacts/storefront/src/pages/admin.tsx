@@ -24,6 +24,7 @@ import { AdminFlashSaleManager } from "@/components/admin-flash-sale";
 import { AdminHealthWatch } from "@/components/admin-health-watch";
 import { AdminEmailCampaigns } from "@/components/admin-email-campaigns";
 import { AdminEmailTemplates } from "@/components/admin-email-templates";
+import { AdminSiteUiEditor } from "@/components/admin-site-ui-editor";
 import {
   ShieldCheck,
   Users as UsersIcon,
@@ -45,6 +46,7 @@ import {
   MousePointerClick,
   Mail,
   PenLine,
+  Paintbrush,
 } from "lucide-react";
 
 type Section =
@@ -68,7 +70,8 @@ type Section =
   | "ad-notifications"
   | "promotions"
   | "email-campaigns"
-  | "email-templates";
+  | "email-templates"
+  | "site-ui";
 
 export default function Admin({ section = "dashboard" }: { section?: Section }) {
   const [, setLocation] = useLocation();
@@ -242,6 +245,13 @@ export default function Admin({ section = "dashboard" }: { section?: Section }) 
         <>
           <StaffPageHeader icon={PenLine} title="Email templates" description="Edit the content, styling, and subject lines of every transactional email sent by AllMart." />
           <AdminEmailTemplates />
+        </>
+      )}
+
+      {section === "site-ui" && (
+        <>
+          <StaffPageHeader icon={Paintbrush} title="Site UI editor" description="Edit the header, footer, create custom color themes, and apply them site-wide." />
+          <AdminSiteUiEditor />
         </>
       )}
     </div>

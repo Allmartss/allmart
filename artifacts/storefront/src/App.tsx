@@ -36,6 +36,7 @@ import MyAccount from "@/pages/my-account";
 import Terms from "@/pages/terms";
 import Privacy from "@/pages/privacy";
 import { PopupAdModal } from "@/components/popup-ad-modal";
+import { SiteThemeApplier } from "@/hooks/use-site-config";
 
 const queryClient = new QueryClient();
 
@@ -94,6 +95,7 @@ function Router() {
     <Layout>
       <ProfileGate />
       <AuthRedirect />
+      <SiteThemeApplier />
       <PopupAdModal />
       <Switch>
         <Route path="/video" component={VideoPreview} />
@@ -141,6 +143,7 @@ function Router() {
         <Route path="/admin/notifications" component={() => <Admin section="notifications" />} />
         <Route path="/admin/email-campaigns" component={() => <Admin section="email-campaigns" />} />
         <Route path="/admin/email-templates" component={() => <Admin section="email-templates" />} />
+        <Route path="/admin/site-ui" component={() => <Admin section="site-ui" />} />
         <Route path="/pm" component={() => <PMConsole section="dashboard" />} />
         <Route path="/pm/orders" component={() => <PMConsole section="orders" />} />
         <Route path="/pm/catalog" component={() => <PMConsole section="catalog" />} />

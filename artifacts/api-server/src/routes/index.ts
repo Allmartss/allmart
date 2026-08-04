@@ -31,6 +31,7 @@ import subscriptionsRouter from "./subscriptions";
 import popupAdRouter from "./popup-ad";
 import emailCampaignsRouter from "./email-campaigns";
 import emailTemplatesRouter from "./email-templates";
+import siteUiRouter from "./site-ui";
 
 const router: IRouter = Router();
 
@@ -66,5 +67,6 @@ router.use(subscriptionsRouter);
 router.use(popupAdRouter);
 router.use(emailCampaignsRouter);
 router.use(emailTemplatesRouter);
+router.use(siteUiRouter);
 
 export default router;
