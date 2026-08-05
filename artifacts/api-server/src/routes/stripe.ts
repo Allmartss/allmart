@@ -88,9 +88,14 @@ router.post("/stripe/verify", requireRole("buyer", "pm", "admin"), async (req: R
       return;
     }
 
-    const metadataUserId = Number(session.metadata?.["userId"] ?? "");
     const user = await getUserFromCookie(req);
-    if (!user || !Number.isSafeInteger(metadataUserId) || metadataUserId !== user.id) {
+    const metadataUserId = Number(session.metadata?.["userId"] ?? "");
+    const metaSessionId = session.metadata?.["sessionId"] as string | undefined;
+    const belongsToUser =
+      Number.isSafeInteger(metadataUserId) && metadataUserId > 0
+        ? metadataUserId === user?.id
+        : metaSessionId === req.sessionId;
+    if (!user || !belongsToUser) {
       res.status(403).json({ error: "Payment session does not belong to this account" });
       return;
     }
@@ -111,14 +116,8 @@ router.post("/stripe/verify", requireRole("buyer", "pm", "admin"), async (req: R
       return;
     }
 
-    if (!shippingAddress) {
-      res.status(400).json({ error: "shippingAddress required" });
-      return;
-    }
-
     // For chat-initiated payments, bind back to the originating cart session
     // from Stripe metadata to prevent cross-session order injection.
-    const metaSessionId = session.metadata?.["sessionId"] as string | undefined;
     const orderSessionId = metaSessionId ?? req.sessionId;
 
     const placed = await placeOrderForSession(orderSessionId, shippingAddress, "user", user.id, {

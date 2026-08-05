@@ -109,7 +109,7 @@ router.post("/auth/signup", async (req: Request, res: Response) => {
     }).onConflictDoNothing();
   }
 
-  await issueSession(res, user!.id);
+  await issueSession(req, res, user!.id);
   res.json(publicUser(user!));
 
   // Welcome email — fire and forget
@@ -148,7 +148,7 @@ router.post("/auth/signin", async (req: Request, res: Response) => {
     return;
   }
 
-  await issueSession(res, user.id);
+  await issueSession(req, res, user.id);
   res.json(publicUser(user));
 
   // Login notification — fire and forget

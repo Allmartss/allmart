@@ -8,7 +8,7 @@ import router from "./routes";
 import { logger } from "./lib/logger";
 import { sessionMiddleware } from "./lib/session";
 import { ensureUploadsDir } from "./lib/localStorageFallback";
-import { trustedOrigins } from "./lib/trusted-origin";
+import { isAllowedRequestOrigin, trustedOrigins } from "./lib/trusted-origin";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STATIC_DIR = path.resolve(__dirname, "../../storefront/dist/public");
@@ -42,7 +42,7 @@ app.use(
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || trustedOrigins().has(origin)) {
+      if (!origin || isAllowedRequestOrigin(origin)) {
         callback(null, true);
         return;
       }

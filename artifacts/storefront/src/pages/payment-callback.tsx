@@ -28,14 +28,6 @@ export default function PaymentCallback() {
       return;
     }
 
-    const address = sessionStorage.getItem(STORAGE_KEY) ?? "";
-
-    if (!address) {
-      setStatus("error");
-      setErrorMsg("Checkout session expired. Please start again.");
-      return;
-    }
-
     async function verify() {
       try {
         let res: Response;
@@ -44,11 +36,12 @@ export default function PaymentCallback() {
           res = await fetch("/api/stripe/verify", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            credentials: "include",
             body: JSON.stringify({ sessionId: stripeSessionId }),
           });
         } else {
           setStatus("error");
-          setErrorMsg("No payment reference found in the URL.");
+          setErrorMsg("No Stripe payment session was found in the return URL.");
           return;
         }
 

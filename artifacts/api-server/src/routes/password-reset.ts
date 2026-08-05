@@ -159,7 +159,7 @@ router.post("/auth/redeem-reset-code", async (req: Request, res: Response) => {
     .set({ usedAt: new Date() })
     .where(eq(passwordResetCodesTable.id, resetRow.id));
 
-  await issueSession(res, user.id);
+  await issueSession(req, res, user.id);
   res.json({ id: user.id, email: user.email, name: user.name, role: user.role });
 });
 

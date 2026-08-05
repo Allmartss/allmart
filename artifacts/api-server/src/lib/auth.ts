@@ -41,13 +41,21 @@ function unpack(token: string | undefined): { uid: number; sid: string } | null 
   return { uid, sid };
 }
 
-export async function issueSession(res: Response, userId: number) {
+function isSecureRequest(req: Request): boolean {
+  const forwardedProto = req.headers["x-forwarded-proto"];
+  const proto = Array.isArray(forwardedProto)
+    ? forwardedProto[0]
+    : forwardedProto?.split(",")[0]?.trim();
+  return req.protocol === "https" || proto === "https" || req.secure;
+}
+
+export async function issueSession(req: Request, res: Response, userId: number) {
   const sid = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
   await db.insert(sessionsTable).values({ id: sid, userId, expiresAt });
   res.cookie(COOKIE, pack(userId, sid), {
     httpOnly: true,
-    secure: true,
+    secure: isSecureRequest(req),
     sameSite: "lax",
     path: "/",
     maxAge: SESSION_TTL_MS,

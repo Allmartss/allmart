@@ -31,3 +31,16 @@ export function isTrustedUrl(value: string): boolean {
   const origin = parseOrigin(value);
   return origin !== null && trustedOrigins().has(origin);
 }
+
+export function isAllowedRequestOrigin(origin: string): boolean {
+  if (trustedOrigins().has(origin)) return true;
+  try {
+    const url = new URL(origin);
+    return (
+      (url.hostname === "localhost" || url.hostname === "127.0.0.1") &&
+      (url.protocol === "http:" || url.protocol === "https:")
+    );
+  } catch {
+    return false;
+  }
+}
