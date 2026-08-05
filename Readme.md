@@ -1,8 +1,8 @@
-# NowBuy Workspace
+# Allmart Workspace
 
 ## Overview
 
-NowBuy is an AI-powered Nigerian e-commerce platform. It uses a pnpm monorepo with TypeScript, NGN currency throughout.
+Allmart is an AI-powered  e-commerce platform. It uses a pnpm monorepo with TypeScript,  throughout.
 
 ## Stack
 
@@ -25,7 +25,7 @@ NowBuy is an AI-powered Nigerian e-commerce platform. It uses a pnpm monorepo wi
 
 ## Artifacts
 
-- **storefront** (`/`) — Main NowBuy storefront (React + Vite)
+- **storefront** (`/`) — Main allmart storefront (React + Vite)
 - **api-server** (`/api`) — Express backend API
 - **mockup-sandbox** (`/__mockup`) — Design mockup sandbox
 
@@ -47,7 +47,7 @@ NowBuy is an AI-powered Nigerian e-commerce platform. It uses a pnpm monorepo wi
 ## Database Schema
 
 - `users` — accounts with roles: buyer / admin / pm
-- `products` — catalog items with `images[]`, `colors[]`, `productType` (new), `imageUrl`, `tags[]`, `price` (NGN)
+- `products` — catalog items with `images[]`, `colors[]`, `productType` (new), `imageUrl`, `tags[]`, `price` (usd)
 - `orders` — purchases with status flow and NGN pricing
 - `cart_items` — session-scoped cart
 - `chat_messages` — AI assistant history
@@ -64,8 +64,8 @@ NowBuy is an AI-powered Nigerian e-commerce platform. It uses a pnpm monorepo wi
 
 ## Admin Account
 
-- Email: `admin@nowbuy.app`
-- Password: `nowbuyadmin1234`
+- Email: `admin@allmart.app`
+- Password: `allmartadmin1234`
 
 ## Admin Routes
 
@@ -89,6 +89,6 @@ NowBuy is an AI-powered Nigerian e-commerce platform. It uses a pnpm monorepo wi
 
 - Order status changes automatically send a branded email to the customer
 - Support ticket replies send an email to the customer
-- New support tickets forward to `support@nowbuy.com`
+- New support tickets forward to `support@allmart.com`
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
