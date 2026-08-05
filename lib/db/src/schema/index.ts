@@ -14,3 +14,6 @@ export * from "./visitors";
 export * from "./admin-bonus-gifts";
 export * from "./email-subscriptions";
 export * from "./email-campaigns";
+export * from "./order-reports";
+export * from "./order-refunds";
+export * from "./order-ratings";

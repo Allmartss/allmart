@@ -32,6 +32,9 @@ import popupAdRouter from "./popup-ad";
 import emailCampaignsRouter from "./email-campaigns";
 import emailTemplatesRouter from "./email-templates";
 import siteUiRouter from "./site-ui";
+import orderReportsRouter from "./order-reports";
+import orderRefundsRouter from "./order-refunds";
+import orderRatingsRouter from "./order-ratings";
 
 const router: IRouter = Router();
 
@@ -68,5 +71,8 @@ router.use(popupAdRouter);
 router.use(emailCampaignsRouter);
 router.use(emailTemplatesRouter);
 router.use(siteUiRouter);
+router.use(orderReportsRouter);
+router.use(orderRefundsRouter);
+router.use(orderRatingsRouter);
 
 export default router;
