@@ -55,29 +55,74 @@ type NavItem = {
   icon: React.ElementType;
 };
 
-const ADMIN_ITEMS: NavItem[] = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/users", label: "Users", icon: Users },
-  { href: "/admin/orders", label: "Orders", icon: Package },
-  { href: "/admin/catalog", label: "Add product", icon: PackagePlus },
-  { href: "/admin/products", label: "Manage products", icon: LayoutList },
-  { href: "/admin/flash-sale", label: "Flash sale", icon: Zap },
-  { href: "/admin/cashback", label: "Cashback codes", icon: Tag },
-  { href: "/admin/landing-pages", label: "Landing pages", icon: Globe },
-  { href: "/admin/promotions", label: "Promotions", icon: Megaphone },
-  { href: "/admin/email-campaigns", label: "Email campaigns", icon: Mail },
-  { href: "/admin/email-templates", label: "Email templates", icon: PenLine },
-  { href: "/admin/support", label: "Support desk", icon: HeadphonesIcon },
-  { href: "/admin/visitors", label: "Visitors", icon: Eye },
-  { href: "/admin/telegram", label: "Telegram bot", icon: Send },
-  { href: "/admin/referrals", label: "Referrals", icon: Gift },
-  { href: "/admin/bank", label: "Bank details", icon: Landmark },
-  { href: "/admin/password", label: "Admin password", icon: KeyRound },
-  { href: "/admin/health", label: "Service health", icon: Activity },
-  { href: "/admin/site-ui", label: "Site UI editor", icon: Paintbrush },
-  { href: "/admin/order-reports", label: "Order reports", icon: Flag },
-  { href: "/admin/order-refunds", label: "Refund requests", icon: RotateCcw },
-  { href: "/admin/order-ratings", label: "Order ratings", icon: Star },
+type NavGroup = {
+  label: string;
+  items: NavItem[];
+};
+
+const ADMIN_GROUPS: NavGroup[] = [
+  {
+    label: "Overview",
+    items: [
+      { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: "Order services",
+    items: [
+      { href: "/admin/orders", label: "Order manager", icon: Package },
+      { href: "/admin/order-reports", label: "Order reports", icon: Flag },
+      { href: "/admin/order-refunds", label: "Refund requests", icon: RotateCcw },
+      { href: "/admin/order-ratings", label: "Order ratings", icon: Star },
+    ],
+  },
+  {
+    label: "Product services",
+    items: [
+      { href: "/admin/catalog", label: "Add product", icon: PackagePlus },
+      { href: "/admin/products", label: "Manage products", icon: LayoutList },
+    ],
+  },
+  {
+    label: "Customer services",
+    items: [
+      { href: "/admin/support", label: "Support desk", icon: HeadphonesIcon },
+      { href: "/admin/users", label: "Users", icon: Users },
+      { href: "/admin/referrals", label: "Referrals", icon: Gift },
+    ],
+  },
+  {
+    label: "Marketing services",
+    items: [
+      { href: "/admin/flash-sale", label: "Flash sale", icon: Zap },
+      { href: "/admin/cashback", label: "Cashback codes", icon: Tag },
+      { href: "/admin/landing-pages", label: "Landing pages", icon: Globe },
+      { href: "/admin/promotions", label: "Promotions", icon: Megaphone },
+      { href: "/admin/visitors", label: "Visitors", icon: Eye },
+    ],
+  },
+  {
+    label: "Communication services",
+    items: [
+      { href: "/admin/email-campaigns", label: "Email campaigns", icon: Mail },
+      { href: "/admin/email-templates", label: "Email templates", icon: PenLine },
+      { href: "/admin/telegram", label: "Telegram bot", icon: Send },
+    ],
+  },
+  {
+    label: "Store settings",
+    items: [
+      { href: "/admin/bank", label: "Bank details", icon: Landmark },
+      { href: "/admin/site-ui", label: "Site UI editor", icon: Paintbrush },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      { href: "/admin/health", label: "Service health", icon: Activity },
+      { href: "/admin/password", label: "Admin password", icon: KeyRound },
+    ],
+  },
 ];
 
 const PM_ITEMS: NavItem[] = [
@@ -97,7 +142,6 @@ export function StaffSidebarTrigger({
   const [location, setLocation] = useLocation();
   const queryClient = useQueryClient();
 
-  const items = role === "admin" ? ADMIN_ITEMS : PM_ITEMS;
   const Icon = role === "admin" ? ShieldCheck : ClipboardList;
   const label = role === "admin" ? "Admin" : "PM";
   const accent = role === "admin" ? "text-primary" : "text-blue-600";
@@ -152,35 +196,76 @@ export function StaffSidebarTrigger({
         </SheetHeader>
 
         <nav className="flex-1 overflow-y-auto px-3 py-4">
-          <ul className="space-y-1">
-            {items.map((item) => {
-              const active = location === item.href;
-              const ItemIcon = item.icon;
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    onClick={() => setOpen(false)}
-                    className={`group flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-                      active
-                        ? "bg-primary/10 text-primary font-semibold"
-                        : "text-foreground/80 hover:bg-muted hover:text-foreground"
-                    }`}
-                  >
-                    <span className="flex items-center gap-3">
-                      <ItemIcon
-                        className={`h-4 w-4 ${active ? "text-primary" : "text-muted-foreground group-hover:text-foreground"}`}
+          {role === "admin" ? (
+            <div className="space-y-5">
+              {ADMIN_GROUPS.map((group) => (
+                <section key={group.label}>
+                  <p className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground/70">
+                    {group.label}
+                  </p>
+                  <ul className="space-y-1">
+                    {group.items.map((item) => {
+                      const active = location === item.href;
+                      const ItemIcon = item.icon;
+                      return (
+                        <li key={item.href}>
+                          <Link
+                            href={item.href}
+                            onClick={() => setOpen(false)}
+                            className={`group flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                              active
+                                ? "bg-primary/10 text-primary font-semibold"
+                                : "text-foreground/80 hover:bg-muted hover:text-foreground"
+                            }`}
+                          >
+                            <span className="flex items-center gap-3">
+                              <ItemIcon
+                                className={`h-4 w-4 ${active ? "text-primary" : "text-muted-foreground group-hover:text-foreground"}`}
+                              />
+                              {item.label}
+                            </span>
+                            <ChevronRight
+                              className={`h-3.5 w-3.5 transition-opacity ${active ? "opacity-100 text-primary" : "opacity-0 group-hover:opacity-50"}`}
+                            />
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          ) : (
+            <ul className="space-y-1">
+              {PM_ITEMS.map((item) => {
+                const active = location === item.href;
+                const ItemIcon = item.icon;
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      onClick={() => setOpen(false)}
+                      className={`group flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                        active
+                          ? "bg-primary/10 text-primary font-semibold"
+                          : "text-foreground/80 hover:bg-muted hover:text-foreground"
+                      }`}
+                    >
+                      <span className="flex items-center gap-3">
+                        <ItemIcon
+                          className={`h-4 w-4 ${active ? "text-primary" : "text-muted-foreground group-hover:text-foreground"}`}
+                        />
+                        {item.label}
+                      </span>
+                      <ChevronRight
+                        className={`h-3.5 w-3.5 transition-opacity ${active ? "opacity-100 text-primary" : "opacity-0 group-hover:opacity-50"}`}
                       />
-                      {item.label}
-                    </span>
-                    <ChevronRight
-                      className={`h-3.5 w-3.5 transition-opacity ${active ? "opacity-100 text-primary" : "opacity-0 group-hover:opacity-50"}`}
-                    />
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </nav>
 
         <div className="border-t border-border/50 px-3 py-3">
