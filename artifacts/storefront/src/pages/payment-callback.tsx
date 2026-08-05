@@ -2,8 +2,12 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { CheckCircle2, XCircle, Loader2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { clearCart } from "@workspace/api-client-react";
 
 const STORAGE_KEY = "nb_checkout_address";
+const CONTACT_KEY = "nb_checkout_contact";
+const CASHBACK_KEY = "nb_checkout_cashback";
+const BONUS_KEY = "nb_checkout_bonus";
 
 type Status = "loading" | "success" | "error" | "cancelled";
 
@@ -24,7 +28,7 @@ export default function PaymentCallback() {
       return;
     }
 
-    const address = localStorage.getItem(STORAGE_KEY) ?? "";
+    const address = sessionStorage.getItem(STORAGE_KEY) ?? "";
 
     if (!address) {
       setStatus("error");
@@ -56,7 +60,17 @@ export default function PaymentCallback() {
           return;
         }
 
+        sessionStorage.removeItem(STORAGE_KEY);
+        sessionStorage.removeItem(CONTACT_KEY);
+        sessionStorage.removeItem(CASHBACK_KEY);
+        sessionStorage.removeItem(BONUS_KEY);
         localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(CONTACT_KEY);
+        localStorage.removeItem(CASHBACK_KEY);
+        localStorage.removeItem(BONUS_KEY);
+        void clearCart().catch(() => {
+          // Keeping the cart is safer than losing it if cleanup is interrupted.
+        });
         setOrderId(data.id ?? null);
         setStatus("success");
       } catch {

@@ -4,6 +4,7 @@ import { and, eq, ilike, or, sql, desc, ne } from "drizzle-orm";
 import { CreateProductBody } from "@workspace/api-zod";
 import { serializeProduct } from "../lib/serializers";
 import { requireRole } from "../lib/auth";
+import { isSafeMediaUrl } from "../lib/url-validation";
 
 const router: IRouter = Router();
 
@@ -14,6 +15,10 @@ router.post("/products", requireRole("admin", "pm"), async (req: Request, res: R
     return;
   }
   const d = parsed.data;
+  if (!isSafeMediaUrl(d.imageUrl)) {
+    res.status(400).json({ error: "Product image must be uploaded through the store" });
+    return;
+  }
   const body = req.body as { originalPrice?: number; rating?: number };
   const [created] = await db
     .insert(productsTable)

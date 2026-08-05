@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { db, settingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireRole } from "../lib/auth";
+import { isSafeMediaUrl } from "../lib/url-validation";
 
 const router: IRouter = Router();
 
@@ -42,6 +43,10 @@ router.put("/settings/bank", requireRole("admin"), async (req: Request, res: Res
 
   if (!bankName || !accountName || !accountNumber) {
     res.status(400).json({ error: "All fields required" });
+    return;
+  }
+  if (bankLogo && !isSafeMediaUrl(bankLogo)) {
+    res.status(400).json({ error: "Bank logo must be uploaded through the store" });
     return;
   }
 

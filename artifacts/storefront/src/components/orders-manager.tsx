@@ -333,8 +333,8 @@ export function OrdersManager() {
                                 <span>{item.productName}</span>
                               </td>
                               <td className="py-1.5 text-center">{item.quantity}</td>
-                              <td className="py-1.5 text-right">{fmt(item.price)}</td>
-                              <td className="py-1.5 text-right font-medium">{fmt(item.price * item.quantity)}</td>
+                              <td className="py-1.5 text-right">{fmt(item.unitPrice)}</td>
+                              <td className="py-1.5 text-right font-medium">{fmt(item.unitPrice * item.quantity)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -349,7 +349,7 @@ export function OrdersManager() {
                       <div className="space-y-1 text-xs">
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Subtotal</span>
-                          <span>{fmt(order.items.reduce((s, i) => s + i.price * i.quantity, 0))}</span>
+                          <span>{fmt(order.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0))}</span>
                         </div>
                         {ext.shippingFee != null && ext.shippingFee > 0 && (
                           <div className="flex justify-between">

@@ -35,6 +35,7 @@ export function serializeOrder(o: Order) {
     receiverName: o.receiverName ?? null,
     receiverEmail: o.receiverEmail ?? null,
     receiverPhone: o.receiverPhone ?? null,
+    paymentMethod: (o as { paymentMethod?: string | null }).paymentMethod ?? null,
     cashbackCode: o.cashbackCode ?? null,
     cashbackDiscount: o.cashbackDiscount ?? null,
     placedBy: o.placedBy,

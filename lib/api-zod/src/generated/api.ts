@@ -346,6 +346,11 @@ export const ListOrdersResponseItem = zod.object({
   receiverName: zod.string().nullish(),
   receiverEmail: zod.string().nullish(),
   receiverPhone: zod.string().nullish(),
+  paymentMethod: zod
+    .enum(["stripe", "bank_transfer", "pay_on_delivery"])
+    .nullish(),
+  paymentScreenshotUrl: zod.string().nullish(),
+  paymentNote: zod.string().nullish(),
   cashbackCode: zod.string().nullish(),
   cashbackDiscount: zod.number().nullish(),
   placedBy: zod.enum(["user", "ai"]),
@@ -364,12 +369,20 @@ export const ListOrdersResponse = zod.array(ListOrdersResponseItem);
 
 export const placeOrderBodyShippingAddressMin = 3;
 
+export const placeOrderBodyPaymentNoteMax = 2000;
+
 export const PlaceOrderBody = zod.object({
   shippingAddress: zod.string().min(placeOrderBodyShippingAddressMin),
   receiverName: zod.string().optional(),
-  receiverEmail: zod.string().optional(),
+  receiverEmail: zod.string().email().optional(),
   receiverPhone: zod.string().optional(),
   cashbackCode: zod.string().optional(),
+  paymentMethod: zod
+    .enum(["stripe", "bank_transfer", "pay_on_delivery"])
+    .optional(),
+  paymentScreenshotUrl: zod.string().optional(),
+  paymentNote: zod.string().max(placeOrderBodyPaymentNoteMax).optional(),
+  bonusApplied: zod.boolean().optional(),
   placedBy: zod.enum(["user", "ai"]).optional(),
 });
 
@@ -393,6 +406,11 @@ export const GetOrderResponse = zod.object({
   receiverName: zod.string().nullish(),
   receiverEmail: zod.string().nullish(),
   receiverPhone: zod.string().nullish(),
+  paymentMethod: zod
+    .enum(["stripe", "bank_transfer", "pay_on_delivery"])
+    .nullish(),
+  paymentScreenshotUrl: zod.string().nullish(),
+  paymentNote: zod.string().nullish(),
   cashbackCode: zod.string().nullish(),
   cashbackDiscount: zod.number().nullish(),
   placedBy: zod.enum(["user", "ai"]),
@@ -441,6 +459,11 @@ export const UpdateOrderStatusResponse = zod.object({
   receiverName: zod.string().nullish(),
   receiverEmail: zod.string().nullish(),
   receiverPhone: zod.string().nullish(),
+  paymentMethod: zod
+    .enum(["stripe", "bank_transfer", "pay_on_delivery"])
+    .nullish(),
+  paymentScreenshotUrl: zod.string().nullish(),
+  paymentNote: zod.string().nullish(),
   cashbackCode: zod.string().nullish(),
   cashbackDiscount: zod.number().nullish(),
   placedBy: zod.enum(["user", "ai"]),
@@ -511,6 +534,11 @@ export const ListAllOrdersResponseItem = zod.object({
   receiverName: zod.string().nullish(),
   receiverEmail: zod.string().nullish(),
   receiverPhone: zod.string().nullish(),
+  paymentMethod: zod
+    .enum(["stripe", "bank_transfer", "pay_on_delivery"])
+    .nullish(),
+  paymentScreenshotUrl: zod.string().nullish(),
+  paymentNote: zod.string().nullish(),
   cashbackCode: zod.string().nullish(),
   cashbackDiscount: zod.number().nullish(),
   placedBy: zod.enum(["user", "ai"]),
@@ -781,6 +809,10 @@ export const ListChatMessagesResponse = zod.array(ListChatMessagesResponseItem);
 
 export const SendChatMessageBody = zod.object({
   content: zod.string().min(1),
+  productId: zod
+    .number()
+    .optional()
+    .describe("Product ID to pre-add to cart before the AI responds"),
   confirmOrder: zod
     .boolean()
     .optional()
@@ -790,10 +822,6 @@ export const SendChatMessageBody = zod.object({
     .enum(["stripe", "bank_transfer", "pay_on_delivery"])
     .optional()
     .describe("Payment method chosen by the shopper"),
-  productId: zod
-    .number()
-    .optional()
-    .describe("Product ID to pre-add to cart before the AI responds"),
 });
 
 export const SendChatMessageResponse = zod.object({
@@ -910,6 +938,11 @@ export const SendChatMessageResponse = zod.object({
       receiverName: zod.string().nullish(),
       receiverEmail: zod.string().nullish(),
       receiverPhone: zod.string().nullish(),
+      paymentMethod: zod
+        .enum(["stripe", "bank_transfer", "pay_on_delivery"])
+        .nullish(),
+      paymentScreenshotUrl: zod.string().nullish(),
+      paymentNote: zod.string().nullish(),
       cashbackCode: zod.string().nullish(),
       cashbackDiscount: zod.number().nullish(),
       placedBy: zod.enum(["user", "ai"]),

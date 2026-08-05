@@ -5,6 +5,7 @@
  * AllMart API
  * OpenAPI spec version: 0.1.0
  */
+import type { PlaceOrderRequestPaymentMethod } from "./placeOrderRequestPaymentMethod";
 import type { PlaceOrderRequestPlacedBy } from "./placeOrderRequestPlacedBy";
 
 export interface PlaceOrderRequest {
@@ -14,5 +15,10 @@ export interface PlaceOrderRequest {
   receiverEmail?: string;
   receiverPhone?: string;
   cashbackCode?: string;
+  paymentMethod?: PlaceOrderRequestPaymentMethod;
+  paymentScreenshotUrl?: string;
+  /** @maxLength 2000 */
+  paymentNote?: string;
+  bonusApplied?: boolean;
   placedBy?: PlaceOrderRequestPlacedBy;
 }

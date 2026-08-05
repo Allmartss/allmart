@@ -10,11 +10,11 @@ import type { SendChatMessageRequestPaymentMethod } from "./sendChatMessageReque
 export interface SendChatMessageRequest {
   /** @minLength 1 */
   content: string;
+  /** Product ID to pre-add to cart before the AI responds */
+  productId?: number;
   /** When true, AI is authorized to place order with current cart */
   confirmOrder?: boolean;
   shippingAddress?: string;
   /** Payment method chosen by the shopper */
   paymentMethod?: SendChatMessageRequestPaymentMethod;
-  /** Product ID to pre-add to cart before the AI responds (used by "Ask AI to Buy" on product pages) */
-  productId?: number;
 }

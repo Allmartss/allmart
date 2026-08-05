@@ -14,7 +14,7 @@ export default function VerifyEmail() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: meData, isLoading } = useGetCurrentUser();
-  const user = meData?.user as ({ emailVerified?: boolean } & typeof meData.user) | null | undefined;
+  const user = meData?.user as ({ email?: string; emailVerified?: boolean }) | null | undefined;
 
   const [code, setCode] = useState("");
   const [submitting, setSubmitting] = useState(false);

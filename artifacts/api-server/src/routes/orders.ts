@@ -7,8 +7,13 @@ import { generateTrackingCode } from "../lib/tracking";
 import { requireRole, getUserFromCookie } from "../lib/auth";
 import { sendOrderEmail } from "./email";
 import { logger } from "../lib/logger";
+import { isSafeMediaUrl } from "../lib/url-validation";
 
 const router: IRouter = Router();
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PAYMENT_METHODS = ["stripe", "bank_transfer", "pay_on_delivery"] as const;
+type PaymentMethod = typeof PAYMENT_METHODS[number];
 
 export async function placeOrderForSession(
   sessionId: string,
@@ -20,9 +25,11 @@ export async function placeOrderForSession(
     receiverEmail?: string;
     receiverPhone?: string;
     cashbackCode?: string;
+    paymentMethod?: PaymentMethod;
     paymentScreenshotUrl?: string;
     paymentNote?: string;
     bonusApplied?: boolean;
+    deferCartClear?: boolean;
   },
 ) {
   const items = await db
@@ -97,6 +104,7 @@ export async function placeOrderForSession(
       cashbackDiscount,
       placedBy,
       items: orderItems,
+      paymentMethod: extras?.paymentMethod ?? null,
       paymentScreenshotUrl: extras?.paymentScreenshotUrl ?? null,
       paymentNote: extras?.paymentNote ?? null,
       paymentVerified: "pending",
@@ -104,7 +112,9 @@ export async function placeOrderForSession(
     })
     .returning();
 
-  await db.delete(cartItemsTable).where(eq(cartItemsTable.sessionId, sessionId));
+  if (!extras?.deferCartClear) {
+    await db.delete(cartItemsTable).where(eq(cartItemsTable.sessionId, sessionId));
+  }
 
   return { order: order! };
 }
@@ -198,18 +208,38 @@ router.post("/orders", async (req: Request, res: Response) => {
     receiverEmail?: string;
     receiverPhone?: string;
     cashbackCode?: string;
+    paymentMethod?: PaymentMethod;
     paymentScreenshotUrl?: string;
     paymentNote?: string;
     bonusApplied?: boolean;
+    deferCartClear?: boolean;
   };
+  if (body.receiverEmail && !EMAIL_RE.test(body.receiverEmail.trim())) {
+    res.status(400).json({ error: "receiverEmail must be a valid email address" });
+    return;
+  }
+  if (body.paymentMethod && !PAYMENT_METHODS.includes(body.paymentMethod)) {
+    res.status(400).json({ error: "Invalid payment method" });
+    return;
+  }
+  if (body.paymentScreenshotUrl && !isSafeMediaUrl(body.paymentScreenshotUrl)) {
+    res.status(400).json({ error: "Invalid payment screenshot URL" });
+    return;
+  }
+  if (body.paymentNote && body.paymentNote.length > 2000) {
+    res.status(400).json({ error: "Payment note is too long" });
+    return;
+  }
   const result = await placeOrderForSession(req.sessionId, parsed.data.shippingAddress, placedBy, user?.id, {
     receiverName: body.receiverName,
     receiverEmail: body.receiverEmail,
     receiverPhone: body.receiverPhone,
     cashbackCode: body.cashbackCode,
+    paymentMethod: body.paymentMethod,
     paymentScreenshotUrl: body.paymentScreenshotUrl,
     paymentNote: body.paymentNote,
     bonusApplied: body.bonusApplied,
+    deferCartClear: body.deferCartClear,
   });
   if ("error" in result) {
     res.status(400).json({ error: result.error });
@@ -316,6 +346,10 @@ router.patch("/orders/:id/resubmit-payment", async (req: Request, res: Response)
   };
   if (!paymentScreenshotUrl) {
     res.status(400).json({ error: "paymentScreenshotUrl required" });
+    return;
+  }
+  if (!isSafeMediaUrl(paymentScreenshotUrl)) {
+    res.status(400).json({ error: "Invalid payment screenshot URL" });
     return;
   }
 

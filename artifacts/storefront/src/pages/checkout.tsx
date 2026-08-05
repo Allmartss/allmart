@@ -26,20 +26,20 @@ export default function Checkout() {
   const me = meData?.user ?? null;
 
   const [shippingAddress, setShippingAddress] = useState(
-    () => localStorage.getItem(STORAGE_KEY) ?? "",
+    () => sessionStorage.getItem(STORAGE_KEY) ?? "",
   );
   const [contact, setContact] = useState<Contact>(() => {
-    try { return JSON.parse(localStorage.getItem(CONTACT_KEY) ?? "null") ?? { name: "", email: "", phone: "" }; }
+    try { return JSON.parse(sessionStorage.getItem(CONTACT_KEY) ?? "null") ?? { name: "", email: "", phone: "" }; }
     catch { return { name: "", email: "", phone: "" }; }
   });
   const [cashbackInput, setCashbackInput] = useState("");
   const [cashback, setCashback] = useState<CashbackState>(() => {
-    try { return JSON.parse(localStorage.getItem(CASHBACK_KEY) ?? "null"); }
+    try { return JSON.parse(sessionStorage.getItem(CASHBACK_KEY) ?? "null"); }
     catch { return null; }
   });
   const [validating, setValidating] = useState(false);
   const [useBonus, setUseBonus] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(BONUS_KEY) ?? "false"); }
+    try { return JSON.parse(sessionStorage.getItem(BONUS_KEY) ?? "false"); }
     catch { return false; }
   });
 
@@ -58,13 +58,22 @@ export default function Checkout() {
   }
 
   useEffect(() => {
+    // Clear sensitive values that may have been left by older builds which
+    // stored checkout state in localStorage.
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(CONTACT_KEY);
+    localStorage.removeItem(CASHBACK_KEY);
+    localStorage.removeItem(BONUS_KEY);
+  }, []);
+
+  useEffect(() => {
     if (!isLoading && cart && cart.items.length === 0) setLocation("/cart");
   }, [isLoading, cart, setLocation]);
 
   // Guests must sign in; signed-in users must verify email before checkout
   useEffect(() => {
     if (isLoading || isUserLoading) return;
-    const u = meData?.user as ({ emailVerified?: boolean } & typeof meData.user) | null | undefined;
+    const u = meData?.user as ({ emailVerified?: boolean } & Record<string, unknown>) | null | undefined;
     if (!u) {
       toast({ title: "Sign in required", description: "Please sign in to continue.", variant: "destructive" });
       setLocation("/account");
@@ -88,11 +97,11 @@ export default function Checkout() {
       if (data.valid && data.amount && data.code) {
         const cb = { code: data.code, amount: data.amount };
         setCashback(cb);
-        localStorage.setItem(CASHBACK_KEY, JSON.stringify(cb));
+        sessionStorage.setItem(CASHBACK_KEY, JSON.stringify(cb));
         toast({ title: "Cashback applied!", description: data.message });
       } else {
         setCashback(null);
-        localStorage.removeItem(CASHBACK_KEY);
+        sessionStorage.removeItem(CASHBACK_KEY);
         toast({ title: "Invalid code", description: data.message ?? "That code is not valid.", variant: "destructive" });
       }
     } catch {
@@ -103,19 +112,19 @@ export default function Checkout() {
   function removeCashback() {
     setCashback(null);
     setCashbackInput("");
-    localStorage.removeItem(CASHBACK_KEY);
+    sessionStorage.removeItem(CASHBACK_KEY);
   }
 
   function toggleBonus(checked: boolean) {
     setUseBonus(checked);
-    localStorage.setItem(BONUS_KEY, JSON.stringify(checked));
+    sessionStorage.setItem(BONUS_KEY, JSON.stringify(checked));
   }
 
   function continueToPayment() {
     if (shippingAddress.trim().length < 3) return;
-    localStorage.setItem(STORAGE_KEY, shippingAddress.trim());
-    localStorage.setItem(CONTACT_KEY, JSON.stringify(contact));
-    localStorage.setItem(BONUS_KEY, JSON.stringify(useBonus));
+    sessionStorage.setItem(STORAGE_KEY, shippingAddress.trim());
+    sessionStorage.setItem(CONTACT_KEY, JSON.stringify(contact));
+    sessionStorage.setItem(BONUS_KEY, JSON.stringify(useBonus));
     setLocation("/payment");
   }
 
@@ -147,7 +156,8 @@ export default function Checkout() {
   const canContinue =
     shippingAddress.trim().length >= 3 &&
     contact.name.trim().length >= 2 &&
-    contact.phone.trim().length >= 7;
+    contact.phone.trim().length >= 7 &&
+    (!contact.email.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email.trim()));
 
   return (
     <div className="container max-w-screen-lg mx-auto py-12 px-6">
@@ -189,6 +199,9 @@ export default function Checkout() {
               <Label htmlFor="rec-email">Email <span className="text-muted-foreground font-normal">(optional, for order updates)</span></Label>
               <Input id="rec-email" type="email" placeholder="john@example.com" value={contact.email}
                 onChange={e => setContact(c => ({ ...c, email: e.target.value }))} />
+              {contact.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email.trim()) && (
+                <p className="text-xs text-destructive">Enter a valid email address.</p>
+              )}
             </div>
           </Card>
 

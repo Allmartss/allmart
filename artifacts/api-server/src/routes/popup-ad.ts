@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { db, settingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireRole } from "../lib/auth";
+import { isSafeMediaUrl, isSafeHttpUrl } from "../lib/url-validation";
 
 const router: IRouter = Router();
 
@@ -89,6 +90,14 @@ router.post("/admin/popup-ad/:slot", requireRole("admin"), async (req: Request, 
     displayDelay: body.displayDelay ?? current.displayDelay,
     autoClose: body.autoClose ?? current.autoClose,
   };
+  if (updated.imageUrl && !isSafeMediaUrl(updated.imageUrl)) {
+    res.status(400).json({ error: "Popup image must be uploaded through the store" });
+    return;
+  }
+  if (updated.ctaUrl && !updated.ctaUrl.startsWith("/") && !isSafeHttpUrl(updated.ctaUrl)) {
+    res.status(400).json({ error: "CTA URL must be a safe HTTPS URL or local path" });
+    return;
+  }
   await savePopup(slot, updated);
   res.json(updated);
 });
@@ -98,6 +107,14 @@ router.post("/admin/popup-ad", requireRole("admin"), async (req: Request, res: R
   const current = await getPopup(1);
   const body = req.body as Partial<PopupAd>;
   const updated: PopupAd = { ...current, ...body };
+  if (updated.imageUrl && !isSafeMediaUrl(updated.imageUrl)) {
+    res.status(400).json({ error: "Popup image must be uploaded through the store" });
+    return;
+  }
+  if (updated.ctaUrl && !updated.ctaUrl.startsWith("/") && !isSafeHttpUrl(updated.ctaUrl)) {
+    res.status(400).json({ error: "CTA URL must be a safe HTTPS URL or local path" });
+    return;
+  }
   await savePopup(1, updated);
   res.json(updated);
 });

@@ -45,12 +45,22 @@ const PROFILE_EXEMPT = ["/profile", "/my-account", "/account", "/signin", "/sign
 function ProfileGate() {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
-  const { data: meData, isLoading } = useGetCurrentUser();
+  const { data: meData, isLoading, isError } = useGetCurrentUser();
   const me = meData?.user ?? null;
+  const exempt = PROFILE_EXEMPT.some(p => location === p || location.startsWith(p + "/"));
 
   useEffect(() => {
-    if (isLoading || !me) return;
-    const exempt = PROFILE_EXEMPT.some(p => location === p || location.startsWith(p + "/"));
+    if (isLoading || exempt) return;
+    if (isError) {
+      toast({
+        title: "Your session has expired",
+        description: "Please sign in again to continue.",
+        variant: "destructive",
+      });
+      setLocation("/account");
+      return;
+    }
+    if (!me) return;
     if (!(me as { profileComplete?: boolean }).profileComplete && !exempt) {
       toast({
         title: "Complete your profile",
@@ -58,8 +68,15 @@ function ProfileGate() {
       });
       setLocation("/profile");
     }
-  }, [isLoading, me, location, setLocation, toast]);
+  }, [isLoading, isError, me, exempt, setLocation, toast]);
 
+  if (isError && !exempt) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background px-6">
+        <p className="text-sm text-muted-foreground">Checking your session…</p>
+      </div>
+    );
+  }
   return null;
 }
 
@@ -69,15 +86,15 @@ function ProfileGate() {
  */
 function AuthRedirect() {
   const [location, setLocation] = useLocation();
-  const { data: meData, isLoading } = useGetCurrentUser();
-  const isLoggedIn = !isLoading && !!meData?.user;
-  const isGuest    = !isLoading && !meData?.user;
+  const { data: meData, isLoading, isError } = useGetCurrentUser();
+  const isLoggedIn = !isLoading && !isError && !!meData?.user;
+  const isGuest    = !isLoading && !isError && !meData?.user;
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || isError) return;
     if (isLoggedIn && location === "/") setLocation("/home");
     if (isGuest && (location === "/home" || location === "/dashboard")) setLocation("/account");
-  }, [isLoading, isLoggedIn, isGuest, location, setLocation]);
+  }, [isLoading, isError, isLoggedIn, isGuest, location, setLocation]);
 
   return null;
 }
@@ -128,7 +145,6 @@ function Router() {
         <Route path="/admin/products" component={() => <Admin section="products" />} />
         <Route path="/admin/bank" component={() => <Admin section="bank" />} />
         <Route path="/admin/password" component={() => <Admin section="password" />} />
-        <Route path="/admin/notifications" component={() => <Admin section="notifications" />} />
         <Route path="/admin/support" component={() => <Admin section="support" />} />
         <Route path="/admin/cashback" component={() => <Admin section="cashback" />} />
         <Route path="/admin/landing-pages" component={() => <Admin section="landing-pages" />} />
@@ -140,7 +156,6 @@ function Router() {
         <Route path="/admin/promotions" component={() => <Admin section="promotions" />} />
         <Route path="/admin/pop-ads" component={() => <Admin section="pop-ads" />} />
         <Route path="/admin/ad-notifications" component={() => <Admin section="ad-notifications" />} />
-        <Route path="/admin/notifications" component={() => <Admin section="notifications" />} />
         <Route path="/admin/email-campaigns" component={() => <Admin section="email-campaigns" />} />
         <Route path="/admin/email-templates" component={() => <Admin section="email-templates" />} />
         <Route path="/admin/site-ui" component={() => <Admin section="site-ui" />} />

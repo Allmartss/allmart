@@ -5,6 +5,7 @@ import {
   useGetCart,
   usePlaceOrder,
   useGetCurrentUser,
+  clearCart,
   getGetCartQueryKey,
   getListOrdersQueryKey,
   getGetCurrentUserQueryKey,
@@ -57,7 +58,7 @@ export default function Payment() {
   const { toast } = useToast();
   const { data: cart, isLoading } = useGetCart();
   const { data: authData } = useGetCurrentUser();
-  const user = authData?.user as ({ tier?: number; bonusBalance?: number } & typeof authData.user) | null | undefined;
+  const user = authData?.user as ({ tier?: number; bonusBalance?: number } & Record<string, unknown>) | null | undefined;
   const [method, setMethod] = useState<Method>("stripe");
   const [bankDetails, setBankDetails] = useState<BankDetails | null>(null);
   const [bankLoaded, setBankLoaded] = useState(false);
@@ -74,20 +75,20 @@ export default function Payment() {
   const [paymentNote, setPaymentNote] = useState("");
 
   const address =
-    typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) ?? "" : "";
+    typeof window !== "undefined" ? sessionStorage.getItem(STORAGE_KEY) ?? "" : "";
 
   const contact: Contact = (() => {
-    try { return JSON.parse(localStorage.getItem(CONTACT_KEY) ?? "null") ?? { name: "", email: "", phone: "" }; }
+    try { return JSON.parse(sessionStorage.getItem(CONTACT_KEY) ?? "null") ?? { name: "", email: "", phone: "" }; }
     catch { return { name: "", email: "", phone: "" }; }
   })();
 
   const cashback: CashbackState = (() => {
-    try { return JSON.parse(localStorage.getItem(CASHBACK_KEY) ?? "null"); }
+    try { return JSON.parse(sessionStorage.getItem(CASHBACK_KEY) ?? "null"); }
     catch { return null; }
   })();
 
   const bonusApplied: boolean = (() => {
-    try { return JSON.parse(localStorage.getItem(BONUS_KEY) ?? "false"); }
+    try { return JSON.parse(sessionStorage.getItem(BONUS_KEY) ?? "false"); }
     catch { return false; }
   })();
 
@@ -121,13 +122,21 @@ export default function Payment() {
   const placeOrder = usePlaceOrder({
     mutation: {
       onSuccess: (order) => {
+        sessionStorage.removeItem(STORAGE_KEY);
+        sessionStorage.removeItem(CONTACT_KEY);
+        sessionStorage.removeItem(CASHBACK_KEY);
+        sessionStorage.removeItem(BONUS_KEY);
         localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(CONTACT_KEY);
         localStorage.removeItem(CASHBACK_KEY);
         localStorage.removeItem(BONUS_KEY);
         queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
         queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
         queryClient.invalidateQueries({ queryKey: ["me-stats"] });
+        void clearCart().catch(() => {
+          // Keeping the cart is safer than losing it if the cleanup request blips.
+        });
         toast({ title: "Order placed!", description: "Your order is on the way." });
         setLocation(`/orders/${order.id}`);
       },
@@ -171,9 +180,11 @@ export default function Payment() {
         receiverEmail: contact.email || undefined,
         receiverPhone: contact.phone || undefined,
         cashbackCode: cashback?.code || undefined,
+        paymentMethod: method === "transfer" ? "bank_transfer" : "pay_on_delivery",
         paymentScreenshotUrl: screenshotUrl || undefined,
         paymentNote: paymentNote.trim() || undefined,
         bonusApplied: bonusApplied || undefined,
+        deferCartClear: true,
       } as Parameters<typeof placeOrder.mutate>[0]["data"],
     });
   }

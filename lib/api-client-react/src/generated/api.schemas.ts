@@ -64,7 +64,6 @@ export interface Product {
   stock: number;
   sellerName: string;
   tags: string[];
-  freeShipping: boolean;
 }
 
 export type ResetCodeResponseScope =
@@ -195,6 +194,16 @@ export const OrderStatus = {
   cancelled: "cancelled",
 } as const;
 
+export type OrderPaymentMethod =
+  | (typeof OrderPaymentMethod)[keyof typeof OrderPaymentMethod]
+  | null;
+
+export const OrderPaymentMethod = {
+  stripe: "stripe",
+  bank_transfer: "bank_transfer",
+  pay_on_delivery: "pay_on_delivery",
+} as const;
+
 export type OrderPlacedBy = (typeof OrderPlacedBy)[keyof typeof OrderPlacedBy];
 
 export const OrderPlacedBy = {
@@ -212,12 +221,24 @@ export interface Order {
   receiverName?: string | null;
   receiverEmail?: string | null;
   receiverPhone?: string | null;
+  paymentMethod?: OrderPaymentMethod;
+  paymentScreenshotUrl?: string | null;
+  paymentNote?: string | null;
   cashbackCode?: string | null;
   cashbackDiscount?: number | null;
   placedBy: OrderPlacedBy;
   createdAt: string;
   items: OrderItem[];
 }
+
+export type PlaceOrderRequestPaymentMethod =
+  (typeof PlaceOrderRequestPaymentMethod)[keyof typeof PlaceOrderRequestPaymentMethod];
+
+export const PlaceOrderRequestPaymentMethod = {
+  stripe: "stripe",
+  bank_transfer: "bank_transfer",
+  pay_on_delivery: "pay_on_delivery",
+} as const;
 
 export type PlaceOrderRequestPlacedBy =
   (typeof PlaceOrderRequestPlacedBy)[keyof typeof PlaceOrderRequestPlacedBy];
@@ -234,6 +255,11 @@ export interface PlaceOrderRequest {
   receiverEmail?: string;
   receiverPhone?: string;
   cashbackCode?: string;
+  paymentMethod?: PlaceOrderRequestPaymentMethod;
+  paymentScreenshotUrl?: string;
+  /** @maxLength 2000 */
+  paymentNote?: string;
+  bonusApplied?: boolean;
   placedBy?: PlaceOrderRequestPlacedBy;
 }
 
@@ -355,13 +381,13 @@ export const SendChatMessageRequestPaymentMethod = {
 export interface SendChatMessageRequest {
   /** @minLength 1 */
   content: string;
+  /** Product ID to pre-add to cart before the AI responds */
+  productId?: number;
   /** When true, AI is authorized to place order with current cart */
   confirmOrder?: boolean;
   shippingAddress?: string;
   /** Payment method chosen by the shopper */
   paymentMethod?: SendChatMessageRequestPaymentMethod;
-  /** Product ID to pre-add to cart before the AI responds (used by "Ask AI to Buy" on product pages) */
-  productId?: number;
 }
 
 export interface ChatBankDetails {

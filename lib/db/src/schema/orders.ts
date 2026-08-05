@@ -25,6 +25,7 @@ export const ordersTable = pgTable("orders", {
   cashbackDiscount: real("cashback_discount"),
   placedBy: text("placed_by").notNull().default("user"),
   items: jsonb("items").$type<OrderItemJson[]>().notNull(),
+  paymentMethod: text("payment_method"),
   paymentScreenshotUrl: text("payment_screenshot_url"),
   paymentNote: text("payment_note"),
   paymentVerified: text("payment_verified").notNull().default("pending"),

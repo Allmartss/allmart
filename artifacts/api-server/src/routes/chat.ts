@@ -543,7 +543,9 @@ router.post("/chat/messages", async (req: Request, res: Response) => {
             }
           }
         } else if (paymentMethod === "bank_transfer") {
-          const result = await placeOrderForSession(sessionId, shippingAddress, "ai");
+          const result = await placeOrderForSession(sessionId, shippingAddress, "ai", chatUser?.id, {
+            paymentMethod: "bank_transfer",
+          });
           if ("error" in result) {
             messages.push({
               role: "tool",
@@ -584,7 +586,9 @@ router.post("/chat/messages", async (req: Request, res: Response) => {
           }
         } else {
           // pay_on_delivery (or no paymentMethod — default)
-          const result = await placeOrderForSession(sessionId, shippingAddress, "ai");
+          const result = await placeOrderForSession(sessionId, shippingAddress, "ai", chatUser?.id, {
+            paymentMethod: "pay_on_delivery",
+          });
           if ("error" in result) {
             messages.push({
               role: "tool",

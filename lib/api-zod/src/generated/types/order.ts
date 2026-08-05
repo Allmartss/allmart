@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { OrderItem } from "./orderItem";
+import type { OrderPaymentMethod } from "./orderPaymentMethod";
 import type { OrderPlacedBy } from "./orderPlacedBy";
 import type { OrderStatus } from "./orderStatus";
 
@@ -19,6 +20,9 @@ export interface Order {
   receiverName?: string | null;
   receiverEmail?: string | null;
   receiverPhone?: string | null;
+  paymentMethod?: OrderPaymentMethod;
+  paymentScreenshotUrl?: string | null;
+  paymentNote?: string | null;
   cashbackCode?: string | null;
   cashbackDiscount?: number | null;
   placedBy: OrderPlacedBy;

@@ -19,6 +19,7 @@ const CSV_HEADERS = [
   "cashbackCode",
   "cashbackDiscount",
   "placedBy",
+  "paymentMethod",
   "paymentVerified",
   "paymentNote",
   "createdAt",
@@ -27,7 +28,10 @@ const CSV_HEADERS = [
 
 function escapeCsv(val: unknown): string {
   if (val === null || val === undefined) return "";
-  const s = typeof val === "object" ? JSON.stringify(val) : String(val);
+  const raw = typeof val === "object" ? JSON.stringify(val) : String(val);
+  // Prefix spreadsheet formula starters so opening the export cannot execute
+  // a formula supplied through a customer/admin-controlled field.
+  const s = /^[=+\-@]/.test(raw) ? `'${raw}` : raw;
   if (s.includes(",") || s.includes('"') || s.includes("\n")) {
     return `"${s.replace(/"/g, '""')}"`;
   }
@@ -133,6 +137,7 @@ router.post(
         const currency = col(row, "currency") || "USD";
         const shippingAddress = col(row, "shippingAddress") || "";
         const placedBy = (col(row, "placedBy") || "user") as "user" | "ai";
+        const paymentMethod = col(row, "paymentMethod") || null;
         const createdAtRaw = col(row, "createdAt");
         const createdAt = createdAtRaw ? new Date(createdAtRaw) : new Date();
         const receiverName = col(row, "receiverName") || null;
@@ -158,7 +163,7 @@ router.post(
         if (existing) {
           await db
             .update(ordersTable)
-            .set({ status, total, shippingAddress, paymentVerified })
+            .set({ status, total, shippingAddress, paymentVerified, paymentMethod })
             .where(eq(ordersTable.trackingCode, trackingCode));
           updated++;
         } else {
@@ -170,6 +175,7 @@ router.post(
             currency,
             shippingAddress,
             placedBy,
+            paymentMethod,
             receiverName,
             receiverEmail,
             receiverPhone,

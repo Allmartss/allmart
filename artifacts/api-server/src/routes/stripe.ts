@@ -88,7 +88,10 @@ router.post("/stripe/verify", async (req: Request, res: Response) => {
     const orderSessionId = metaSessionId ?? req.sessionId;
 
     const user = await getUserFromCookie(req);
-    const placed = await placeOrderForSession(orderSessionId, shippingAddress, "user", user?.id);
+    const placed = await placeOrderForSession(orderSessionId, shippingAddress, "user", user?.id, {
+      paymentMethod: "stripe",
+      deferCartClear: true,
+    });
     if ("error" in placed) {
       res.status(400).json({ error: placed.error });
       return;

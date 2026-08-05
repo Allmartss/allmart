@@ -868,6 +868,16 @@ components:
         receiverPhone:
           type: string
           nullable: true
+        paymentMethod:
+          type: string
+          enum: [stripe, bank_transfer, pay_on_delivery]
+          nullable: true
+        paymentScreenshotUrl:
+          type: string
+          nullable: true
+        paymentNote:
+          type: string
+          nullable: true
         cashbackCode:
           type: string
           nullable: true
@@ -886,9 +896,15 @@ components:
       properties:
         shippingAddress: { type: string, minLength: 3 }
         receiverName: { type: string }
-        receiverEmail: { type: string }
+        receiverEmail: { type: string, format: email }
         receiverPhone: { type: string }
         cashbackCode: { type: string }
+        paymentMethod:
+          type: string
+          enum: [stripe, bank_transfer, pay_on_delivery]
+        paymentScreenshotUrl: { type: string }
+        paymentNote: { type: string, maxLength: 2000 }
+        bonusApplied: { type: boolean }
         placedBy:
           type: string
           enum: [user, ai]
@@ -1026,6 +1042,9 @@ components:
       type: object
       properties:
         content: { type: string, minLength: 1 }
+        productId:
+          type: integer
+          description: Product ID to pre-add to cart before the AI responds
         confirmOrder:
           type: boolean
           description: When true, AI is authorized to place order with current cart

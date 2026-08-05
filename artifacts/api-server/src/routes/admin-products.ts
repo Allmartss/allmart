@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { requireRole } from "../lib/auth";
 import { serializeProduct } from "../lib/serializers";
 import { chatCompletion } from "../lib/llm";
+import { isSafeMediaUrl } from "../lib/url-validation";
 
 const router: IRouter = Router();
 
@@ -25,6 +26,14 @@ router.patch("/admin/products/:id", requireRole("admin", "pm"), async (req: Requ
     images?: string[]; colors?: string[]; productType?: string; tags?: string[];
     rating?: number; freeShipping?: boolean; hidden?: boolean;
   };
+  if (imageUrl !== undefined && !isSafeMediaUrl(imageUrl)) {
+    res.status(400).json({ error: "Product image must be uploaded through the store" });
+    return;
+  }
+  if (images !== undefined && (!Array.isArray(images) || images.some((url) => !isSafeMediaUrl(url)))) {
+    res.status(400).json({ error: "All product images must be uploaded through the store" });
+    return;
+  }
 
   const [updated] = await db
     .update(productsTable)

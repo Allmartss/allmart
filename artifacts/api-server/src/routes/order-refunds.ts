@@ -4,6 +4,7 @@ import { eq, desc, and } from "drizzle-orm";
 import { requireRole, getUserFromCookie } from "../lib/auth";
 import { logger } from "../lib/logger";
 import { sendSupportCaseStatusEmail } from "./email";
+import { isSafeMediaUrl } from "../lib/url-validation";
 
 const router: IRouter = Router();
 
@@ -21,6 +22,10 @@ router.post("/order-refunds", async (req: Request, res: Response) => {
 
   if (!orderId || !reason?.trim() || !description?.trim() || !imageUrl?.trim()) {
     res.status(400).json({ error: "orderId, reason, description, and proof image are required" });
+    return;
+  }
+  if (!isSafeMediaUrl(imageUrl)) {
+    res.status(400).json({ error: "Invalid proof image URL" });
     return;
   }
 
