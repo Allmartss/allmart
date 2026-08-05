@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { Flag, ChevronDown, ChevronUp, CheckCircle2, Clock, Eye } from "lucide-react";
+import { Flag, ChevronDown, ChevronUp, CheckCircle2, Clock, Eye, ImageIcon } from "lucide-react";
 import { format } from "date-fns";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -14,6 +14,7 @@ type OrderReport = {
   userId: number | null;
   orderTrackingCode: string;
   reason: string;
+  imageUrl: string | null;
   status: string;
   adminNote: string | null;
   createdAt: string;
@@ -21,8 +22,16 @@ type OrderReport = {
 
 const statusColor: Record<string, string> = {
   open: "bg-amber-50 text-amber-700 border-amber-200",
+  reviewing: "bg-amber-50 text-amber-700 border-amber-200",
   reviewed: "bg-blue-50 text-blue-700 border-blue-200",
   resolved: "bg-emerald-50 text-emerald-700 border-emerald-200",
+};
+
+const statusLabel: Record<string, string> = {
+  open: "Reviewing",
+  reviewing: "Reviewing",
+  reviewed: "Reviewed",
+  resolved: "Resolved",
 };
 
 export function AdminOrderReports() {
@@ -62,8 +71,8 @@ export function AdminOrderReports() {
 
   if (isLoading) return <div className="space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}</div>;
 
-  const open = reports?.filter(r => r.status === "open") ?? [];
-  const others = reports?.filter(r => r.status !== "open") ?? [];
+  const open = reports?.filter(r => r.status === "open" || r.status === "reviewing") ?? [];
+  const others = reports?.filter(r => r.status !== "open" && r.status !== "reviewing") ?? [];
   const sorted = [...open, ...others];
 
   return (
@@ -97,27 +106,32 @@ export function AdminOrderReports() {
                     #{report.orderTrackingCode}
                   </span>
                   <Badge variant="outline" className={`text-xs px-2 py-0.5 capitalize ${statusColor[report.status] ?? "bg-muted"}`}>
-                    {report.status === "open" ? <Clock className="h-3 w-3 mr-1" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
-                    {report.status}
+                    {report.status === "reviewed" ? <Eye className="h-3 w-3 mr-1" /> : report.status === "resolved" ? <CheckCircle2 className="h-3 w-3 mr-1" /> : <Clock className="h-3 w-3 mr-1" />}
+                    {statusLabel[report.status] ?? report.status}
                   </Badge>
                   <span className="text-xs text-muted-foreground">
                     {format(new Date(report.createdAt), "MMM d, yyyy 'at' h:mm a")}
                   </span>
                 </div>
                 <p className="text-sm text-foreground line-clamp-2">{report.reason}</p>
+                {report.imageUrl && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <ImageIcon className="h-3 w-3" /> Proof image attached
+                  </p>
+                )}
                 {report.adminNote && !isExpanded && (
                   <p className="text-xs text-muted-foreground italic">Note: {report.adminNote}</p>
                 )}
               </div>
               <div className="flex items-start gap-2 shrink-0">
-                {report.status === "open" && (
+                {(report.status === "open" || report.status === "reviewing") && (
                   <>
                     <Button
                       size="sm"
                       variant="outline"
                       className="h-7 text-xs gap-1 border-blue-200 text-blue-700 hover:bg-blue-50"
                       disabled={saving === report.id}
-                      onClick={() => updateReport(report.id, "reviewed")}
+                      onClick={() => updateReport(report.id, "reviewed", notes[report.id] ?? report.adminNote ?? undefined)}
                     >
                       <Eye className="h-3 w-3" /> Mark reviewed
                     </Button>
@@ -125,7 +139,7 @@ export function AdminOrderReports() {
                       size="sm"
                       className="h-7 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
                       disabled={saving === report.id}
-                      onClick={() => updateReport(report.id, "resolved")}
+                      onClick={() => updateReport(report.id, "resolved", notes[report.id] ?? report.adminNote ?? undefined)}
                     >
                       <CheckCircle2 className="h-3 w-3" /> Resolve
                     </Button>
@@ -136,7 +150,7 @@ export function AdminOrderReports() {
                     size="sm"
                     className="h-7 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
                     disabled={saving === report.id}
-                    onClick={() => updateReport(report.id, "resolved")}
+                     onClick={() => updateReport(report.id, "resolved", notes[report.id] ?? report.adminNote ?? undefined)}
                   >
                     <CheckCircle2 className="h-3 w-3" /> Resolve
                   </Button>
@@ -158,6 +172,18 @@ export function AdminOrderReports() {
                   <p className="text-xs font-semibold text-muted-foreground mb-1">Full report</p>
                   <p className="text-sm">{report.reason}</p>
                 </div>
+                {report.imageUrl && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground mb-1">Proof image</p>
+                    <a href={report.imageUrl} target="_blank" rel="noopener noreferrer">
+                      <img
+                        src={report.imageUrl}
+                        alt="Order report proof"
+                        className="max-h-72 max-w-full rounded-lg border border-border/40 object-contain shadow-sm hover:opacity-90 transition-opacity"
+                      />
+                    </a>
+                  </div>
+                )}
                 <div className="space-y-1">
                   <p className="text-xs font-semibold text-muted-foreground">Admin note</p>
                   <Textarea

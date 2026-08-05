@@ -11,7 +11,7 @@ import {
   ChevronRight, FileText, X, RotateCcw,
   UserPlus, LogIn, ShieldCheck, Package, Bell,
   MapPin, Link as LinkIcon, ChevronDown, Save,
-  Info, Hash, ArrowLeft,
+  Info, Hash, ArrowLeft, Flag,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -35,7 +35,6 @@ type EmailTemplate = {
   subject: string;
   blocks: EmailBlock[];
   footer: CampaignFooter;
-  headerLogoUrl: string;
 };
 
 type OrderStatusMessages = Record<string, string>;
@@ -123,6 +122,30 @@ const TEMPLATE_META: {
       { name: "{{shipping_address}}", description: "Delivery address" },
     ],
     hasExtraSection: "The order details table and Review button are automatically inserted after your content blocks.",
+  },
+  {
+    key: "report_status",
+    label: "Order report status",
+    description: "Sent when an admin updates an order report",
+    Icon: Flag,
+    vars: [
+      { name: "{{name}}", description: "Customer's full name" },
+      { name: "{{tracking_code}}", description: "Order reference number" },
+      { name: "{{case_status_label}}", description: "Reviewing, Reviewed, or Resolved" },
+      { name: "{{admin_response}}", description: "Admin response message" },
+    ],
+  },
+  {
+    key: "refund_status",
+    label: "Refund status",
+    description: "Sent when an admin updates a refund request",
+    Icon: RotateCcw,
+    vars: [
+      { name: "{{name}}", description: "Customer's full name" },
+      { name: "{{tracking_code}}", description: "Order reference number" },
+      { name: "{{case_status_label}}", description: "Reviewing, Reviewed, or Resolved" },
+      { name: "{{admin_response}}", description: "Admin response message" },
+    ],
   },
 ];
 
@@ -616,15 +639,7 @@ function TemplateEditor({
             placeholder="Email subject…" />
           <p className="text-xs text-muted-foreground">You can use variables like <code className="font-mono">{"{{tracking_code}}"}</code> in the subject.</p>
         </div>
-        <div className="space-y-1.5">
-          <Label>Logo image URL <span className="text-muted-foreground text-xs">(optional — shown in email header bar)</span></Label>
-          <Input value={template.headerLogoUrl} onChange={e => onChange({ ...template, headerLogoUrl: e.target.value })}
-            placeholder="https://…/logo.png" />
-          {template.headerLogoUrl && (
-            <img src={template.headerLogoUrl} alt="Logo preview" className="h-8 object-contain rounded border border-border/50 mt-1"
-              onError={e => (e.currentTarget.style.display = "none")} />
-          )}
-        </div>
+        <p className="text-xs text-muted-foreground">The AllMart logo is included automatically in the email header.</p>
         <div className="space-y-2">
           <Label>Header bar colors</Label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -655,11 +670,10 @@ function TemplateEditor({
           <div className="rounded-lg overflow-hidden border border-border/40 mt-1">
             <div className="flex items-center justify-between px-4 py-2.5"
               style={{ background: template.footer.headerBgColor ?? "#7c3aed" }}>
-              <span className="font-bold text-sm" style={{ color: template.footer.headerTextColor ?? "#ffffff", letterSpacing: "-0.3px" }}>AllMart</span>
-              {template.headerLogoUrl && (
-                <img src={template.headerLogoUrl} alt="Logo" className="max-h-6 max-w-24 object-contain"
-                  onError={e => (e.currentTarget.style.display = "none")} />
-              )}
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[#8B7BD8] text-sm font-bold text-white font-serif">A</span>
+                <span className="font-bold text-sm" style={{ color: template.footer.headerTextColor ?? "#ffffff", letterSpacing: "-0.3px" }}>AllMart</span>
+              </div>
             </div>
           </div>
         </div>
@@ -759,7 +773,6 @@ function TemplateEditor({
 
 const EMPTY_TEMPLATE: EmailTemplate = {
   subject: "",
-  headerLogoUrl: "",
   blocks: [],
   footer: { ...DEFAULT_FOOTER },
 };

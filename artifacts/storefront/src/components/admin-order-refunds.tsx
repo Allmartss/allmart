@@ -24,14 +24,29 @@ type OrderRefund = {
 
 const statusColor: Record<string, string> = {
   pending: "bg-amber-50 text-amber-700 border-amber-200",
+  reviewing: "bg-amber-50 text-amber-700 border-amber-200",
+  reviewed: "bg-blue-50 text-blue-700 border-blue-200",
   approved: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  rejected: "bg-rose-50 text-rose-700 border-rose-200",
+  rejected: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  resolved: "bg-emerald-50 text-emerald-700 border-emerald-200",
 };
 
 const statusIcon: Record<string, React.ReactNode> = {
   pending: <Clock className="h-3 w-3 mr-1" />,
+  reviewing: <Clock className="h-3 w-3 mr-1" />,
+  reviewed: <Eye className="h-3 w-3 mr-1" />,
   approved: <CheckCircle2 className="h-3 w-3 mr-1" />,
-  rejected: <XCircle className="h-3 w-3 mr-1" />,
+  rejected: <CheckCircle2 className="h-3 w-3 mr-1" />,
+  resolved: <CheckCircle2 className="h-3 w-3 mr-1" />,
+};
+
+const statusLabel: Record<string, string> = {
+  pending: "Reviewing",
+  reviewing: "Reviewing",
+  reviewed: "Reviewed",
+  approved: "Resolved",
+  rejected: "Resolved",
+  resolved: "Resolved",
 };
 
 export function AdminOrderRefunds() {
@@ -72,8 +87,8 @@ export function AdminOrderRefunds() {
 
   if (isLoading) return <div className="space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}</div>;
 
-  const pending = refunds?.filter(r => r.status === "pending") ?? [];
-  const others = refunds?.filter(r => r.status !== "pending") ?? [];
+  const pending = refunds?.filter(r => r.status === "pending" || r.status === "reviewing") ?? [];
+  const others = refunds?.filter(r => r.status !== "pending" && r.status !== "reviewing") ?? [];
   const sorted = [...pending, ...others];
 
   return (
@@ -83,7 +98,7 @@ export function AdminOrderRefunds() {
           <RotateCcw className="h-5 w-5 text-violet-600" />
           <h2 className="text-lg font-semibold">Refund Requests</h2>
           {pending.length > 0 && (
-            <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs">{pending.length} pending</Badge>
+            <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs">{pending.length} reviewing</Badge>
           )}
         </div>
         <p className="text-sm text-muted-foreground">{refunds?.length ?? 0} total</p>
@@ -108,7 +123,7 @@ export function AdminOrderRefunds() {
                   </span>
                   <Badge variant="outline" className={`text-xs px-2 py-0.5 capitalize flex items-center ${statusColor[refund.status] ?? "bg-muted"}`}>
                     {statusIcon[refund.status]}
-                    {refund.status}
+                    {statusLabel[refund.status] ?? refund.status}
                   </Badge>
                   <span className="text-xs text-muted-foreground">
                     {format(new Date(refund.createdAt), "MMM d, yyyy 'at' h:mm a")}
@@ -118,24 +133,24 @@ export function AdminOrderRefunds() {
                 <p className="text-sm line-clamp-2">{refund.description}</p>
               </div>
               <div className="flex items-start gap-2 shrink-0">
-                {refund.status === "pending" && (
+                {(refund.status === "pending" || refund.status === "reviewing") && (
                   <>
                     <Button
                       size="sm"
                       className="h-7 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
                       disabled={saving === refund.id}
-                      onClick={() => updateRefund(refund.id, "approved", notes[refund.id] ?? refund.adminNote ?? undefined)}
+                      onClick={() => updateRefund(refund.id, "reviewed", notes[refund.id] ?? refund.adminNote ?? undefined)}
                     >
-                      <CheckCircle2 className="h-3 w-3" /> Approve
+                      <Eye className="h-3 w-3" /> Mark reviewed
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
                       className="h-7 text-xs gap-1 border-rose-200 text-rose-700 hover:bg-rose-50"
                       disabled={saving === refund.id}
-                      onClick={() => updateRefund(refund.id, "rejected", notes[refund.id] ?? refund.adminNote ?? undefined)}
+                      onClick={() => updateRefund(refund.id, "resolved", notes[refund.id] ?? refund.adminNote ?? undefined)}
                     >
-                      <XCircle className="h-3 w-3" /> Reject
+                      <CheckCircle2 className="h-3 w-3" /> Resolve
                     </Button>
                   </>
                 )}
@@ -190,7 +205,7 @@ export function AdminOrderRefunds() {
                 )}
 
                 <div className="space-y-1">
-                  <p className="text-xs font-semibold text-muted-foreground">Admin note (sent to customer on rejection)</p>
+                  <p className="text-xs font-semibold text-muted-foreground">Admin response (sent to customer)</p>
                   <Textarea
                     placeholder="Add a note or rejection reason…"
                     value={notes[refund.id] ?? refund.adminNote ?? ""}
@@ -208,25 +223,25 @@ export function AdminOrderRefunds() {
                     >
                       Save note
                     </Button>
-                    {refund.status !== "approved" && (
+                    {refund.status !== "resolved" && refund.status !== "approved" && refund.status !== "rejected" && (
                       <Button
                         size="sm"
                         className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
                         disabled={saving === refund.id}
-                        onClick={() => updateRefund(refund.id, "approved", notes[refund.id] ?? refund.adminNote ?? undefined)}
+                        onClick={() => updateRefund(refund.id, "reviewed", notes[refund.id] ?? refund.adminNote ?? undefined)}
                       >
-                        <CheckCircle2 className="h-3 w-3 mr-1" /> Approve refund
+                        <Eye className="h-3 w-3 mr-1" /> Mark reviewed
                       </Button>
                     )}
-                    {refund.status !== "rejected" && (
+                    {refund.status !== "resolved" && refund.status !== "approved" && refund.status !== "rejected" && (
                       <Button
                         size="sm"
                         variant="outline"
                         className="h-7 text-xs border-rose-200 text-rose-700 hover:bg-rose-50"
                         disabled={saving === refund.id}
-                        onClick={() => updateRefund(refund.id, "rejected", notes[refund.id] ?? refund.adminNote ?? undefined)}
+                        onClick={() => updateRefund(refund.id, "resolved", notes[refund.id] ?? refund.adminNote ?? undefined)}
                       >
-                        <XCircle className="h-3 w-3 mr-1" /> Reject
+                        <CheckCircle2 className="h-3 w-3 mr-1" /> Resolve refund
                       </Button>
                     )}
                   </div>

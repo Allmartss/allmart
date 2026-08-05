@@ -6,7 +6,8 @@ export const orderReportsTable = pgTable("order_reports", {
   userId: integer("user_id"),
   orderTrackingCode: text("order_tracking_code").notNull(),
   reason: text("reason").notNull(),
-  status: text("status").notNull().default("open"), // open | reviewed | resolved
+  imageUrl: text("image_url"),
+  status: text("status").notNull().default("reviewing"), // reviewing | reviewed | resolved
   adminNote: text("admin_note"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

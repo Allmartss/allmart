@@ -3,6 +3,7 @@ import { db, orderReportsTable, ordersTable, notificationsTable, usersTable } fr
 import { eq, desc, and } from "drizzle-orm";
 import { requireRole, getUserFromCookie } from "../lib/auth";
 import { logger } from "../lib/logger";
+import { sendSupportCaseStatusEmail } from "./email";
 
 const router: IRouter = Router();
 
@@ -11,7 +12,11 @@ router.post("/order-reports", async (req: Request, res: Response) => {
   const user = await getUserFromCookie(req);
   if (!user) { res.status(401).json({ error: "Sign in required" }); return; }
 
-  const { orderId, reason } = req.body as { orderId?: number; reason?: string };
+  const { orderId, reason, imageUrl } = req.body as {
+    orderId?: number;
+    reason?: string;
+    imageUrl?: string;
+  };
   if (!orderId || !reason?.trim()) {
     res.status(400).json({ error: "orderId and reason are required" });
     return;
@@ -27,6 +32,7 @@ router.post("/order-reports", async (req: Request, res: Response) => {
     userId: user.id,
     orderTrackingCode: order.trackingCode,
     reason: reason.trim(),
+    imageUrl: imageUrl?.trim() || null,
   }).returning();
 
   // Notify admins
@@ -67,6 +73,14 @@ router.get("/admin/order-reports", requireRole("admin"), async (_req: Request, r
 router.patch("/admin/order-reports/:id", requireRole("admin"), async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   const { status, adminNote } = req.body as { status?: string; adminNote?: string };
+  const allowedStatuses = new Set(["reviewing", "reviewed", "resolved", "open"]);
+  if (status && !allowedStatuses.has(status)) {
+    res.status(400).json({ error: "Invalid report status" });
+    return;
+  }
+  const [existing] = await db.select().from(orderReportsTable).where(eq(orderReportsTable.id, id));
+  if (!existing) { res.status(404).json({ error: "Not found" }); return; }
+
   const [updated] = await db.update(orderReportsTable)
     .set({
       ...(status && { status }),
@@ -74,7 +88,35 @@ router.patch("/admin/order-reports/:id", requireRole("admin"), async (req: Reque
     })
     .where(eq(orderReportsTable.id, id))
     .returning();
-  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
+  if (status && status !== existing.status && existing.userId) {
+    const [customer] = await db
+      .select({ email: usersTable.email, name: usersTable.name })
+      .from(usersTable)
+      .where(eq(usersTable.id, existing.userId));
+    const responseMessage = adminNote?.trim() || "Our support team has updated your order report.";
+    const statusLabel = status === "open" ? "Reviewing" : status.charAt(0).toUpperCase() + status.slice(1);
+
+    try {
+      await db.insert(notificationsTable).values({
+        userId: existing.userId,
+        title: `Order report ${statusLabel.toLowerCase()}`,
+        message: `Your report for order #${existing.orderTrackingCode} is now ${statusLabel.toLowerCase()}.${adminNote?.trim() ? ` Response: ${adminNote.trim()}` : ""}`,
+      });
+    } catch (err) {
+      logger.error({ err }, "order report status notification failed");
+    }
+
+    if (customer?.email) {
+      sendSupportCaseStatusEmail({
+        to: customer.email,
+        name: customer.name,
+        caseType: "report",
+        trackingCode: existing.orderTrackingCode,
+        status: status === "open" ? "reviewing" : status,
+        adminNote: responseMessage,
+      }).catch((err) => logger.error({ err, to: customer.email }, "order report status email failed"));
+    }
+  }
   res.json(updated);
 });
 

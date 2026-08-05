@@ -8,7 +8,7 @@ export const orderRefundsTable = pgTable("order_refunds", {
   reason: text("reason").notNull(),
   description: text("description").notNull(),
   imageUrl: text("image_url"), // proof image
-  status: text("status").notNull().default("pending"), // pending | approved | rejected
+  status: text("status").notNull().default("reviewing"), // reviewing | reviewed | resolved
   adminNote: text("admin_note"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   resolvedAt: timestamp("resolved_at", { withTimezone: true }),

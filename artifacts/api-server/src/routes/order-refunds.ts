@@ -3,6 +3,7 @@ import { db, orderRefundsTable, ordersTable, notificationsTable, usersTable } fr
 import { eq, desc, and } from "drizzle-orm";
 import { requireRole, getUserFromCookie } from "../lib/auth";
 import { logger } from "../lib/logger";
+import { sendSupportCaseStatusEmail } from "./email";
 
 const router: IRouter = Router();
 
@@ -92,6 +93,11 @@ router.get("/admin/order-refunds", requireRole("admin"), async (_req: Request, r
 router.patch("/admin/order-refunds/:id", requireRole("admin"), async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   const { status, adminNote } = req.body as { status?: string; adminNote?: string };
+  const allowedStatuses = new Set(["reviewing", "reviewed", "resolved", "pending", "approved", "rejected"]);
+  if (status && !allowedStatuses.has(status)) {
+    res.status(400).json({ error: "Invalid refund status" });
+    return;
+  }
 
   const [existing] = await db.select().from(orderRefundsTable).where(eq(orderRefundsTable.id, id));
   if (!existing) { res.status(404).json({ error: "Not found" }); return; }
@@ -100,25 +106,38 @@ router.patch("/admin/order-refunds/:id", requireRole("admin"), async (req: Reque
     .set({
       ...(status && { status }),
       ...(adminNote !== undefined && { adminNote }),
-      ...((status === "approved" || status === "rejected") && { resolvedAt: new Date() }),
+      ...((status === "approved" || status === "rejected" || status === "resolved") && { resolvedAt: new Date() }),
     })
     .where(eq(orderRefundsTable.id, id))
     .returning();
 
   // Notify user if status changed
   if (status && existing.userId && status !== existing.status) {
+    const [customer] = await db
+      .select({ email: usersTable.email, name: usersTable.name })
+      .from(usersTable)
+      .where(eq(usersTable.id, existing.userId));
+    const normalizedStatus = status === "pending" ? "reviewing" : status === "approved" || status === "rejected" ? "resolved" : status;
+    const statusLabel = normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1);
+    const responseMessage = adminNote?.trim() || "Our support team has updated your refund request.";
     try {
-      const msg = status === "approved"
-        ? `Your refund request for order #${existing.orderTrackingCode} has been approved.`
-        : status === "rejected"
-        ? `Your refund request for order #${existing.orderTrackingCode} has been reviewed. Unfortunately it was not approved${adminNote ? `: ${adminNote}` : "."}`
-        : `Your refund request for order #${existing.orderTrackingCode} status is now: ${status}.`;
       await db.insert(notificationsTable).values({
         userId: existing.userId,
-        title: `Refund ${status === "approved" ? "Approved ✅" : status === "rejected" ? "Not Approved ❌" : "Updated"}`,
-        message: msg,
+        title: `Refund request ${statusLabel.toLowerCase()}`,
+        message: `Your refund request for order #${existing.orderTrackingCode} is now ${statusLabel.toLowerCase()}.${adminNote?.trim() ? ` Response: ${adminNote.trim()}` : ""}`,
       });
     } catch (err) { logger.error({ err }, "order refund user status notification failed"); }
+
+    if (customer?.email) {
+      sendSupportCaseStatusEmail({
+        to: customer.email,
+        name: customer.name,
+        caseType: "refund",
+        trackingCode: existing.orderTrackingCode,
+        status: normalizedStatus,
+        adminNote: responseMessage,
+      }).catch((err) => logger.error({ err, to: customer.email }, "order refund status email failed"));
+    }
   }
 
   res.json(updated);

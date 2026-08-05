@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useGetCurrentUser } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,69 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { HeadphonesIcon, Mail, CheckCircle2, Loader2 } from "lucide-react";
+import { HeadphonesIcon, Mail, CheckCircle2, Loader2, Flag, RotateCcw, Clock, MessageCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+
+type SupportCase = {
+  id: number;
+  orderTrackingCode: string;
+  reason: string;
+  description?: string;
+  imageUrl?: string | null;
+  status: string;
+  adminNote: string | null;
+  createdAt: string;
+};
+
+const statusLabel: Record<string, string> = {
+  open: "Reviewing",
+  pending: "Reviewing",
+  reviewing: "Reviewing",
+  reviewed: "Reviewed",
+  approved: "Resolved",
+  rejected: "Resolved",
+  resolved: "Resolved",
+};
+
+const statusClass: Record<string, string> = {
+  open: "bg-amber-50 text-amber-700 border-amber-200",
+  pending: "bg-amber-50 text-amber-700 border-amber-200",
+  reviewing: "bg-amber-50 text-amber-700 border-amber-200",
+  reviewed: "bg-blue-50 text-blue-700 border-blue-200",
+  approved: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  rejected: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  resolved: "bg-emerald-50 text-emerald-700 border-emerald-200",
+};
+
+function CaseCard({ item, kind }: { item: SupportCase; kind: "report" | "refund" }) {
+  const label = statusLabel[item.status] ?? item.status;
+  return (
+    <Card className="p-4 border-border/50">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            {kind === "report" ? <Flag className="h-4 w-4 text-amber-600" /> : <RotateCcw className="h-4 w-4 text-violet-600" />}
+            <p className="font-semibold text-sm">{kind === "report" ? "Order report" : "Refund request"} · #{item.orderTrackingCode}</p>
+            <Badge variant="outline" className={`capitalize text-xs ${statusClass[item.status] ?? "bg-muted"}`}>
+              {label}
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">{item.reason}</p>
+          {item.description && <p className="text-sm mt-2">{item.description}</p>}
+          <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+            <Clock className="h-3 w-3" /> Submitted {new Date(item.createdAt).toLocaleDateString()}
+          </p>
+        </div>
+      </div>
+      {item.adminNote && (
+        <div className="mt-3 rounded-lg bg-muted/40 border border-border/40 p-3">
+          <p className="text-xs font-semibold flex items-center gap-1.5 mb-1"><MessageCircle className="h-3.5 w-3.5" /> Admin response</p>
+          <p className="text-sm text-muted-foreground">{item.adminNote}</p>
+        </div>
+      )}
+    </Card>
+  );
+}
 
 export default function Support() {
   const { data } = useGetCurrentUser();
@@ -18,6 +80,23 @@ export default function Support() {
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [reports, setReports] = useState<SupportCase[]>([]);
+  const [refunds, setRefunds] = useState<SupportCase[]>([]);
+  const [casesLoading, setCasesLoading] = useState(false);
+
+  useEffect(() => {
+    if (!me) return;
+    setCasesLoading(true);
+    Promise.all([
+      fetch("/api/order-reports/mine", { credentials: "include" }).then((r) => r.ok ? r.json() : []),
+      fetch("/api/order-refunds/mine", { credentials: "include" }).then((r) => r.ok ? r.json() : []),
+    ]).then(([nextReports, nextRefunds]) => {
+      setReports(nextReports);
+      setRefunds(nextRefunds);
+    }).catch(() => {
+      toast({ title: "Could not load support cases", variant: "destructive" });
+    }).finally(() => setCasesLoading(false));
+  }, [me, toast]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -111,6 +190,30 @@ export default function Support() {
           </Card>
         </div>
       </div>
+      {me && (
+        <section className="mt-12 space-y-5">
+          <div>
+            <h2 className="font-serif text-2xl font-bold">Order support status</h2>
+            <p className="text-sm text-muted-foreground mt-1">Track your refund requests and order reports here. You’ll also receive an email and in-app notification when an admin responds.</p>
+          </div>
+          {casesLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading your cases…</div>
+          ) : reports.length === 0 && refunds.length === 0 ? (
+            <Card className="p-6 text-center text-sm text-muted-foreground">You have no order reports or refund requests yet.</Card>
+          ) : (
+            <div className="grid lg:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <h3 className="font-semibold text-sm">Reports ({reports.length})</h3>
+                {reports.map((item) => <CaseCard key={item.id} item={item} kind="report" />)}
+              </div>
+              <div className="space-y-3">
+                <h3 className="font-semibold text-sm">Refunds ({refunds.length})</h3>
+                {refunds.map((item) => <CaseCard key={item.id} item={item} kind="refund" />)}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }

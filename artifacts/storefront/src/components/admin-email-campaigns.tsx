@@ -667,7 +667,6 @@ function CampaignEditor({
 
   const [title, setTitle]           = useState(campaign?.title ?? "");
   const [subject, setSubject]       = useState(campaign?.subject ?? "");
-  const [headerLogoUrl, setHeaderLogoUrl] = useState(campaign?.headerLogoUrl ?? "");
   const [blocks, setBlocks]         = useState<EmailBlock[]>(() => {
     // Migrate legacy single-product blocks to new products[] format
     return (campaign?.blocks ?? []).map(b => {
@@ -697,7 +696,6 @@ function CampaignEditor({
   useEffect(() => {
     setTitle(campaign?.title ?? "");
     setSubject(campaign?.subject ?? "");
-    setHeaderLogoUrl(campaign?.headerLogoUrl ?? "");
     setBlocks((campaign?.blocks ?? []).map(b => {
       if (b.type === "product") {
         const pb = b as { type: "product"; products?: ProductItem[]; productId?: number; name?: string; price?: number; imageUrl?: string };
@@ -746,7 +744,7 @@ function CampaignEditor({
       const res   = await fetch(url, {
         method, credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, subject, headerLogoUrl, blocks, footer, recipientType, recipientIds }),
+        body: JSON.stringify({ title, subject, blocks, footer, recipientType, recipientIds }),
       });
       const data = await res.json() as Campaign & { error?: string };
       if (!res.ok) { toast({ title: "Error", description: data.error, variant: "destructive" }); return; }
@@ -874,15 +872,7 @@ function CampaignEditor({
               placeholder="e.g. 🔥 Huge discounts inside!" disabled={isSent} />
           </div>
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="ec-logo">Header logo URL <span className="text-muted-foreground text-xs">(optional — shown opposite "AllMart" in email header)</span></Label>
-          <Input id="ec-logo" value={headerLogoUrl} onChange={e => setHeaderLogoUrl(e.target.value)}
-            placeholder="https://…/logo.png" disabled={isSent} />
-          {headerLogoUrl && (
-            <img src={headerLogoUrl} alt="Logo preview" className="h-8 object-contain rounded border border-border/50 mt-1"
-              onError={e => (e.currentTarget.style.display = "none")} />
-          )}
-        </div>
+        <p className="text-xs text-muted-foreground">The AllMart logo is included automatically in the email header.</p>
 
         {/* Header bar color pickers */}
         <div className="space-y-2">
@@ -923,11 +913,10 @@ function CampaignEditor({
           <div className="rounded-lg overflow-hidden border border-border/40 mt-1">
             <div className="flex items-center justify-between px-4 py-2.5"
               style={{ background: footer.headerBgColor ?? "#7c3aed" }}>
-              <span className="font-bold text-sm" style={{ color: footer.headerTextColor ?? "#ffffff", letterSpacing: "-0.3px" }}>AllMart</span>
-              {headerLogoUrl && (
-                <img src={headerLogoUrl} alt="logo" className="h-6 object-contain"
-                  onError={e => (e.currentTarget.style.display = "none")} />
-              )}
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[#8B7BD8] text-sm font-bold text-white font-serif">A</span>
+                <span className="font-bold text-sm" style={{ color: footer.headerTextColor ?? "#ffffff", letterSpacing: "-0.3px" }}>AllMart</span>
+              </div>
             </div>
           </div>
         </div>

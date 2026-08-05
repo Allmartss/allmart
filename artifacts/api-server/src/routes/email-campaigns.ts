@@ -118,11 +118,13 @@ export function renderCampaignHtml(subject: string, blocks: EmailBlock[], footer
   const footerData  = { ...DEFAULT_FOOTER, ...(footer ?? {}) };
   const headerBg   = footer?.headerBgColor?.trim()   || "#7c3aed";
   const headerFg   = footer?.headerTextColor?.trim() || "#ffffff";
-  const logoHtml = headerLogoUrl?.trim()
-    ? `<td align="right" style="padding:16px 32px;vertical-align:middle;">
-        <img src="${escHtml(headerLogoUrl)}" alt="Logo" style="display:inline-block;max-height:40px;max-width:140px;object-fit:contain;" />
-      </td>`
-    : "";
+  // Keep the AllMart mark built into every email. The legacy logo URL argument
+  // is intentionally ignored so admins never need to maintain a hosted logo.
+  const logoHtml = `<td align="right" style="padding:16px 32px;vertical-align:middle;">
+    <table cellpadding="0" cellspacing="0"><tr>
+      <td style="width:26px;height:26px;border-radius:6px;background:#8B7BD8;color:#fff;text-align:center;vertical-align:middle;font-family:Georgia,serif;font-size:19px;font-weight:700;">A</td>
+    </tr></table>
+  </td>`;
   return `<!DOCTYPE html>
 <html lang="en">
 <head>

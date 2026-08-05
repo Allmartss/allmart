@@ -13,12 +13,11 @@ export type EmailTemplate = {
   subject: string;
   blocks: EmailBlock[];
   footer: CampaignFooter;
-  headerLogoUrl: string;
 };
 
 export type OrderStatusMessages = Record<string, string>;
 
-const TEMPLATE_KEYS = ["welcome", "login", "verification", "order", "admin_alert"] as const;
+const TEMPLATE_KEYS = ["welcome", "login", "verification", "order", "admin_alert", "report_status", "refund_status"] as const;
 type TemplateKey = (typeof TEMPLATE_KEYS)[number];
 
 // ── Defaults ─────────────────────────────────────────────────────────────────
@@ -26,7 +25,6 @@ type TemplateKey = (typeof TEMPLATE_KEYS)[number];
 const DEFAULT_TEMPLATES: Record<TemplateKey, EmailTemplate> = {
   welcome: {
     subject: "Welcome to AllMart 🎉",
-    headerLogoUrl: "",
     blocks: [
       { type: "header", text: "Welcome to AllMart, {{name}}!", size: "h2", align: "center", color: "#111827" },
       { type: "text", text: "Your account has been created successfully. Start shopping thousands of products across every category." },
@@ -39,7 +37,6 @@ const DEFAULT_TEMPLATES: Record<TemplateKey, EmailTemplate> = {
   },
   login: {
     subject: "New login to your AllMart account",
-    headerLogoUrl: "",
     blocks: [
       { type: "header", text: "Login detected", size: "h2", align: "left", color: "#111827" },
       { type: "text", text: "Hi {{name}}, a new sign-in to your AllMart account was detected." },
@@ -51,7 +48,6 @@ const DEFAULT_TEMPLATES: Record<TemplateKey, EmailTemplate> = {
   },
   verification: {
     subject: "Your AllMart verification code",
-    headerLogoUrl: "",
     blocks: [
       { type: "header", text: "Verify your email", size: "h2", align: "left", color: "#111827" },
       { type: "text", text: "Hi {{name}}, use the code below to verify your AllMart account." },
@@ -60,7 +56,6 @@ const DEFAULT_TEMPLATES: Record<TemplateKey, EmailTemplate> = {
   },
   order: {
     subject: "Order {{tracking_code}} — {{order_status_label}}",
-    headerLogoUrl: "",
     blocks: [
       { type: "header", text: "Order Update", size: "h2", align: "left", color: "#111827" },
       { type: "text", text: "Hi {{name}}," },
@@ -70,10 +65,29 @@ const DEFAULT_TEMPLATES: Record<TemplateKey, EmailTemplate> = {
   },
   admin_alert: {
     subject: "Payment screenshot uploaded — Order {{tracking_code}}",
-    headerLogoUrl: "",
     blocks: [
       { type: "header", text: "AllMart — Admin Alert", size: "h2", align: "left", color: "#111827" },
       { type: "text", text: "A customer has uploaded a payment screenshot and is awaiting verification." },
+    ],
+    footer: { ...DEFAULT_FOOTER },
+  },
+  report_status: {
+    subject: "Order report {{tracking_code}} — {{case_status_label}}",
+    blocks: [
+      { type: "header", text: "Order report update", size: "h2", align: "left", color: "#111827" },
+      { type: "text", text: "Hi {{name}}," },
+      { type: "text", text: "Your report for order {{tracking_code}} is now {{case_status_label}}." },
+      { type: "text", text: "Support response: {{admin_response}}" },
+    ],
+    footer: { ...DEFAULT_FOOTER },
+  },
+  refund_status: {
+    subject: "Refund request {{tracking_code}} — {{case_status_label}}",
+    blocks: [
+      { type: "header", text: "Refund request update", size: "h2", align: "left", color: "#111827" },
+      { type: "text", text: "Hi {{name}}," },
+      { type: "text", text: "Your refund request for order {{tracking_code}} is now {{case_status_label}}." },
+      { type: "text", text: "Support response: {{admin_response}}" },
     ],
     footer: { ...DEFAULT_FOOTER },
   },
@@ -219,7 +233,7 @@ export function renderTemplate(
     template.subject,
     template.blocks,
     template.footer,
-    template.headerLogoUrl,
+    "",
     extraBodyHtml,
   );
   return replaceVars(html, vars);
@@ -365,6 +379,14 @@ router.post(
         paymentNote: "Payment sent via bank transfer",
         adminUrl: process.env.STOREFRONT_URL ?? "https://allmarts.us",
       });
+    } else if (key === "report_status" || key === "refund_status") {
+      vars = {
+        name: "Jane Smith",
+        tracking_code: "AM-2026-0001",
+        case_status: "reviewed",
+        case_status_label: "Reviewed",
+        admin_response: "We have reviewed your request and will update you again soon.",
+      };
     }
 
     const html = renderTemplate(template, vars, extraBodyHtml);

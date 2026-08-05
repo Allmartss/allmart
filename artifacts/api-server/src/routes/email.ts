@@ -236,6 +236,33 @@ export async function sendAdminPaymentAlert(opts: {
   }
 }
 
+export async function sendSupportCaseStatusEmail(opts: {
+  to: string;
+  name: string;
+  caseType: "report" | "refund";
+  trackingCode: string;
+  status: string;
+  adminNote: string;
+}) {
+  const template = await loadTemplate(opts.caseType === "report" ? "report_status" : "refund_status");
+  const statusLabel = opts.status.charAt(0).toUpperCase() + opts.status.slice(1);
+  const vars = {
+    name: opts.name,
+    tracking_code: opts.trackingCode,
+    case_status: opts.status,
+    case_status_label: statusLabel,
+    admin_response: opts.adminNote,
+  };
+  const html = renderTemplate(template, vars);
+  const subject = template.subject
+    .split("{{tracking_code}}").join(opts.trackingCode)
+    .split("{{case_status}}").join(opts.status)
+    .split("{{case_status_label}}").join(statusLabel);
+
+  await sendEmail({ to: opts.to, subject, html });
+  logger.info({ to: opts.to, caseType: opts.caseType, status: opts.status }, "Support case status email sent");
+}
+
 // ---------------------------------------------------------------------------
 // Routes
 // ---------------------------------------------------------------------------

@@ -150,8 +150,23 @@ function ResubmitPanel({ order, onDone }: { order: ExtOrder; onDone: () => void 
 /* ─── Report Order Panel ──────────────────────────────────────────────────── */
 function ReportPanel({ order, onClose }: { order: ExtOrder; onClose: () => void }) {
   const { toast } = useToast();
+  const { upload, isUploading, progress, error: uploadError } = useImageUpload();
+  const fileRef = useRef<HTMLInputElement>(null);
   const [reason, setReason] = useState("");
+  const [preview, setPreview] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  async function handleFile(file: File) {
+    setPreview(URL.createObjectURL(file));
+    try {
+      const result = await upload(file);
+      setImageUrl(result.servingUrl);
+    } catch {
+      setPreview(null);
+      setImageUrl(null);
+    }
+  }
 
   async function handleSubmit() {
     if (!reason.trim()) return;
@@ -161,7 +176,7 @@ function ReportPanel({ order, onClose }: { order: ExtOrder; onClose: () => void 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ orderId: order.id, reason: reason.trim() }),
+        body: JSON.stringify({ orderId: order.id, reason: reason.trim(), imageUrl: imageUrl ?? undefined }),
       });
       if (!res.ok) throw new Error("Failed");
       toast({ title: "Report submitted", description: "Our team will review your report shortly." });
@@ -199,11 +214,52 @@ function ReportPanel({ order, onClose }: { order: ExtOrder; onClose: () => void 
           className="text-xs resize-none"
         />
 
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-amber-700">Attach a photo (optional)</p>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+          />
+          {!preview ? (
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="w-full border-2 border-dashed border-amber-200 rounded-lg p-3 flex items-center justify-center gap-2 text-amber-500 hover:border-amber-400 transition-colors cursor-pointer"
+            >
+              <Upload className="h-4 w-4" />
+              <span className="text-xs font-medium">Upload a photo of the issue</span>
+            </button>
+          ) : (
+            <div className="relative">
+              <img src={preview} alt="Report proof" className="w-full max-h-40 rounded-lg object-contain border border-border/40" />
+              {!isUploading && (
+                <button
+                  type="button"
+                  onClick={() => { setPreview(null); setImageUrl(null); }}
+                  className="absolute top-2 right-2 bg-background/90 rounded-full p-1 shadow"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {isUploading && (
+                <div className="mt-2 space-y-1">
+                  <Progress value={progress} className="h-1.5" />
+                  <p className="text-xs text-muted-foreground text-center">{progress}% uploading…</p>
+                </div>
+              )}
+              {uploadError && <p className="text-xs text-rose-600 mt-1">{uploadError}</p>}
+            </div>
+          )}
+        </div>
+
         <div className="flex gap-2">
           <Button
             size="sm"
             className="gap-1.5 bg-amber-600 hover:bg-amber-700 text-white"
-            disabled={!reason.trim() || submitting}
+            disabled={!reason.trim() || isUploading || submitting}
             onClick={handleSubmit}
           >
             {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Flag className="h-3.5 w-3.5" />}
