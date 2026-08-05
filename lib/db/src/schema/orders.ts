@@ -29,6 +29,7 @@ export const ordersTable = pgTable("orders", {
   paymentScreenshotUrl: text("payment_screenshot_url"),
   paymentNote: text("payment_note"),
   paymentVerified: text("payment_verified").notNull().default("pending"),
+  stripeSessionId: text("stripe_session_id").unique(),
   bonusDiscount: real("bonus_discount"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

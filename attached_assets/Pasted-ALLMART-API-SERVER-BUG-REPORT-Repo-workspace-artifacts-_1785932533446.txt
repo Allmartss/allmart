@@ -1,0 +1,311 @@
+ALLMART API-SERVER — BUG REPORT
+================================
+Repo: /workspace/artifacts/api-server/src/**/*.ts
+
+==================================================
+CRITICAL (6)
+==================================================
+
+C1. Authentication is client-side: nb_user cookie is the user ID, unsigned.
+    File: artifacts/api-server/src/lib/auth.ts:7-13
+    Code: getUserFromCookie reads req.cookies["nb_user"], Number(), SELECT users WHERE id = n
+    Impact: Anyone can set nb_user=1 in a cookie and become admin. No token, JWT, HMAC,
+    session record, or link to nb_session. Compromises every protected endpoint.
+    Repro: curl -H "Cookie: nb_user=1" /api/orders → admin's orders.
+
+C2. Unauthenticated file upload serves user-controlled SVG → stored XSS.
+    File: artifacts/api-server/src/routes/storage.ts:47-88, 97-142, 160, 176-212
+    Code: detectMimeType returns "image/svg+xml" when first byte is "<"; serveLocalFile
+    sets that content-type with Cache-Control: public, max-age=31536000, immutable and
+    no Content-Disposition: attachment. POST /storage/uploads/request-url and PUT
+    /storage/local/:uuid have no auth.
+    Impact: Attacker uploads <svg onload=...> → same-origin XSS in any logged-in admin's
+    browser; payload persists in HTTP cache for a year.
+    Repro: PUT /api/storage/local/<uuid> with body starting `<svg onload=...>` → visit
+    /api/storage/local/<uuid> as admin.
+
+C3. HTML-injection in support-ticket forward email → XSS in admin's mail client.
+    File: artifacts/api-server/src/routes/support.ts:19-30
+    Code: `html: `<p>From: ${name} <${email}></p><p>${message.replace(/\n/g,"<br>")}</p>``
+    Impact: name and message are interpolated into HTML with no escHtml. Admin reading
+    forwarded ticket in a webmail client triggers the payload.
+    Repro: POST /api/support-tickets with name="<img src=x onerror=...>".
+
+C4. Stripe callbackUrl from request body, no allowlist.
+    File: artifacts/api-server/src/routes/stripe.ts:13
+    Code: success_url is built from req.body.callbackUrl with no host check.
+    Impact: Shopper pays full amount, browser is redirected to attacker with
+    ?session_id=cs_test_...; attacker replays the id at /stripe/verify and captures
+    the order.
+
+C5. Stripe amount from request body, no comparison to cart subtotal.
+    File: artifacts/api-server/src/routes/stripe.ts:13
+    Code: unit_amount = Math.round(req.body.amount * 100); no comparison to cart total.
+    Impact: Shopper pays $1 on a $200 cart.
+    Repro: POST /api/stripe/initialize {amount: 1} on $200 cart.
+
+C6. /stripe/verify is unauthenticated and accepts shippingAddress override.
+    File: artifacts/api-server/src/routes/stripe.ts:55-109
+    Code: No auth middleware; reads shippingAddress from req.body and uses it to place
+    order against whichever sessionId is in Stripe metadata.
+    Impact: Combined with C4/C5, an unauthenticated attacker who obtains any Stripe
+    session id redirects shipment of the paid cart to themselves.
+
+==================================================
+HIGH (~20)
+==================================================
+
+H1. Order status update has no state-machine guard.
+    File: artifacts/api-server/src/routes/orders.ts:241-258
+    Code: PATCH /orders/:id/status writes status directly with no prior-state check.
+    Impact: Admin flips placed → delivered, skipping confirmation/dispatch; triggers
+    "delivered" email.
+
+H2. Cashback code: amount not capped by cart total.
+    File: artifacts/api-server/src/routes/orders.ts:60-69
+    Code: cashbackDiscount = cb.amount without Math.min(cb.amount, total).
+    Impact: $1000 single-use cashback on a $0.01 cart drains the full $1000; total
+    clamps to 0 but the cashback row is consumed.
+
+H3. No stock check / decrement on order placement.
+    File: artifacts/api-server/src/routes/orders.ts:13-110 + cart.ts:60
+    Code: never reads products.stock, never checks stock >= quantity, never decrements.
+    Impact: Merchant ships unbounded inventory on never-collected COD; 100 concurrent
+    place-orders on stock:1 all succeed.
+
+H4. Cashback usedCount: read-then-write race.
+    File: artifacts/api-server/src/routes/orders.ts:60-69
+    Code: JS check usedCount < maxUses, then UPDATE ... SET usedCount = usedCount + 1
+    with no conditional WHERE.
+    Impact: Two parallel orders both pass the JS check and both increment past maxUses.
+
+H5. Bonus balance: read-then-write race.
+    File: artifacts/api-server/src/routes/orders.ts:73-80 + referral.ts:95-115
+    Code: SELECT bonusBalance, compute newBalance, UPDATE; no row lock, no guard.
+    Impact: Double-spend user bonus under concurrency.
+
+H6. Hidden products buyable.
+    File: artifacts/api-server/src/routes/cart.ts:59-91 + orders.ts:37-54
+    Code: Cart-add and placeOrder don't filter hidden=true; public GETs do.
+    Impact: Admin hides a product; shopper with the URL adds it to cart and orders.
+
+H7. Order-ratings TOCTOU with no try/catch.
+    File: artifacts/api-server/src/routes/order-ratings.ts:30-49
+    Code: SELECT existing then INSERT/UPDATE; no try/catch around insert.
+    Impact: Two parallel ratings 500 with unique-constraint violation; UPDATE branch
+    also doesn't filter by userId so any user can re-rate any orderId.
+
+H8. Resubmit-payment matches by sessionId, not userId.
+    File: artifacts/api-server/src/routes/orders.ts:307-343
+    Code: WHERE id = ? AND sessionId = req.sessionId. nb_session is 1-year, never
+    rotated, shared across users on same browser.
+    Impact: User B on shared kiosk resubmits payment for user A's rejected order with
+    arbitrary screenshot URL.
+
+H9. Order-refunds TOCTOU → duplicate refund rows / 500.
+    File: artifacts/api-server/src/routes/order-refunds.ts:32-37
+
+H10. Telegram bot responds to any chat that messages it.
+    File: artifacts/api-server/src/routes/telegram.ts:10-97
+    Code: Webhook secret checked; chat.id never compared to configured TELEGRAM_CHAT_ID.
+    Impact: Anyone running /orders, /pending, /notifications exfiltrates order data.
+
+H11. No rate-limit on /auth/signin or /auth/signup.
+    File: artifacts/api-server/src/routes/auth.ts:62-157
+    Impact: Credential stuffing; bcrypt CPU burn; email-enumeration via timing.
+
+H12. POST /visitors/track: unauthenticated, no rate limit, fires Telegram admin alert.
+    File: artifacts/api-server/src/routes/visitors.ts:25-99
+    Impact: Loop triggers thousands of "new visitor" Telegram alerts and ip-api.com
+    lookups.
+
+H13. sendTelegram uses parse_mode:"HTML" with no escape.
+    File: artifacts/api-server/src/lib/telegram.ts:9-29
+    Impact: trackingCode, shippingAddress, referrer, page interpolated raw; HTML/JS
+    executes in admin's Telegram client.
+
+H14. Admin-reply email: ticket.name and adminReply interpolated raw.
+    File: artifacts/api-server/src/routes/support.ts:84-91
+    Impact: XSS in attacker's mailbox.
+
+H15. sendOrderEmail: buyer opts.name interpolated raw into template.
+    File: artifacts/api-server/src/routes/email.ts:148-190
+    Impact: name="<img onerror=...>" executes in self/admin emails.
+
+H16. PATCH /profile has no Zod; name no length cap.
+    File: artifacts/api-server/src/routes/profile.ts:52-86
+    Impact: 10MB name / HTML in emails.
+
+H17. Admin PATCH/POST routes skip Zod.
+    Files: admin-products.ts:15-54, admin.ts:21-55,77-134, users-admin.ts:8-45,
+           landing-pages.ts:14-63, cashback.ts:13-36, bank-settings.ts:33-57
+    Impact: Extra/untyped fields land in Drizzle .set(...); tier:99999, stock:-1,
+    javascript: imageUrl, etc.
+
+H18. Stripe /stripe/initialize: unauth, no idempotency key.
+    File: artifacts/api-server/src/routes/stripe.ts:12-53
+
+H19. paymentScreenshotUrl unvalidated; javascript:/attacker URLs accepted.
+    File: artifacts/api-server/src/routes/orders.ts:180-238, 307-343
+
+H20. receiverEmail/Name/Phone unvalidated; order email interpolates raw.
+    File: artifacts/api-server/src/routes/orders.ts:180-238 + email.ts:148-190
+
+H21. placeOrderForSession: no transaction.
+    File: artifacts/api-server/src/routes/orders.ts:13-110
+    Impact: SELECT cart → INSERT order → DELETE cart are three separate statements;
+    crash between INSERT and DELETE leaves phantom items; concurrent add changes
+    contents mid-flight.
+
+H22. Currency hard-coded USD on Stripe line items / orders.
+    File: artifacts/api-server/src/routes/orders.ts:90 + chat.ts:498-540
+    Impact: Non-USD carts silently converted; buyers over/under-charged.
+
+H23. Chat LLM Drizzle immutability bug.
+    File: artifacts/api-server/src/routes/chat.ts:163-169
+    Code: const q = db.select().from(...); if (category) q.where(...); — q.where()
+    is immutable so the call result is discarded; LLM gets full catalog when it asked
+    for one category. Silently wrong.
+
+H24. Stripe success_url/cancel_url from Host/x-forwarded-proto.
+    File: artifacts/api-server/src/routes/chat.ts:506-507
+    Impact: Behind no proxy, attacker sets Host:attacker.com → 2nd payment-hijack.
+
+H25. /storage/objects/* ACL check commented out.
+    File: artifacts/api-server/src/routes/storage.ts:257-299
+    Impact: All "private" files publicly readable by anyone who can guess the path.
+
+H26. setWebhook secret_token silently "": webhooks open.
+    File: artifacts/api-server/src/lib/telegram.ts:32-43
+    Impact: Anyone POSTing to the webhook URL triggers /orders, /pending,
+    /notifications.
+
+==================================================
+MEDIUM (~20)
+==================================================
+
+M1. /support-tickets: no rate-limit, no length cap on name/subject/message,
+    no captcha. Loop drains Brevo/SMTP quota.
+    File: artifacts/api-server/src/routes/support.ts:19-30
+
+M2. Campaign and order-email sends: no per-recipient throttle, no batch cap,
+    no unsubscribe header check.
+    File: email-campaigns.ts (~send) + orders.ts:218-238, 264-300
+
+M3. /admin/orders/export leaks customer PII in CSV (receiverEmail, receiverPhone,
+    paymentNote, full shipping address). Combined with C1: any attacker.
+    File: artifacts/api-server/src/routes/orders.ts:166-178 +
+          orders-export.ts:61-92
+
+M4. Campaign block renderer: CSS injection via headerBgColor, javascript: URLs.
+    escHtml missing single-quote escape.
+    File: artifacts/api-server/src/routes/email-campaigns.ts:12-57, 116-163
+
+M5. CSV import accepts status, total, paymentVerified straight from the file.
+    File: artifacts/api-server/src/routes/orders-export.ts:94-194
+
+M6. POST /api/subscribe: no double-opt-in, no unsubscribe token; bulk victim
+    signups.
+    File: artifacts/api-server/src/routes/subscriptions.ts:9-24
+
+M7. Missing paymentMethod silently defaults to pay_on_delivery.
+    File: artifacts/api-server/src/routes/chat.ts:482-617
+
+M8. Order status changes write no audit row.
+    File: artifacts/api-server/src/routes/orders.ts:241-305
+
+M9. /email/order-status and /email/test are unauthenticated.
+    File: artifacts/api-server/src/routes/email.ts:243-269
+    Impact: Phishing primitive from @allmart.com.
+
+M10. /settings/bank returns admin's bank details unauthenticated.
+    File: artifacts/api-server/src/routes/bank-settings.ts:8-31
+
+M11. /cashback/validate is public; brute-force enum of codes.
+    File: artifacts/api-server/src/routes/cashback.ts:38-48
+
+M12. Referal code generated with Math.random(). Predictable.
+    File: artifacts/api-server/src/routes/auth.ts:21-37
+
+M13. referralCode read from raw body, not Zod → self-referral spam.
+    File: artifacts/api-server/src/routes/auth.ts:70
+
+M14. PATCH /auth/password has no Zod; length < 6 only check.
+    File: artifacts/api-server/src/routes/auth.ts:175-196
+
+M15. /products q=% dumps full catalog (LIKE wildcard not escaped).
+    File: artifacts/api-server/src/routes/products.ts:37-64
+
+M16. Anonymous → signup orders orphaned (no migration to claim them under new userId).
+    File: artifacts/api-server/src/routes/orders.ts:166-178
+
+M17. placeOrderForSession TOCTOU on cart select→insert→delete.
+    File: artifacts/api-server/src/routes/orders.ts:107
+
+M18. Chat add_to_cart / preAddedProduct: non-atomic select+update.
+    File: artifacts/api-server/src/routes/chat.ts:225-249, 419-461
+
+M19. settings.value Number() throws on NaN; signup inserts crash.
+    File: artifacts/api-server/src/routes/auth.ts:88, 105
+
+M20. Cache-Control public, max-age=31536000, immutable on sniffed mime → persistent
+    stored-XSS via browser cache.
+    File: artifacts/api-server/src/routes/storage.ts:186-189
+
+==================================================
+LOW (~8)
+==================================================
+
+L1. Storage size limit not cleanly enforced; socket buffers.
+    File: artifacts/api-server/src/routes/storage.ts:107-116
+
+L2. safeLocalPath second branch unreachable — dead code.
+    File: artifacts/api-server/src/routes/storage.ts:30-36
+
+L3. Stripe error String(err) leaks detail in 502.
+    File: artifacts/api-server/src/routes/stripe.ts:51
+
+L4. Stripe-verified orders set placedBy:"user" instead of "ai" for chat path.
+    File: artifacts/api-server/src/routes/stripe.ts:91
+
+L5. Chat LLM Number(args[...]) can be NaN → eq(_, NaN) crashes tool loop.
+    File: artifacts/api-server/src/routes/chat.ts:420-421
+
+L6. 5 LLM hops × unbounded tool_calls = cost-DoS.
+    File: artifacts/api-server/src/routes/chat.ts:323
+
+L7. recentOrdersSummary leaks across shared sessions via system prompt.
+    File: artifacts/api-server/src/routes/chat.ts:280-289
+
+L8. bcrypt cost 10 below OWASP ≥12.
+    File: artifacts/api-server/src/routes/auth.ts:79
+
+L9. Order byId.get(i.productId)! non-null assert crashes on since-deleted product,
+    after cashback/bonus have already mutated.
+    File: artifacts/api-server/src/routes/orders.ts:45
+
+L10. parse_mode:"HTML" + caller text → layout-injection in admin Telegram.
+    File: artifacts/api-server/src/lib/telegram.ts:16-19
+
+L11. /email/order-status not gated by role; chaining with C1 → email-as-attacker-channel.
+    File: artifacts/api-server/src/routes/email.ts:243-269
+
+L12. CreateProductBody Zod bypassed; out-of-range rating written.
+    File: artifacts/api-server/src/routes/products.ts:10-35
+
+==================================================
+CROSS-CUTTING / RECURRING PATTERNS
+==================================================
+
+- Read-then-write races everywhere (cashback, bonus, cart, ratings, refunds,
+  gifts, referral claim). Need: row-level locks, conditional UPDATEs, or
+  transactions.
+- Zod parsing skipped on most admin/write routes. req.body as {…} casts everywhere.
+- No global Express error middleware (app.ts has no use((err,req,res,next)=>...));
+  process.on('unhandledRejection') and 'uncaughtException' not registered.
+- No Stripe webhook handler anywhere; no express.raw body parser for it.
+- cors() called with no options → wildcard Access-Control-Allow-Origin.
+- express.json({limit:"5mb"}) is global; chat can hit it legitimately and 413
+  silently breaks mid-checkout.
+- nb_session cookie never rotated on sign-in/out; sameSessionId across users
+  on shared browser is the root of multiple "ownership" bugs.

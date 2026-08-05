@@ -30,6 +30,7 @@ export async function placeOrderForSession(
     paymentNote?: string;
     bonusApplied?: boolean;
     deferCartClear?: boolean;
+    stripeSessionId?: string;
   },
 ) {
   const items = await db
@@ -108,6 +109,7 @@ export async function placeOrderForSession(
       paymentScreenshotUrl: extras?.paymentScreenshotUrl ?? null,
       paymentNote: extras?.paymentNote ?? null,
       paymentVerified: "pending",
+      stripeSessionId: extras?.stripeSessionId ?? null,
       bonusDiscount,
     })
     .returning();

@@ -161,8 +161,9 @@ async function searchProductsTool(query: string, limit = 6) {
 }
 
 async function getAllProductsTool(category?: string, limit = 12) {
-  const q = db.select().from(productsTable);
-  if (category) q.where(eq(productsTable.category, category.toLowerCase()));
+  const q = category
+    ? db.select().from(productsTable).where(eq(productsTable.category, category.toLowerCase()))
+    : db.select().from(productsTable);
   return q
     .orderBy(desc(productsTable.rating))
     .limit(Math.min(limit, 30));
@@ -521,7 +522,11 @@ router.post("/chat/messages", async (req: Request, res: Response) => {
                 success_url: `${callbackUrl}?session_id={CHECKOUT_SESSION_ID}`,
                 cancel_url: `${callbackUrl}?cancelled=1`,
                 // sessionId in metadata lets /stripe/verify bind back to this cart/session
-                metadata: { sessionId, shippingAddress },
+                metadata: {
+                  sessionId,
+                  shippingAddress,
+                  userId: String(chatUser?.id ?? ""),
+                },
               });
               stripeCheckoutUrl = session.url!;
               messages.push({

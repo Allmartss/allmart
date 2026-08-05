@@ -44,7 +44,7 @@ export default function PaymentCallback() {
           res = await fetch("/api/stripe/verify", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ sessionId: stripeSessionId, shippingAddress: address }),
+            body: JSON.stringify({ sessionId: stripeSessionId }),
           });
         } else {
           setStatus("error");

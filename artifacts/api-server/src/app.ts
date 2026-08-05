@@ -8,6 +8,7 @@ import router from "./routes";
 import { logger } from "./lib/logger";
 import { sessionMiddleware } from "./lib/session";
 import { ensureUploadsDir } from "./lib/localStorageFallback";
+import { trustedOrigins } from "./lib/trusted-origin";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STATIC_DIR = path.resolve(__dirname, "../../storefront/dist/public");
@@ -38,7 +39,18 @@ app.use(
     },
   }),
 );
-app.use(cors());
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || trustedOrigins().has(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error("Origin is not allowed"));
+    },
+    credentials: true,
+  }),
+);
 app.use(cookieParser());
 app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true }));
@@ -52,6 +64,15 @@ app.use(express.static(STOREFRONT_PUBLIC));
 app.use(express.static(STATIC_DIR));
 app.get("/{*path}", (_req, res) => {
   res.sendFile(path.join(STATIC_DIR, "index.html"));
+});
+
+app.use((err: unknown, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  logger.error({ err, path: req.path }, "Unhandled request error");
+  if (res.headersSent) {
+    next(err);
+    return;
+  }
+  res.status(500).json({ error: "Internal error" });
 });
 
 export default app;

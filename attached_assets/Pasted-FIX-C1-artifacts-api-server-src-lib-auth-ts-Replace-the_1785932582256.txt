@@ -1,0 +1,267 @@
+FIX C1 — artifacts/api-server/src/lib/auth.ts
+Replace the unsigned nb_user cookie with an HMAC-signed session token.
+==============================================================
+--- a/src/lib/auth.ts
++++ b/src/lib/auth.ts
+@@
+-import { type Request, type Response, type NextFunction } from "express";
+-import { db, usersTable } from "@workspace/db";
+-import { eq } from "drizzle-orm";
+-
+-export type Role = "buyer" | "admin" | "pm";
+-
+-export async function getUserFromCookie(req: Request) {
+-  const raw = req.cookies?.["nb_user"];
+-  const id = Number(raw);
+-  if (!raw || !Number.isFinite(id)) return null;
+-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+-  return user ?? null;
+-}
++import { createHmac, timingSafeEqual, randomBytes } from "node:crypto";
++import { db, usersTable, sessionsTable } from "@workspace/db";
++import { eq, and, gt } from "drizzle-orm";
++import type { Request, Response, NextFunction } from "express";
++
++const COOKIE = "nb_session_v2";
++const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
++
++function sign(payload: string): string {
++  const secret = process.env["SESSION_SECRET"];
++  if (!secret) throw new Error("SESSION_SECRET is required");
++  return createHmac("sha256", secret).update(payload).digest("base64url");
++}
++
++function pack(uid: number, sid: string): string {
++  const payload = `${uid}.${sid}`;
++  return `${payload}.${sign(payload)}`;
++}
++
++function unpack(token: string | undefined): { uid: number; sid: string } | null {
++  if (!token) return null;
++  const parts = token.split(".");
++  if (parts.length !== 3) return null;
++  const [uidStr, sid, sig] = parts;
++  const expected = sign(`${uidStr}.${sid}`);
++  const a = Buffer.from(sig);
++  const b = Buffer.from(expected);
++  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
++  const uid = Number(uidStr);
++  if (!Number.isFinite(uid)) return null;
++  return { uid, sid };
++}
++
++export async function issueSession(res: Response, userId: number) {
++  const sid = randomBytes(32).toString("base64url");
++  const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
++  await db.insert(sessionsTable).values({ id: sid, userId, expiresAt });
++  res.cookie(COOKIE, pack(userId, sid), {
++    httpOnly: true, secure: true, sameSite: "lax",
++    path: "/", maxAge: SESSION_TTL_MS,
++  });
++}
++
++export async function getUserFromCookie(req: Request) {
++  const t = unpack(req.cookies?.[COOKIE]);
++  if (!t) return null;
++  const [row] = await db
++    .select({ user: usersTable })
++    .from(sessionsTable)
++    .innerJoin(usersTable, eq(usersTable.id, sessionsTable.userId))
++    .where(and(eq(sessionsTable.id, t.sid), gt(sessionsTable.expiresAt, new Date())));
++  return row?.user ?? null;
++}
++
++export type Role = "buyer" | "admin" | "pm";
++
++export function requireRole(...allowed: Role[]) {
++  return async (req: Request, res: Response, next: NextFunction) => {
++    const user = await getUserFromCookie(req);
++    if (!user) {
++      res.status(401).json({ error: "Sign in required" });
++      return;
++    }
++    if (!allowed.includes(user.role as Role)) {
++      res.status(403).json({ error: "Forbidden" });
++      return;
++    }
++    (req as Request & { authUser: typeof user }).authUser = user;
++    next();
++  };
++}
+
+# Then: wherever you currently set nb_user (e.g. auth.ts:114, password-reset.ts:170),
+# replace
+#   res.cookie("nb_user", String(user.id), { httpOnly: true, sameSite: "lax" })
+# with
+#   await issueSession(res, user.id)
+
+# Migration: add a `sessions` table:
+#   CREATE TABLE sessions (
+#     id          text PRIMARY KEY,
+#     user_id     integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+#     expires_at  timestamptz NOT NULL,
+#     created_at  timestamptz NOT NULL DEFAULT now()
+#   );
+#   CREATE INDEX sessions_user_id_idx ON sessions(user_id);
+
+
+==============================================================
+FIX C3 — artifacts/api-server/src/routes/support.ts:29
+Escape user-controlled fields in the support-ticket forward email.
+==============================================================
+--- a/src/routes/support.ts
++++ b/src/routes/support.ts
+@@
+-function escHtml(s: string): string {
+-  return s.replace(/[&<>"]/g, c => `&#${c.charCodeAt(0)};`);
+-}
++function escHtml(s: string): string {
++  return s.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
++}
+ // (add this helper at the top of support.ts)
+
+ # inside POST /support-tickets, line 29:
+-    html: `<p><strong>From:</strong> ${name} &lt;${email}&gt;</p><p><strong>Message:</strong></p><p>${message.replace(/\n/g, "<br>")}</p>`,
++    html: `<p><strong>From:</strong> ${escHtml(name)} &lt;${escHtml(email)}&gt;</p><p><strong>Message:</strong></p><p>${escHtml(message).replace(/\n/g, "<br>")}</p>`,
+
+ # inside PATCH /admin/support-tickets/:id, line 89:
+-        html: `<p>Hi ${ticket.name},</p><p>Here is our response to your support request:</p><blockquote>${adminReply.replace(/\n/g, "<br>")}</blockquote><p>— AllMart Support Team</p>`,
++        html: `<p>Hi ${escHtml(ticket.name)},</p><p>Here is our response to your support request:</p><blockquote>${escHtml(adminReply ?? "").replace(/\n/g, "<br>")}</blockquote><p>— AllMart Support Team</p>`,
+
+
+==============================================================
+FIX C2 — artifacts/api-server/src/routes/storage.ts
+Require auth on upload routes and treat SVG as attachment, not image.
+==============================================================
+--- a/src/routes/storage.ts
++++ b/src/routes/storage.ts
+@@
+-import { Router, type Request, type Response } from "express";
++import { Router, type Request, type Response } from "express";
++import { requireRole, getUserFromCookie } from "../lib/auth";
+@@
+-router.post("/storage/uploads/request-url", async (req, res) => { ... });
+-router.put("/storage/local/:uuid", async (req, res) => { ... });
++router.post("/storage/uploads/request-url", requireRole("buyer", "pm", "admin"), async (req, res) => { ... });
++router.put("/storage/local/:uuid", requireRole("buyer", "pm", "admin"), async (req, res) => { ... });
+
+ # inside detectMimeType, AFTER the SVG branch:
+-  if (buf[0] === 0x3c) return "image/svg+xml";
++  if (buf[0] === 0x3c) return "application/octet-stream"; // refuse to label SVG/HTML as inline image
+
+ # inside serveLocalFile:
+-  res.setHeader("Content-Type", mimeType);
+-  res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+-  res.sendFile(diskPath);
++  // Force any HTML/SVG/XML-type sniff result to attachment, to neutralize stored XSS.
++  const safe = /^(image\/(jpeg|png|gif|webp)|application\/octet-stream)$/.test(mimeType)
++    ? mimeType
++    : "application/octet-stream";
++  res.setHeader("Content-Type", safe);
++  res.setHeader("Content-Disposition", 'attachment; filename="file"');
++  res.setHeader("Cache-Control", "private, no-store");
++  res.sendFile(diskPath);
+
+ # Also: re-validate MIME by magic bytes on S3 mirror; reject Content-Type
+ # the client claims when uploading (lines 130-131):
+-  ContentType: req.headers["content-type"]
++  ContentType: "application/octet-stream"  // set by server after re-sniff on PUT completion
+
+
+==============================================================
+FIX C4 + C5 + C6 — artifacts/api-server/src/routes/stripe.ts
+Close the payment-hijack chain: callbackUrl allowlist, amount = cart total,
+require auth + ownership on /verify.
+==============================================================
+--- a/src/routes/stripe.ts
++++ b/src/routes/stripe.ts
+@@
+-import { Router, type IRouter, type Request, type Response } from "express";
+-import Stripe from "stripe";
+-import { db, /* ... */ } from "@workspace/db";
+-import { getUserFromCookie } from "../lib/auth";
++import { Router, type IRouter, type Request, type Response } from "express";
++import Stripe from "stripe";
++import { db, /* ... */ } from "@workspace/db";
++import { getUserFromCookie, requireRole } from "../lib/auth";
+
++# Trusted origins allowed as Stripe success/cancel redirect targets.
++# Pull from env (comma-separated) so production can override per domain.
++function allowedOrigins(): Set<string> {
++  return new Set((process.env["APP_URL"] ?? "http://localhost:3000")
++    .split(",").map(s => new URL(s.trim()).origin));
++}
++function isAllowedUrl(url: string): boolean {
++  try {
++    const u = new URL(url);
++    return allowedOrigins().has(u.origin);
++  } catch { return false; }
++}
+
+-router.post("/stripe/initialize", async (req, res) => {
+-  const { callbackUrl, email, amount, ... } = req.body as { ... };
++router.post("/stripe/initialize", requireRole("buyer", "pm", "admin"), async (req, res) => {
++  const { callbackUrl, email } = req.body as { callbackUrl?: string; email?: string };
++  if (!callbackUrl || !isAllowedUrl(callbackUrl)) {
++    res.status(400).json({ error: "Invalid callbackUrl" });
++    return;
++  }
++  // amount is computed server-side from cart subtotal — DO NOT trust client.
++  const cartSubtotal = await computeCartSubtotal(req.sessionId); // helper you already have
++  const amount = cartSubtotal;
+
+-router.post("/stripe/verify", async (req, res) => {
+-  const { sessionId, shippingAddress } = req.body as { ... };
++router.post("/stripe/verify", requireRole("buyer", "pm", "admin"), async (req, res) => {
++  const { sessionId } = req.body as { sessionId?: string };
++  if (!sessionId) { res.status(400).json({ error: "sessionId required" }); return; }
++  // shippingAddress comes from the Stripe session metadata that YOU set in /initialize,
++  // not from the request body. Never trust the body for fulfillment inputs.
++  const stripeSession = await stripe.checkout.sessions.retrieve(sessionId);
++  const shippingAddress = stripeSession.metadata?.shippingAddress;
+
++  // Optional but recommended: idempotency on the verify path.
++  const order = await db.transaction(async tx => {
++    const existing = await tx.select().from(ordersTable)
++      .where(eq(ordersTable.stripeSessionId, sessionId)).limit(1);
++    if (existing[0]) return existing[0];
++    return placeOrderForSession({
++      shippingAddress,
++      placedBy: stripeSession.metadata?.placedBy === "ai" ? "ai" : "user",
++      stripeSessionId: sessionId,
++      amount: stripeSession.amount_total! / 100,
++      userId: req.authUser!.id,
++      sessionId: req.sessionId,
++    }, tx);
++  });
+
+==============================================================
+Plus (cross-cutting, do once and only once):
+==============================================================
+# 1) Stop signing cookies without `secure: true` and without a secret.
+#    SESSION_SECRET is required (see FIX C1).
+# 2) Add rate limiter to /auth/signin and /auth/signup (HIGH #12).
+#    Use rate-limit.ts you already have. 5 attempts / 15 min / IP+email.
+# 3) Add a global Express error middleware in app.ts:
+#      app.use((err, req, res, next) => {
+#        logger.error({ err }, "unhandled");
+#        if (res.headersSent) return next(err);
+#        res.status(500).json({ error: "Internal error" });
+#      });
+#    and register process.on('unhandledRejection', ...) + 'uncaughtException'.
+# 4) Set Access-Control-Allow-Origin to your APP_URL, not *.
+#    Replace `app.use(cors())` with:
+#      app.use(cors({ origin: process.env.APP_URL, credentials: true }));
+# 5) Lock down /email/test and /email/order-status behind requireRole("admin"),
+#    or remove them. Same for bank-settings.ts GET (bank-details public leak).
+
+==============================================================
+Verification after applying:
+==============================================================
+# - pnpm typecheck (must be clean).
+# - Manual: curl -H "Cookie: nb_user=1" /api/orders → 401 (was 200 with admin's orders).
+# - Upload <svg> file → response Content-Disposition: attachment (was inline image).
+# - Submit a support ticket with name containing <script> → forwarded email body
+#   shows &lt;script&gt; (literal text), no execution.
+# - Stripe initialize with callbackUrl=https://attacker.com → 400.
+# - Stripe verify with shippingAddress in body → ignored; taken from Stripe metadata.

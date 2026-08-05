@@ -3,20 +3,13 @@ import { db, usersTable, referralsTable, settingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { SignUpBody, SignInBody } from "@workspace/api-zod";
-import { getUserFromCookie } from "../lib/auth";
+import { clearSession, getUserFromCookie, issueSession } from "../lib/auth";
 import { sendEmail } from "./email";
 import { loadTemplate, renderTemplate } from "./email-templates";
 import { logger } from "../lib/logger";
+import { authAttemptLimiter } from "../lib/rate-limit";
 
 const router: IRouter = Router();
-
-const AUTH_COOKIE = "nb_user";
-const COOKIE_OPTS = {
-  httpOnly: true,
-  sameSite: "lax" as const,
-  maxAge: 1000 * 60 * 60 * 24 * 30,
-  path: "/",
-};
 
 function generateReferralCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -67,6 +60,11 @@ router.post("/auth/signup", async (req: Request, res: Response) => {
   }
   const { email, name, password } = parsed.data;
   const normalized = email.trim().toLowerCase();
+  const ip = req.ip || req.socket.remoteAddress || "unknown";
+  if (!authAttemptLimiter.allow(`${ip}:${normalized}`)) {
+    res.status(429).json({ error: "Too many authentication attempts. Try again later." });
+    return;
+  }
   const refCode = (req.body as { referralCode?: string }).referralCode?.trim().toUpperCase() ?? null;
 
   const [existing] = await db.select().from(usersTable).where(eq(usersTable.email, normalized));
@@ -111,7 +109,7 @@ router.post("/auth/signup", async (req: Request, res: Response) => {
     }).onConflictDoNothing();
   }
 
-  res.cookie(AUTH_COOKIE, String(user!.id), COOKIE_OPTS);
+  await issueSession(res, user!.id);
   res.json(publicUser(user!));
 
   // Welcome email — fire and forget
@@ -133,6 +131,11 @@ router.post("/auth/signin", async (req: Request, res: Response) => {
   }
   const { email, password } = parsed.data;
   const normalized = email.trim().toLowerCase();
+  const ip = req.ip || req.socket.remoteAddress || "unknown";
+  if (!authAttemptLimiter.allow(`${ip}:${normalized}`)) {
+    res.status(429).json({ error: "Too many authentication attempts. Try again later." });
+    return;
+  }
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.email, normalized));
   if (!user) {
@@ -145,7 +148,7 @@ router.post("/auth/signin", async (req: Request, res: Response) => {
     return;
   }
 
-  res.cookie(AUTH_COOKIE, String(user.id), COOKIE_OPTS);
+  await issueSession(res, user.id);
   res.json(publicUser(user));
 
   // Login notification — fire and forget
@@ -156,19 +159,13 @@ router.post("/auth/signin", async (req: Request, res: Response) => {
   }).catch((err) => { logger.error({ err, to: user.email }, "Login notification email failed"); });
 });
 
-router.post("/auth/signout", (_req: Request, res: Response) => {
-  res.clearCookie(AUTH_COOKIE, { path: "/" });
+router.post("/auth/signout", async (req: Request, res: Response) => {
+  await clearSession(req, res);
   res.status(204).end();
 });
 
 router.get("/auth/me", async (req: Request, res: Response) => {
-  const raw = req.cookies?.[AUTH_COOKIE];
-  const id = Number(raw);
-  if (!raw || !Number.isFinite(id)) {
-    res.json({ user: null });
-    return;
-  }
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+  const user = await getUserFromCookie(req);
   res.json({ user: user ? publicUser(user) : null });
 });
 

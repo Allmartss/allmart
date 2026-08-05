@@ -9,6 +9,7 @@ import {
   buildOrderTableHtml,
   buildAlertTableHtml,
 } from "./email-templates";
+import { requireRole } from "../lib/auth";
 
 const router: IRouter = Router();
 
@@ -267,7 +268,7 @@ export async function sendSupportCaseStatusEmail(opts: {
 // Routes
 // ---------------------------------------------------------------------------
 
-router.post("/email/order-status", async (req: Request, res: Response) => {
+router.post("/email/order-status", requireRole("admin"), async (req: Request, res: Response) => {
   const { to, name, orderStatus, trackingCode, total, currency, shippingAddress } = req.body as {
     to: string; name: string; orderStatus: string;
     trackingCode: string; total: number; currency: string; shippingAddress: string;
@@ -280,7 +281,7 @@ router.post("/email/order-status", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/email/test", async (req: Request, res: Response) => {
+router.post("/email/test", requireRole("admin"), async (req: Request, res: Response) => {
   const { to } = req.body as { to?: string };
   if (!to) { res.status(400).json({ error: "to required" }); return; }
   try {

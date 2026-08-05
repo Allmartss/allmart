@@ -11,7 +11,7 @@ router.post("/telegram/webhook", async (req: Request, res: Response) => {
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET ?? "";
   const incoming = req.headers["x-telegram-bot-api-secret-token"] as string;
 
-  if (secret && incoming !== secret) {
+  if (!secret || incoming !== secret) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }
@@ -19,6 +19,13 @@ router.post("/telegram/webhook", async (req: Request, res: Response) => {
   const body = req.body as {
     message?: { text?: string; chat?: { id: number } };
   };
+  if (
+    !process.env.TELEGRAM_CHAT_ID ||
+    String(body.message?.chat?.id ?? "") !== String(process.env.TELEGRAM_CHAT_ID)
+  ) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
 
   const text = body.message?.text?.trim() ?? "";
 

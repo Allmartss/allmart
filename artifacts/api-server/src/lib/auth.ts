@@ -1,15 +1,86 @@
+import { createHmac, timingSafeEqual, randomBytes } from "node:crypto";
 import { type Request, type Response, type NextFunction } from "express";
-import { db, usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, usersTable, sessionsTable } from "@workspace/db";
+import { and, eq, gt } from "drizzle-orm";
 
 export type Role = "buyer" | "admin" | "pm";
 
+const COOKIE = "nb_session_v2";
+const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30;
+
+function sign(payload: string): string {
+  const secret = process.env["SESSION_SECRET"];
+  if (!secret) throw new Error("SESSION_SECRET is required");
+  return createHmac("sha256", secret).update(payload).digest("base64url");
+}
+
+function pack(uid: number, sid: string): string {
+  const payload = `${uid}.${sid}`;
+  return `${payload}.${sign(payload)}`;
+}
+
+function unpack(token: string | undefined): { uid: number; sid: string } | null {
+  if (!token) return null;
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  const [uidStr, sid, signature] = parts;
+  if (!uidStr || !sid || !signature) return null;
+
+  const expected = sign(`${uidStr}.${sid}`);
+  const actualBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expected);
+  if (
+    actualBuffer.length !== expectedBuffer.length ||
+    !timingSafeEqual(actualBuffer, expectedBuffer)
+  ) {
+    return null;
+  }
+
+  const uid = Number(uidStr);
+  if (!Number.isSafeInteger(uid) || uid <= 0) return null;
+  return { uid, sid };
+}
+
+export async function issueSession(res: Response, userId: number) {
+  const sid = randomBytes(32).toString("base64url");
+  const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
+  await db.insert(sessionsTable).values({ id: sid, userId, expiresAt });
+  res.cookie(COOKIE, pack(userId, sid), {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: SESSION_TTL_MS,
+  });
+  res.clearCookie("nb_user", { path: "/" });
+}
+
 export async function getUserFromCookie(req: Request) {
-  const raw = req.cookies?.["nb_user"];
-  const id = Number(raw);
-  if (!raw || !Number.isFinite(id)) return null;
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id));
-  return user ?? null;
+  const token = unpack(req.cookies?.[COOKIE]);
+  if (!token) return null;
+
+  const [row] = await db
+    .select({ user: usersTable })
+    .from(sessionsTable)
+    .innerJoin(usersTable, eq(usersTable.id, sessionsTable.userId))
+    .where(
+      and(
+        eq(sessionsTable.id, token.sid),
+        eq(sessionsTable.userId, token.uid),
+        gt(sessionsTable.expiresAt, new Date()),
+      ),
+    );
+  return row?.user ?? null;
+}
+
+export async function clearSession(req: Request, res: Response) {
+  const token = unpack(req.cookies?.[COOKIE]);
+  if (token) {
+    await db.delete(sessionsTable).where(eq(sessionsTable.id, token.sid));
+  }
+  res.clearCookie(COOKIE, { path: "/" });
+  // Invalidate the old unsigned cookie if one is still present.
+  res.clearCookie("nb_user", { path: "/" });
 }
 
 export function requireRole(...allowed: Role[]) {

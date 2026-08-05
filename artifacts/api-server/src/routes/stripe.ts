@@ -2,22 +2,26 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import Stripe from "stripe";
 import { placeOrderForSession, sendPlacedEmailAndNotification } from "./orders";
 import { serializeOrder } from "../lib/serializers";
-import { getUserFromCookie } from "../lib/auth";
+import { getUserFromCookie, requireRole } from "../lib/auth";
 import { sendTelegram } from "../lib/telegram";
+import { buildCart } from "./cart";
+import { trustedOrigins, isTrustedUrl } from "../lib/trusted-origin";
+import { db, ordersTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 
 const router: IRouter = Router();
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "no-key-set");
 
-router.post("/stripe/initialize", async (req: Request, res: Response) => {
-  const { email, amount, callbackUrl } = req.body as {
+router.post("/stripe/initialize", requireRole("buyer", "pm", "admin"), async (req: Request, res: Response) => {
+  const { email, callbackUrl, shippingAddress } = req.body as {
     email: string;
-    amount: number;
     callbackUrl: string;
+    shippingAddress: string;
   };
 
-  if (!email || !amount || !callbackUrl) {
-    res.status(400).json({ error: "email, amount and callbackUrl required" });
+  if (!email || !callbackUrl || !shippingAddress || shippingAddress.length > 2000 || !isTrustedUrl(callbackUrl)) {
+    res.status(400).json({ error: "email, shippingAddress, and a trusted callbackUrl are required" });
     return;
   }
 
@@ -27,6 +31,16 @@ router.post("/stripe/initialize", async (req: Request, res: Response) => {
   }
 
   try {
+    const cart = await buildCart(req.sessionId);
+    if (cart.subtotal <= 0) {
+      res.status(400).json({ error: "Cart is empty or total is zero" });
+      return;
+    }
+    const callbackOrigin = new URL(callbackUrl).origin;
+    if (!trustedOrigins().has(callbackOrigin)) {
+      res.status(400).json({ error: "Invalid callbackUrl" });
+      return;
+    }
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
@@ -36,14 +50,18 @@ router.post("/stripe/initialize", async (req: Request, res: Response) => {
           price_data: {
             currency: "usd",
             product_data: { name: "AllMart Order" },
-            unit_amount: Math.round(amount * 100),
+            unit_amount: Math.round(cart.subtotal * 100),
           },
           quantity: 1,
         },
       ],
       success_url: `${callbackUrl}?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${callbackUrl}?cancelled=1`,
-      metadata: { sessionId: req.sessionId },
+      metadata: {
+        sessionId: req.sessionId,
+        userId: String((req as Request & { authUser?: { id: number } }).authUser?.id ?? ""),
+        shippingAddress,
+      },
     });
 
     res.json({ checkoutUrl: session.url, sessionId: session.id });
@@ -52,10 +70,9 @@ router.post("/stripe/initialize", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/stripe/verify", async (req: Request, res: Response) => {
-  const { sessionId, shippingAddress: bodyShippingAddress } = req.body as {
+router.post("/stripe/verify", requireRole("buyer", "pm", "admin"), async (req: Request, res: Response) => {
+  const { sessionId } = req.body as {
     sessionId: string;
-    shippingAddress?: string;
   };
 
   if (!sessionId) {
@@ -71,11 +88,28 @@ router.post("/stripe/verify", async (req: Request, res: Response) => {
       return;
     }
 
-    // shippingAddress can come from the request body (storefront flow) or
-    // from Stripe session metadata (chat flow)
-    const shippingAddress =
-      bodyShippingAddress ??
-      (session.metadata?.["shippingAddress"] as string | undefined);
+    const metadataUserId = Number(session.metadata?.["userId"] ?? "");
+    const user = await getUserFromCookie(req);
+    if (!user || !Number.isSafeInteger(metadataUserId) || metadataUserId !== user.id) {
+      res.status(403).json({ error: "Payment session does not belong to this account" });
+      return;
+    }
+
+    const existing = await db
+      .select()
+      .from(ordersTable)
+      .where(eq(ordersTable.stripeSessionId, sessionId))
+      .limit(1);
+    if (existing[0]) {
+      res.status(200).json(serializeOrder(existing[0]));
+      return;
+    }
+
+    const shippingAddress = session.metadata?.["shippingAddress"] as string | undefined;
+    if (!shippingAddress || shippingAddress.length > 2000) {
+      res.status(400).json({ error: "Shipping address is required" });
+      return;
+    }
 
     if (!shippingAddress) {
       res.status(400).json({ error: "shippingAddress required" });
@@ -87,10 +121,10 @@ router.post("/stripe/verify", async (req: Request, res: Response) => {
     const metaSessionId = session.metadata?.["sessionId"] as string | undefined;
     const orderSessionId = metaSessionId ?? req.sessionId;
 
-    const user = await getUserFromCookie(req);
-    const placed = await placeOrderForSession(orderSessionId, shippingAddress, "user", user?.id, {
+    const placed = await placeOrderForSession(orderSessionId, shippingAddress, "user", user.id, {
       paymentMethod: "stripe",
       deferCartClear: true,
+      stripeSessionId: sessionId,
     });
     if ("error" in placed) {
       res.status(400).json({ error: placed.error });
@@ -107,7 +141,8 @@ router.post("/stripe/verify", async (req: Request, res: Response) => {
 
     res.status(201).json(serializeOrder(placed.order));
   } catch (err) {
-    res.status(502).json({ error: "Stripe verification failed", detail: String(err) });
+    req.log.error({ err }, "Stripe verification failed");
+    res.status(502).json({ error: "Stripe verification failed" });
   }
 });
 

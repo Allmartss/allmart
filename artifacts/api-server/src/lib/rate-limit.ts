@@ -55,10 +55,13 @@ export const verificationResendLimiter = new RateLimiter({ windowMs: 10 * 60_000
 export const verificationAttemptLimiter = new RateLimiter({ windowMs: 30 * 60_000, max: 10 });
 /** 3 password-reset requests per email per 15 minutes */
 export const passwordResetRequestLimiter = new RateLimiter({ windowMs: 15 * 60_000, max: 3 });
+/** 5 combined sign-in/sign-up attempts per IP and email per 15 minutes */
+export const authAttemptLimiter = new RateLimiter({ windowMs: 15 * 60_000, max: 5 });
 
 // Prune stale buckets every 15 minutes
 setInterval(() => {
   verificationResendLimiter.prune();
   verificationAttemptLimiter.prune();
   passwordResetRequestLimiter.prune();
+  authAttemptLimiter.prune();
 }, 15 * 60_000).unref();

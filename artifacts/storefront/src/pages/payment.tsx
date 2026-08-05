@@ -210,8 +210,8 @@ export default function Payment() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
-          amount: cart.subtotal,
           callbackUrl: getCallbackUrl(),
+          shippingAddress: address,
         }),
       });
       const data = await res.json() as { checkoutUrl?: string; sessionId?: string; error?: string };

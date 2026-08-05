@@ -17,3 +17,4 @@ export * from "./email-campaigns";
 export * from "./order-reports";
 export * from "./order-refunds";
 export * from "./order-ratings";
+export * from "./sessions";

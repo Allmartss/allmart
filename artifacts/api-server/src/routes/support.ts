@@ -7,6 +7,10 @@ import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
+function escHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => `&#${character.charCodeAt(0)};`);
+}
+
 router.post("/support-tickets", async (req: Request, res: Response) => {
   const user = await getUserFromCookie(req);
   const { name, email, subject, message } = req.body as {
@@ -26,7 +30,7 @@ router.post("/support-tickets", async (req: Request, res: Response) => {
     from: "AllMart Support <support@allmart.com>",
     to: "support@allmart.com",
     subject: `[Support] ${subject}`,
-    html: `<p><strong>From:</strong> ${name} &lt;${email}&gt;</p><p><strong>Message:</strong></p><p>${message.replace(/\n/g, "<br>")}</p>`,
+    html: `<p><strong>From:</strong> ${escHtml(name)} &lt;${escHtml(email)}&gt;</p><p><strong>Message:</strong></p><p>${escHtml(message).replace(/\n/g, "<br>")}</p>`,
   }).catch((err) => { logger.error({ err }, "Support ticket forward email failed"); });
 
   res.status(201).json(ticket);
@@ -86,7 +90,7 @@ router.patch(
         from: "AllMart Support <support@allmart.com>",
         to: ticket.email,
         subject: `Re: ${ticket.subject}`,
-        html: `<p>Hi ${ticket.name},</p><p>Here is our response to your support request:</p><blockquote>${adminReply.replace(/\n/g, "<br>")}</blockquote><p>— AllMart Support Team</p>`,
+        html: `<p>Hi ${escHtml(ticket.name)},</p><p>Here is our response to your support request:</p><blockquote>${escHtml(adminReply).replace(/\n/g, "<br>")}</blockquote><p>— AllMart Support Team</p>`,
       }).catch((err) => { logger.error({ err, to: ticket.email }, "Support reply email failed"); });
     }
 

@@ -4,20 +4,12 @@ import { and, eq, gt, isNull } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 import { RedeemResetCodeBody } from "@workspace/api-zod";
-import { requireRole } from "../lib/auth";
+import { issueSession, requireRole } from "../lib/auth";
 import { sendEmail } from "./email";
 import { logger } from "../lib/logger";
 import { passwordResetRequestLimiter } from "../lib/rate-limit";
 
 const router: IRouter = Router();
-
-const AUTH_COOKIE = "nb_user";
-const COOKIE_OPTS = {
-  httpOnly: true,
-  sameSite: "lax" as const,
-  maxAge: 1000 * 60 * 60 * 24 * 30,
-  path: "/",
-};
 
 const TTL_MS = 30 * 60 * 1000;
 
@@ -167,7 +159,7 @@ router.post("/auth/redeem-reset-code", async (req: Request, res: Response) => {
     .set({ usedAt: new Date() })
     .where(eq(passwordResetCodesTable.id, resetRow.id));
 
-  res.cookie(AUTH_COOKIE, String(user.id), COOKIE_OPTS);
+  await issueSession(res, user.id);
   res.json({ id: user.id, email: user.email, name: user.name, role: user.role });
 });
 

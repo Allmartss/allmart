@@ -6,7 +6,7 @@ import { isSafeMediaUrl } from "../lib/url-validation";
 
 const router: IRouter = Router();
 
-router.get("/settings/bank", async (_req: Request, res: Response) => {
+router.get("/settings/bank", requireRole("buyer", "pm", "admin"), async (_req: Request, res: Response) => {
   const rows = await db
     .select()
     .from(settingsTable)

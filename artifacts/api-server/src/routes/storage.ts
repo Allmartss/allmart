@@ -44,7 +44,7 @@ const LOCAL_UPLOAD_MAX_BYTES = 20 * 1024 * 1024; // 20 MB hard limit
  * The client sends JSON metadata (name, size, contentType) — NOT the file.
  * Then uploads the file directly to the returned presigned URL.
  */
-router.post("/storage/uploads/request-url", async (req: Request, res: Response) => {
+router.post("/storage/uploads/request-url", requireRole("buyer", "pm", "admin"), async (req: Request, res: Response) => {
   const parsed = RequestUploadUrlBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Missing or invalid required fields" });
@@ -94,7 +94,7 @@ router.post("/storage/uploads/request-url", async (req: Request, res: Response) 
  * Only accepts canonical UUID v4 filenames issued by request-url (path-traversal safe).
  * Hard body limit: 20 MB.
  */
-router.put("/storage/local/:uuid", (req: Request, res: Response) => {
+router.put("/storage/local/:uuid", requireRole("buyer", "pm", "admin"), (req: Request, res: Response) => {
   const diskPath = safeLocalPath(req.params.uuid as string);
   if (!diskPath) {
     res.status(400).json({ error: "Invalid upload identifier" });
@@ -126,11 +126,8 @@ router.put("/storage/local/:uuid", (req: Request, res: Response) => {
 
     if (isS3Configured()) {
       const uuid = req.params.uuid as string;
-      const contentType =
-        (req.headers["content-type"] as string | undefined) ??
-        "application/octet-stream";
       fs.promises.readFile(diskPath)
-        .then((buffer) => uploadToS3(uuid, buffer, contentType))
+        .then((buffer) => uploadToS3(uuid, buffer, "application/octet-stream"))
         .then(() => req.log.info({ uuid }, "S3 mirror complete"))
         .catch((err) => req.log.error({ err, uuid }, "S3 mirror failed (file is safe on disk)"));
     }
@@ -157,7 +154,7 @@ function detectMimeType(diskPath: string): string {
     // WebP: 52 49 46 46 ... 57 45 42 50
     if (buf[0] === 0x52 && buf[1] === 0x49 && buf[8] === 0x57 && buf[9] === 0x45) return "image/webp";
     // SVG / XML text
-    if (buf[0] === 0x3c) return "image/svg+xml";
+     if (buf[0] === 0x3c) return "application/octet-stream";
   } catch {
     // ignore read errors — fall through to octet-stream
   }
@@ -184,8 +181,14 @@ async function serveLocalFile(req: Request, res: Response) {
   // 1. Serve from local disk when available
   if (fs.existsSync(diskPath)) {
     const mimeType = detectMimeType(diskPath);
-    res.setHeader("Content-Type", mimeType);
-    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    const inlineMime = /^(image\/(jpeg|png|gif|webp))$/.test(mimeType)
+      ? mimeType
+      : "application/octet-stream";
+    res.setHeader("Content-Type", inlineMime);
+    res.setHeader("Cache-Control", "private, no-store");
+    if (inlineMime === "application/octet-stream") {
+      res.setHeader("Content-Disposition", 'attachment; filename="file"');
+    }
     res.sendFile(diskPath);
     return;
   }
@@ -195,8 +198,9 @@ async function serveLocalFile(req: Request, res: Response) {
     try {
       const s3File = await downloadFromS3(uuid);
       if (s3File) {
-        res.setHeader("Content-Type", s3File.contentType);
-        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        res.setHeader("Content-Type", "application/octet-stream");
+        res.setHeader("Content-Disposition", 'attachment; filename="file"');
+        res.setHeader("Cache-Control", "private, no-store");
         s3File.body.pipe(res);
         return;
       }

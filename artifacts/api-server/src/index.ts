@@ -1,6 +1,10 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 
+if (!process.env["SESSION_SECRET"]) {
+  throw new Error("SESSION_SECRET environment variable is required.");
+}
+
 const rawPort = process.env["PORT"];
 
 if (!rawPort) {
@@ -22,4 +26,13 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+});
+
+process.on("unhandledRejection", (reason) => {
+  logger.error({ err: reason }, "Unhandled promise rejection");
+});
+
+process.on("uncaughtException", (err) => {
+  logger.fatal({ err }, "Uncaught exception");
+  process.exit(1);
 });
