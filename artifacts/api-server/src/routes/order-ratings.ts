@@ -26,29 +26,35 @@ router.post("/order-ratings", async (req: Request, res: Response) => {
     .where(and(eq(ordersTable.id, orderId), eq(ordersTable.userId, user.id)));
   if (!order) { res.status(404).json({ error: "Order not found" }); return; }
 
-  // Upsert: one rating per order (unique constraint on order_id)
-  const existing = await db.select().from(orderRatingsTable)
+  // Ratings are one-time submissions. Do not allow a later request to overwrite
+  // the customer's original feedback.
+  const existing = await db.select({ id: orderRatingsTable.id }).from(orderRatingsTable)
     .where(eq(orderRatingsTable.orderId, orderId));
 
-  let result;
   if (existing.length > 0) {
-    const [updated] = await db.update(orderRatingsTable)
-      .set({ rating: Math.round(rating), comment: comment?.trim() ?? null })
-      .where(eq(orderRatingsTable.orderId, orderId))
-      .returning();
-    result = updated;
-  } else {
-    const [inserted] = await db.insert(orderRatingsTable).values({
-      orderId,
-      userId: user.id,
-      orderTrackingCode: order.trackingCode,
-      rating: Math.round(rating),
-      comment: comment?.trim() ?? null,
-    }).returning();
-    result = inserted;
+    res.status(409).json({ error: "This order has already been rated" });
+    return;
   }
 
-  res.status(201).json(result);
+  const [inserted] = await db.insert(orderRatingsTable).values({
+    orderId,
+    userId: user.id,
+    orderTrackingCode: order.trackingCode,
+    rating: Math.round(rating),
+    comment: comment?.trim() ?? null,
+  }).returning();
+
+  res.status(201).json(inserted);
+});
+
+// User: get all orders this customer has already rated
+router.get("/order-ratings/mine", async (req: Request, res: Response) => {
+  const user = await getUserFromCookie(req);
+  if (!user) { res.status(401).json({ error: "Sign in required" }); return; }
+  const rows = await db.select().from(orderRatingsTable)
+    .where(eq(orderRatingsTable.userId, user.id))
+    .orderBy(desc(orderRatingsTable.createdAt));
+  res.json(rows);
 });
 
 // User: check if order already rated

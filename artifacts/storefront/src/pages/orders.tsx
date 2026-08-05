@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useListOrders, getListOrdersQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -381,7 +381,7 @@ function RefundPanel({ order, onClose }: { order: ExtOrder; onClose: () => void 
 }
 
 /* ─── Rate Order Panel ────────────────────────────────────────────────────── */
-function RatePanel({ order, onClose }: { order: ExtOrder; onClose: () => void }) {
+function RatePanel({ order, onClose, onRated }: { order: ExtOrder; onClose: () => void; onRated: () => void }) {
   const { toast } = useToast();
   const [rating, setRating] = useState(0);
   const [hovered, setHovered] = useState(0);
@@ -398,8 +398,14 @@ function RatePanel({ order, onClose }: { order: ExtOrder; onClose: () => void })
         credentials: "include",
         body: JSON.stringify({ orderId: order.id, rating, comment: comment.trim() || undefined }),
       });
-      if (!res.ok) throw new Error("Failed");
+       if (res.status === 409) {
+         toast({ title: "Order already rated", description: "You can only rate an order once." });
+         onRated();
+         return;
+       }
+       if (!res.ok) throw new Error("Failed");
       toast({ title: "Thank you for your rating!", description: "Your feedback helps us improve." });
+       onRated();
       onClose();
     } catch {
       toast({ title: "Failed to submit rating", variant: "destructive" });
@@ -482,6 +488,28 @@ export default function Orders() {
   const queryClient = useQueryClient();
   const { data: orders, isLoading } = useListOrders();
   const [activePanel, setActivePanel] = useState<{ id: number; type: "report" | "refund" | "rate" } | null>(null);
+  const [ratedOrderIds, setRatedOrderIds] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/order-ratings/mine", { credentials: "include" })
+      .then((res) => res.ok ? res.json() : [])
+      .then((ratings: { orderId: number }[]) => {
+        if (!cancelled) setRatedOrderIds(new Set(ratings.map((rating) => rating.orderId)));
+      })
+      .catch(() => {
+        // The order list remains usable if the optional rating status request fails.
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  function markOrderRated(orderId: number) {
+    setRatedOrderIds((previous) => {
+      const next = new Set(previous);
+      next.add(orderId);
+      return next;
+    });
+  }
 
   function handleResubmitDone() {
     queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
@@ -532,6 +560,7 @@ export default function Orders() {
           const hasScreenshot = !!ext.paymentScreenshotUrl;
           const isRejected = hasScreenshot && pv === "rejected";
           const panel = activePanel?.id === order.id ? activePanel.type : null;
+          const hasRated = ratedOrderIds.has(order.id);
 
           return (
             <Card key={order.id} className="overflow-hidden border-border/50 shadow-sm hover:shadow-md transition-shadow">
@@ -638,11 +667,13 @@ export default function Orders() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className={`gap-1.5 text-xs ${panel === "rate" ? "bg-amber-50 border-amber-300 text-amber-600" : "text-muted-foreground hover:text-amber-600 hover:border-amber-300"}`}
+                     disabled={hasRated}
+                     title={hasRated ? "You have already rated this order" : "Rate this order"}
+                     className={`gap-1.5 text-xs ${hasRated ? "cursor-not-allowed opacity-60" : panel === "rate" ? "bg-amber-50 border-amber-300 text-amber-600" : "text-muted-foreground hover:text-amber-600 hover:border-amber-300"}`}
                     onClick={() => togglePanel(order.id, "rate")}
                   >
                     <Star className="h-3.5 w-3.5" />
-                    Rate Order
+                     {hasRated ? "Rated" : "Rate Order"}
                   </Button>
 
                   {/* View Details */}
@@ -662,7 +693,7 @@ export default function Orders() {
                 <RefundPanel order={ext} onClose={() => setActivePanel(null)} />
               )}
               {panel === "rate" && (
-                <RatePanel order={ext} onClose={() => setActivePanel(null)} />
+                 <RatePanel order={ext} onClose={() => setActivePanel(null)} onRated={() => markOrderRated(order.id)} />
               )}
 
               {/* Resubmit payment (always shown if rejected) */}
