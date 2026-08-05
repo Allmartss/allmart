@@ -325,7 +325,7 @@ function RefundPanel({ order, onClose }: { order: ExtOrder; onClose: () => void 
 
         {/* Image proof upload */}
         <div className="space-y-1">
-          <p className="text-xs font-medium text-violet-700">Upload proof image (optional but recommended)</p>
+          <p className="text-xs font-medium text-violet-700">Upload proof image <span className="text-rose-600">*</span></p>
           <input
             ref={fileRef}
             type="file"
@@ -367,7 +367,7 @@ function RefundPanel({ order, onClose }: { order: ExtOrder; onClose: () => void 
           <Button
             size="sm"
             className="gap-1.5 bg-violet-600 hover:bg-violet-700 text-white"
-            disabled={!reason || !description.trim() || isUploading || submitting}
+            disabled={!reason || !description.trim() || !imageUrl || isUploading || submitting}
             onClick={handleSubmit}
           >
             {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}

@@ -25,6 +25,9 @@ import { AdminHealthWatch } from "@/components/admin-health-watch";
 import { AdminEmailCampaigns } from "@/components/admin-email-campaigns";
 import { AdminEmailTemplates } from "@/components/admin-email-templates";
 import { AdminSiteUiEditor } from "@/components/admin-site-ui-editor";
+import { AdminOrderReports } from "@/components/admin-order-reports";
+import { AdminOrderRefunds } from "@/components/admin-order-refunds";
+import { AdminOrderRatings } from "@/components/admin-order-ratings";
 import {
   ShieldCheck,
   Users as UsersIcon,
@@ -47,6 +50,9 @@ import {
   Mail,
   PenLine,
   Paintbrush,
+  Flag,
+  RotateCcw,
+  Star,
 } from "lucide-react";
 
 type Section =
@@ -71,7 +77,10 @@ type Section =
   | "promotions"
   | "email-campaigns"
   | "email-templates"
-  | "site-ui";
+  | "site-ui"
+  | "order-reports"
+  | "order-refunds"
+  | "order-ratings";
 
 export default function Admin({ section = "dashboard" }: { section?: Section }) {
   const [, setLocation] = useLocation();
@@ -252,6 +261,27 @@ export default function Admin({ section = "dashboard" }: { section?: Section }) 
         <>
           <StaffPageHeader icon={Paintbrush} title="Site UI editor" description="Edit the header, footer, create custom color themes, and apply them site-wide." />
           <AdminSiteUiEditor />
+        </>
+      )}
+
+      {section === "order-reports" && (
+        <>
+          <StaffPageHeader icon={Flag} title="Order reports" description="Review issues customers have reported with their orders and track resolutions." />
+          <AdminOrderReports />
+        </>
+      )}
+
+      {section === "order-refunds" && (
+        <>
+          <StaffPageHeader icon={RotateCcw} title="Refund requests" description="Review refund reasons, product condition details, and uploaded proof before approving or rejecting requests." />
+          <AdminOrderRefunds />
+        </>
+      )}
+
+      {section === "order-ratings" && (
+        <>
+          <StaffPageHeader icon={Star} title="Order ratings" description="See customer ratings and written feedback for completed orders." />
+          <AdminOrderRatings />
         </>
       )}
     </div>

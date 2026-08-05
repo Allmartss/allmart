@@ -18,8 +18,8 @@ router.post("/order-refunds", async (req: Request, res: Response) => {
     imageUrl?: string;
   };
 
-  if (!orderId || !reason?.trim() || !description?.trim()) {
-    res.status(400).json({ error: "orderId, reason, and description are required" });
+  if (!orderId || !reason?.trim() || !description?.trim() || !imageUrl?.trim()) {
+    res.status(400).json({ error: "orderId, reason, description, and proof image are required" });
     return;
   }
 
@@ -42,7 +42,7 @@ router.post("/order-refunds", async (req: Request, res: Response) => {
     orderTrackingCode: order.trackingCode,
     reason: reason.trim(),
     description: description.trim(),
-    imageUrl: imageUrl ?? null,
+    imageUrl: imageUrl.trim(),
   }).returning();
 
   // Notify admins

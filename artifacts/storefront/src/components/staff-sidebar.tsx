@@ -44,6 +44,9 @@ import {
   Mail,
   PenLine,
   Paintbrush,
+  Flag,
+  RotateCcw,
+  Star,
 } from "lucide-react";
 
 type NavItem = {
@@ -72,6 +75,9 @@ const ADMIN_ITEMS: NavItem[] = [
   { href: "/admin/password", label: "Admin password", icon: KeyRound },
   { href: "/admin/health", label: "Service health", icon: Activity },
   { href: "/admin/site-ui", label: "Site UI editor", icon: Paintbrush },
+  { href: "/admin/order-reports", label: "Order reports", icon: Flag },
+  { href: "/admin/order-refunds", label: "Refund requests", icon: RotateCcw },
+  { href: "/admin/order-ratings", label: "Order ratings", icon: Star },
 ];
 
 const PM_ITEMS: NavItem[] = [
