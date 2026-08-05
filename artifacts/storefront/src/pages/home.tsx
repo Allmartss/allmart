@@ -277,15 +277,16 @@ export default function Home() {
 
           {/* Right actions */}
           <div className="flex items-center gap-2 shrink-0">
-            {darkMode && (
-              <button
-                onClick={toggleDark}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
-                aria-label="Light mode"
-              >
-                <Sun className="h-3.5 w-3.5 text-white/70" />
-              </button>
-            )}
+            <button
+              onClick={toggleDark}
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 dark:border-white/20 hover:border-black/20 dark:hover:border-white/40 bg-white dark:bg-white/5 transition-colors"
+              aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {darkMode
+                ? <Sun className="h-3.5 w-3.5 text-white/70" />
+                : <Moon className="h-3.5 w-3.5 text-foreground/60" />
+              }
+            </button>
 
             {me && !isStaff && (
               <span className="[&_button]:bg-transparent [&_button]:hover:bg-black/5 dark:[&_button]:hover:bg-white/10 [&_svg]:text-foreground/60 dark:[&_svg]:text-white/70">
