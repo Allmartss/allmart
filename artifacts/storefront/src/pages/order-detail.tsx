@@ -49,6 +49,9 @@ export default function OrderDetail() {
   ];
   
   const currentStepIndex = steps.findIndex(s => s.id === order.status);
+  const itemSubtotal = order.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+  const cashbackDiscount = order.cashbackDiscount ?? 0;
+  const bonusDiscount = order.bonusDiscount ?? 0;
 
   return (
     <div className="container max-w-screen-xl mx-auto py-12 px-6">
@@ -136,8 +139,20 @@ export default function OrderDetail() {
             <div className="space-y-4 mb-6">
               <div className="flex justify-between text-muted-foreground">
                 <span>Subtotal</span>
-                <span>{new Intl.NumberFormat('en-US', { style: 'currency', currency: order.currency }).format(order.total)}</span>
+                <span>{new Intl.NumberFormat('en-US', { style: 'currency', currency: order.currency }).format(itemSubtotal)}</span>
               </div>
+              {cashbackDiscount > 0 && (
+                <div className="flex justify-between text-primary">
+                  <span>Cashback{order.cashbackCode ? ` (${order.cashbackCode})` : ""}</span>
+                  <span>-{new Intl.NumberFormat('en-US', { style: 'currency', currency: order.currency }).format(cashbackDiscount)}</span>
+                </div>
+              )}
+              {bonusDiscount > 0 && (
+                <div className="flex justify-between text-violet-600">
+                  <span>Bonus balance</span>
+                  <span>-{new Intl.NumberFormat('en-US', { style: 'currency', currency: order.currency }).format(bonusDiscount)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-muted-foreground">
                 <span>Shipping</span>
                 <span>Free</span>

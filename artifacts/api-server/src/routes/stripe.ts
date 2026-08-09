@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import Stripe from "stripe";
-import { placeOrderForSession, sendPlacedEmailAndNotification } from "./orders";
+import { calculateOrderDiscounts, placeOrderForSession, sendPlacedEmailAndNotification } from "./orders";
 import { serializeOrder } from "../lib/serializers";
 import { getUserFromCookie, requireRole } from "../lib/auth";
 import { sendTelegram } from "../lib/telegram";
@@ -14,10 +14,12 @@ const router: IRouter = Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "no-key-set");
 
 router.post("/stripe/initialize", requireRole("buyer", "pm", "admin"), async (req: Request, res: Response) => {
-  const { email, callbackUrl, shippingAddress } = req.body as {
+  const { email, callbackUrl, shippingAddress, cashbackCode, bonusApplied } = req.body as {
     email: string;
     callbackUrl: string;
     shippingAddress: string;
+    cashbackCode?: string;
+    bonusApplied?: boolean;
   };
 
   if (!email || !callbackUrl || !shippingAddress || shippingAddress.length > 2000 || !isTrustedUrl(callbackUrl)) {
@@ -36,6 +38,15 @@ router.post("/stripe/initialize", requireRole("buyer", "pm", "admin"), async (re
       res.status(400).json({ error: "Cart is empty or total is zero" });
       return;
     }
+    const userId = (req as Request & { authUser?: { id: number } }).authUser?.id;
+    const discounts = await calculateOrderDiscounts(cart.subtotal, userId, {
+      cashbackCode,
+      bonusApplied: bonusApplied === true,
+    });
+    if (discounts.total <= 0) {
+      res.status(400).json({ error: "The order total must be greater than zero for Stripe payment" });
+      return;
+    }
     const callbackOrigin = new URL(callbackUrl).origin;
     if (!trustedOrigins().has(callbackOrigin)) {
       res.status(400).json({ error: "Invalid callbackUrl" });
@@ -50,7 +61,7 @@ router.post("/stripe/initialize", requireRole("buyer", "pm", "admin"), async (re
           price_data: {
             currency: "usd",
             product_data: { name: "AllMart Order" },
-            unit_amount: Math.round(cart.subtotal * 100),
+            unit_amount: Math.round(discounts.total * 100),
           },
           quantity: 1,
         },
@@ -59,8 +70,11 @@ router.post("/stripe/initialize", requireRole("buyer", "pm", "admin"), async (re
       cancel_url: `${callbackUrl}?cancelled=1`,
       metadata: {
         sessionId: req.sessionId,
-        userId: String((req as Request & { authUser?: { id: number } }).authUser?.id ?? ""),
+        userId: String(userId ?? ""),
         shippingAddress,
+        cashbackCode: discounts.cashbackCode ?? "",
+        cashbackDiscount: String(discounts.cashbackDiscount ?? 0),
+        bonusDiscount: String(discounts.bonusDiscount ?? 0),
       },
     });
 
@@ -119,9 +133,13 @@ router.post("/stripe/verify", requireRole("buyer", "pm", "admin"), async (req: R
     // For chat-initiated payments, bind back to the originating cart session
     // from Stripe metadata to prevent cross-session order injection.
     const orderSessionId = metaSessionId ?? req.sessionId;
+    const expectedCashbackCode = session.metadata?.["cashbackCode"] || undefined;
+    const expectedBonusApplied = Number(session.metadata?.["bonusDiscount"] ?? 0) > 0;
 
     const placed = await placeOrderForSession(orderSessionId, shippingAddress, "user", user.id, {
       paymentMethod: "stripe",
+      cashbackCode: expectedCashbackCode,
+      bonusApplied: expectedBonusApplied,
       deferCartClear: true,
       stripeSessionId: sessionId,
     });

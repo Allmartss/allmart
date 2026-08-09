@@ -353,6 +353,7 @@ export const ListOrdersResponseItem = zod.object({
   paymentNote: zod.string().nullish(),
   cashbackCode: zod.string().nullish(),
   cashbackDiscount: zod.number().nullish(),
+  bonusDiscount: zod.number().nullish(),
   placedBy: zod.enum(["user", "ai"]),
   createdAt: zod.string(),
   items: zod.array(
@@ -413,6 +414,7 @@ export const GetOrderResponse = zod.object({
   paymentNote: zod.string().nullish(),
   cashbackCode: zod.string().nullish(),
   cashbackDiscount: zod.number().nullish(),
+  bonusDiscount: zod.number().nullish(),
   placedBy: zod.enum(["user", "ai"]),
   createdAt: zod.string(),
   items: zod.array(
@@ -466,6 +468,7 @@ export const UpdateOrderStatusResponse = zod.object({
   paymentNote: zod.string().nullish(),
   cashbackCode: zod.string().nullish(),
   cashbackDiscount: zod.number().nullish(),
+  bonusDiscount: zod.number().nullish(),
   placedBy: zod.enum(["user", "ai"]),
   createdAt: zod.string(),
   items: zod.array(
@@ -541,6 +544,7 @@ export const ListAllOrdersResponseItem = zod.object({
   paymentNote: zod.string().nullish(),
   cashbackCode: zod.string().nullish(),
   cashbackDiscount: zod.number().nullish(),
+  bonusDiscount: zod.number().nullish(),
   placedBy: zod.enum(["user", "ai"]),
   createdAt: zod.string(),
   items: zod.array(
@@ -945,6 +949,7 @@ export const SendChatMessageResponse = zod.object({
       paymentNote: zod.string().nullish(),
       cashbackCode: zod.string().nullish(),
       cashbackDiscount: zod.number().nullish(),
+      bonusDiscount: zod.number().nullish(),
       placedBy: zod.enum(["user", "ai"]),
       createdAt: zod.string(),
       items: zod.array(

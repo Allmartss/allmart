@@ -25,6 +25,7 @@ export interface Order {
   paymentNote?: string | null;
   cashbackCode?: string | null;
   cashbackDiscount?: number | null;
+  bonusDiscount?: number | null;
   placedBy: OrderPlacedBy;
   createdAt: string;
   items: OrderItem[];

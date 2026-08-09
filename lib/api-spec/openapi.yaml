@@ -884,6 +884,9 @@ components:
         cashbackDiscount:
           type: number
           nullable: true
+        bonusDiscount:
+          type: number
+          nullable: true
         placedBy: { type: string, enum: [user, ai] }
         createdAt: { type: string }
         items:

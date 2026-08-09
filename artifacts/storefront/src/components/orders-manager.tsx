@@ -58,6 +58,7 @@ type ExtendedOrder = Order & {
   shippingFee?: number | null;
   cashbackDiscount?: number;
   cashbackCode?: string;
+  bonusDiscount?: number | null;
   paymentScreenshotUrl?: string;
   paymentNote?: string;
   paymentVerified?: string;
@@ -361,6 +362,12 @@ export function OrdersManager() {
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Cashback {ext.cashbackCode ? `(${ext.cashbackCode})` : ""}</span>
                             <span className="text-primary">-{fmt(ext.cashbackDiscount)}</span>
+                          </div>
+                        )}
+                        {ext.bonusDiscount != null && ext.bonusDiscount > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Bonus balance</span>
+                            <span className="text-violet-600">-{fmt(ext.bonusDiscount)}</span>
                           </div>
                         )}
                         <div className="flex justify-between font-semibold pt-1 border-t border-border/30">

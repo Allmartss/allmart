@@ -62,29 +62,28 @@ export async function placeOrderForSession(
   });
   total = Math.round(total * 100) / 100;
 
-  let cashbackDiscount: number | null = null;
-  let validatedCashbackCode: string | null = null;
+  const discounts = await calculateOrderDiscounts(total, userId, {
+    cashbackCode: extras?.cashbackCode,
+    bonusApplied: extras?.bonusApplied,
+  });
+  total = discounts.total;
 
-  if (extras?.cashbackCode) {
-    const [cb] = await db.select().from(cashbackCodesTable)
-      .where(eq(cashbackCodesTable.code, extras.cashbackCode.toUpperCase()));
-    if (cb && cb.isActive && cb.usedCount < cb.maxUses) {
-      cashbackDiscount = cb.amount;
-      validatedCashbackCode = cb.code;
-      total = Math.max(0, Math.round((total - cb.amount) * 100) / 100);
-      await db.update(cashbackCodesTable).set({ usedCount: cb.usedCount + 1 })
-        .where(eq(cashbackCodesTable.id, cb.id));
-    }
+  if (discounts.cashbackCodeId) {
+    await db.update(cashbackCodesTable)
+      .set({ usedCount: discounts.cashbackUsedCount + 1 })
+      .where(eq(cashbackCodesTable.id, discounts.cashbackCodeId));
   }
 
-  let bonusDiscount: number | null = null;
-  if (extras?.bonusApplied && userId) {
-    const [userRow] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
-    if (userRow && userRow.bonusBalance > 0) {
-      bonusDiscount = Math.min(userRow.bonusBalance, total);
-      total = Math.max(0, Math.round((total - bonusDiscount) * 100) / 100);
-      const newBalance = Math.round((userRow.bonusBalance - bonusDiscount) * 100) / 100;
-      await db.update(usersTable).set({ bonusBalance: newBalance }).where(eq(usersTable.id, userId));
+  if (discounts.bonusDiscount && userId) {
+    const [updatedUser] = await db
+      .update(usersTable)
+      .set({
+        bonusBalance: discounts.remainingBonusBalance,
+      })
+      .where(eq(usersTable.id, userId))
+      .returning({ id: usersTable.id });
+    if (!updatedUser) {
+      return { error: "Bonus balance changed. Please retry checkout." as const };
     }
   }
 
@@ -101,8 +100,8 @@ export async function placeOrderForSession(
       receiverName: extras?.receiverName ?? null,
       receiverEmail: extras?.receiverEmail ?? null,
       receiverPhone: extras?.receiverPhone ?? null,
-      cashbackCode: validatedCashbackCode,
-      cashbackDiscount,
+      cashbackCode: discounts.cashbackCode,
+      cashbackDiscount: discounts.cashbackDiscount,
       placedBy,
       items: orderItems,
       paymentMethod: extras?.paymentMethod ?? null,
@@ -110,7 +109,7 @@ export async function placeOrderForSession(
       paymentNote: extras?.paymentNote ?? null,
       paymentVerified: "pending",
       stripeSessionId: extras?.stripeSessionId ?? null,
-      bonusDiscount,
+      bonusDiscount: discounts.bonusDiscount,
     })
     .returning();
 
@@ -119,6 +118,56 @@ export async function placeOrderForSession(
   }
 
   return { order: order! };
+}
+
+export async function calculateOrderDiscounts(
+  baseTotal: number,
+  userId: number | undefined,
+  options: { cashbackCode?: string; bonusApplied?: boolean },
+) {
+  let total = Math.round(baseTotal * 100) / 100;
+  let cashbackCode: string | null = null;
+  let cashbackDiscount: number | null = null;
+  let cashbackCodeId: number | null = null;
+  let cashbackUsedCount = 0;
+
+  if (options.cashbackCode) {
+    const [cb] = await db
+      .select()
+      .from(cashbackCodesTable)
+      .where(eq(cashbackCodesTable.code, options.cashbackCode.trim().toUpperCase()));
+    if (cb && cb.isActive && cb.usedCount < cb.maxUses) {
+      cashbackCode = cb.code;
+      cashbackCodeId = cb.id;
+      cashbackUsedCount = cb.usedCount;
+      cashbackDiscount = Math.min(cb.amount, total);
+      total = Math.max(0, Math.round((total - cashbackDiscount) * 100) / 100);
+    }
+  }
+
+  let bonusDiscount: number | null = null;
+  let remainingBonusBalance: number | null = null;
+  if (options.bonusApplied && userId) {
+    const [userRow] = await db
+      .select({ bonusBalance: usersTable.bonusBalance })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId));
+    if (userRow && userRow.bonusBalance > 0) {
+      bonusDiscount = Math.min(userRow.bonusBalance, total);
+      total = Math.max(0, Math.round((total - bonusDiscount) * 100) / 100);
+      remainingBonusBalance = Math.round((userRow.bonusBalance - bonusDiscount) * 100) / 100;
+    }
+  }
+
+  return {
+    total,
+    cashbackCode,
+    cashbackDiscount,
+    cashbackCodeId,
+    cashbackUsedCount,
+    bonusDiscount,
+    remainingBonusBalance,
+  };
 }
 
 const ORDER_STATUS_COPY: Record<string, { title: string; message: (trackingCode: string, total?: number, currency?: string) => string }> = {

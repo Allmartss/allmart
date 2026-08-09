@@ -212,6 +212,8 @@ export default function Payment() {
           email,
           callbackUrl: getCallbackUrl(),
           shippingAddress: address,
+          cashbackCode: cashback?.code || undefined,
+          bonusApplied: bonusApplied || undefined,
         }),
       });
       const data = await res.json() as { checkoutUrl?: string; sessionId?: string; error?: string };
