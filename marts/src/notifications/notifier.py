@@ -33,39 +33,39 @@ except ImportError:
 class Notifier:
     def __init__(self):
         # Twilio for WhatsApp / SMS
-        sid = os.getenv("TWILIO_ACCOUNT_SID", "")
-        token = os.getenv("TWILIO_AUTH_TOKEN", "")
+        sid = os.getenv("MARTS_TWILIO_ACCOUNT_SID", "")
+        token = os.getenv("MARTS_TWILIO_AUTH_TOKEN", "")
         if _HAS_TWILIO and sid and token:
             self.twilio_client = TwilioClient(sid, token)
         else:
             self.twilio_client = None
-        self.whatsapp_from = f"whatsapp:{os.getenv('TWILIO_WHATSAPP_NUMBER', '')}"
-        self.whatsapp_to = os.getenv("WHATSAPP_TO_NUMBER", "")
+        self.whatsapp_from = f"whatsapp:{os.getenv('MARTS_TWILIO_WHATSAPP_NUMBER', '')}"
+        self.whatsapp_to = os.getenv("MARTS_WHATSAPP_TO_NUMBER", "")
 
         # Telegram
-        tg_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
+        tg_token = os.getenv("MARTS_TELEGRAM_BOT_TOKEN", "")
         if _HAS_TELEGRAM and tg_token:
             self.telegram_bot = TelegramBot(token=tg_token)
         else:
             self.telegram_bot = None
-        self.telegram_chat_id = os.getenv("TELEGRAM_CHAT_ID", "")
-        self.telegram_admin_chat_id = os.getenv("TELEGRAM_ADMIN_CHAT_ID", "")
+        self.telegram_chat_id = os.getenv("MARTS_TELEGRAM_CHAT_ID", "")
+        self.telegram_admin_chat_id = os.getenv("MARTS_TELEGRAM_ADMIN_CHAT_ID", "")
 
         # Slack (optional)
-        slack_token = os.getenv("SLACK_BOT_TOKEN", "")
+        slack_token = os.getenv("MARTS_SLACK_BOT_TOKEN", "")
         if _HAS_SLACK and slack_token:
             self.slack_client = SlackWebClient(token=slack_token)
         else:
             self.slack_client = None
-        self.slack_channel = os.getenv("SLACK_CHANNEL", "#trading-alerts")
+        self.slack_channel = os.getenv("MARTS_SLACK_CHANNEL", "#trading-alerts")
 
         # Resend (email) — from FinAi
-        resend_key = os.getenv("RESEND_API_KEY", "")
+        resend_key = os.getenv("MARTS_RESEND_API_KEY", "")
         if _HAS_RESEND and resend_key:
             _resend_mod.api_key = resend_key
         self.resend_api_key = resend_key
         self.email_from = "FinAi <onboarding@resend.dev>"
-        self.email_to = os.getenv("EMAIL_TO", "")
+        self.email_to = os.getenv("MARTS_EMAIL_TO", "")
 
     def send_trade_alert(self, trade: dict):
         message = (

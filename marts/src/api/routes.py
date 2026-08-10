@@ -6,15 +6,15 @@ from fastapi import (
 from datetime import datetime, timedelta
 import random, string, base64, io, os, re
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../../.env"), override=False)
 
 
 def _send_email_smtp(to: str, subject: str, html: str) -> bool:
     """SMTP fallback email sender used when Resend is not configured."""
-    smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
-    smtp_port = int(os.getenv("SMTP_PORT", "587"))
-    smtp_user = os.getenv("SMTP_USER", "").strip()
-    smtp_pass = os.getenv("SMTP_PASSWORD", "").strip()
+    smtp_host = os.getenv("MARTS_SMTP_HOST", "smtp.gmail.com")
+    smtp_port = int(os.getenv("MARTS_SMTP_PORT", "587"))
+    smtp_user = os.getenv("MARTS_SMTP_USER", "").strip()
+    smtp_pass = os.getenv("MARTS_SMTP_PASSWORD", "").strip()
     if not smtp_user or not smtp_pass:
         return False
     try:
@@ -275,13 +275,13 @@ def _fire_admin_telegram_alert(message_md: str, db=None) -> None:
     with a linked Telegram chat_id.  Runs in a background thread.
     """
     import threading, requests as _rq
-    tg_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    tg_token = os.getenv("MARTS_TELEGRAM_BOT_TOKEN", "")
     if not tg_token:
         return
 
     chat_ids: set = set()
 
-    env_cid = os.getenv("TELEGRAM_ADMIN_CHAT_ID", "").strip()
+    env_cid = os.getenv("MARTS_TELEGRAM_ADMIN_CHAT_ID", "").strip()
     if env_cid:
         chat_ids.add(env_cid)
 
@@ -508,12 +508,12 @@ def _send_login_email(to: str, ip: str, ua: str):
 
     def _do():
         sent = False
-        resend_key = os.getenv("RESEND_API_KEY", "").strip()
+        resend_key = os.getenv("MARTS_RESEND_API_KEY", "").strip()
         if resend_key:
             try:
                 import resend as _resend_login
                 _resend_login.api_key = resend_key
-                from_addr = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
+                from_addr = os.getenv("MARTS_RESEND_FROM_EMAIL", "onboarding@resend.dev")
                 _resend_login.Emails.send({
                     "from": f"FinAi <{from_addr}>",
                     "to": [to],
@@ -554,12 +554,12 @@ async def forgot_password(data: dict, db: Session = Depends(get_db)):
     db.commit()
 
     email_sent = False
-    resend_key = os.getenv("RESEND_API_KEY", "").strip()
+    resend_key = os.getenv("MARTS_RESEND_API_KEY", "").strip()
     if resend_key:
         try:
             import resend as _resend
             _resend.api_key = resend_key
-            from_addr = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
+            from_addr = os.getenv("MARTS_RESEND_FROM_EMAIL", "onboarding@resend.dev")
             _resend.Emails.send({
                 "from": f"FinAi <{from_addr}>",
                 "to":   [email],
@@ -596,7 +596,7 @@ async def forgot_password(data: dict, db: Session = Depends(get_db)):
         email_sent = _send_email_smtp(email, "FinAi — Password Reset Code", _html_reset)
 
     # Also send via Telegram if linked
-    tg_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+    tg_token = os.getenv("MARTS_TELEGRAM_BOT_TOKEN", "").strip()
     tg_chat  = user.telegram_chat_id or prefs.get("telegram_chat_id")
     if tg_token and tg_chat:
         try:
@@ -621,7 +621,7 @@ async def forgot_password(data: dict, db: Session = Depends(get_db)):
     if user.whatsapp_number:
         try:
             from twilio.rest import Client as _Twilio
-            _tc = _Twilio(os.getenv("TWILIO_ACCOUNT_SID"), os.getenv("TWILIO_AUTH_TOKEN"))
+            _tc = _Twilio(os.getenv("MARTS_TWILIO_ACCOUNT_SID"), os.getenv("MARTS_TWILIO_AUTH_TOKEN"))
             _tc.messages.create(
                 from_=f"whatsapp:{os.getenv('TWILIO_WHATSAPP_NUMBER', '+14155238886')}",
                 body=f"🔐 FinAi Password Reset\nYour code is: *{code}*\nExpires in 15 minutes.",
@@ -701,7 +701,7 @@ async def login(request: Request, user_data: UserCreate2, db: Session = Depends(
         db.commit()
 
         _method = _prefs_2fa.get("tfa_method", "telegram")
-        _tg_tok = os.getenv("TELEGRAM_BOT_TOKEN", "")
+        _tg_tok = os.getenv("MARTS_TELEGRAM_BOT_TOKEN", "")
         _tg_cid = db_user.telegram_chat_id or _prefs_2fa.get("telegram_chat_id")
         _tfa_msg = (
             f"🔐 *FinAi Login Verification*\n\n"
@@ -724,8 +724,8 @@ async def login(request: Request, user_data: UserCreate2, db: Session = Depends(
         elif _method == "email":
             try:
                 import resend as _resend2fa
-                _resend2fa.api_key = os.getenv("RESEND_API_KEY", "")
-                _from2fa = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
+                _resend2fa.api_key = os.getenv("MARTS_RESEND_API_KEY", "")
+                _from2fa = os.getenv("MARTS_RESEND_FROM_EMAIL", "onboarding@resend.dev")
                 _resend2fa.Emails.send({
                     "from": f"FinAi <{_from2fa}>",
                     "to": [db_user.email],
@@ -787,7 +787,7 @@ async def login(request: Request, user_data: UserCreate2, db: Session = Depends(
 
         # 2. Telegram DM to the user (if they have linked Telegram)
         prefs      = dict(db_user.notification_preferences or {})
-        tg_token   = os.getenv("TELEGRAM_BOT_TOKEN") or prefs.get("telegram_bot_token")
+        tg_token   = os.getenv("MARTS_TELEGRAM_BOT_TOKEN") or prefs.get("telegram_bot_token")
         tg_chat_id = db_user.telegram_chat_id or prefs.get("telegram_chat_id")
         if tg_token and tg_chat_id:
             _send_login_telegram(tg_chat_id, tg_token, db_user.email, client_ip, user_agent)
@@ -922,7 +922,7 @@ async def resend_2fa(body: dict, db: Session = Depends(get_db)):
     db.commit()
 
     _method2r = prefs.get("tfa_method", "telegram")
-    _tg_tok2r = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    _tg_tok2r = os.getenv("MARTS_TELEGRAM_BOT_TOKEN", "")
     _tg_cid2r = user.telegram_chat_id or prefs.get("telegram_chat_id")
     _msg2r = (
         f"🔐 *FinAi Login Verification*\n\n"
@@ -944,8 +944,8 @@ async def resend_2fa(body: dict, db: Session = Depends(get_db)):
     elif _method2r == "email":
         try:
             import resend as _resend2r
-            _resend2r.api_key = os.getenv("RESEND_API_KEY", "")
-            _from2r = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
+            _resend2r.api_key = os.getenv("MARTS_RESEND_API_KEY", "")
+            _from2r = os.getenv("MARTS_RESEND_FROM_EMAIL", "onboarding@resend.dev")
             _resend2r.Emails.send({
                 "from": f"FinAi <{_from2r}>",
                 "to": [user.email],
@@ -1045,12 +1045,12 @@ async def send_verify_email(current_user=Depends(get_current_user), db: Session 
     db.commit()
 
     email_sent = False
-    resend_key = os.getenv("RESEND_API_KEY")
+    resend_key = os.getenv("MARTS_RESEND_API_KEY")
     if resend_key:
         try:
             import resend as _resend
             _resend.api_key = resend_key
-            from_addr = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
+            from_addr = os.getenv("MARTS_RESEND_FROM_EMAIL", "onboarding@resend.dev")
             _resend.Emails.send({
                 "from": f"FinAi <{from_addr}>",
                 "to": [user.email],
@@ -1092,7 +1092,7 @@ async def send_verify_email(current_user=Depends(get_current_user), db: Session 
     if wa_phone:
         try:
             from twilio.rest import Client as _Twilio
-            _tc = _Twilio(os.getenv("TWILIO_ACCOUNT_SID"), os.getenv("TWILIO_AUTH_TOKEN"))
+            _tc = _Twilio(os.getenv("MARTS_TWILIO_ACCOUNT_SID"), os.getenv("MARTS_TWILIO_AUTH_TOKEN"))
             _from = f"whatsapp:{os.getenv('TWILIO_WHATSAPP_NUMBER', '+14155238886')}"
             _tc.messages.create(
                 from_=_from,
@@ -1104,7 +1104,7 @@ async def send_verify_email(current_user=Depends(get_current_user), db: Session 
 
     # Fallback: send via Telegram if email failed and user has Telegram linked
     if not email_sent:
-        tg_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+        tg_token = os.getenv("MARTS_TELEGRAM_BOT_TOKEN", "").strip()
         tg_chat  = user.telegram_chat_id or prefs.get("telegram_chat_id")
         if tg_token and tg_chat:
             try:
@@ -1193,7 +1193,7 @@ async def send_whatsapp_code(data: WhatsAppCodeRequest, current_user=Depends(get
             ),
         )
 
-    twilio_number = os.getenv("TWILIO_WHATSAPP_NUMBER", "+14155238886")
+    twilio_number = os.getenv("MARTS_TWILIO_WHATSAPP_NUMBER", "+14155238886")
     return {
         "message": "Verification code sent to WhatsApp",
         "provider": provider,
@@ -1737,7 +1737,7 @@ async def tatum_webhook(request: Request, db: Session = Depends(get_db)):
     from datetime import timedelta
 
     raw_body = await request.body()
-    tatum_secret = os.getenv("TATUM_WEBHOOK_SECRET", "").strip()
+    tatum_secret = os.getenv("MARTS_TATUM_WEBHOOK_SECRET", "").strip()
     if not tatum_secret:
         logger.error("Tatum webhook hit but TATUM_WEBHOOK_SECRET unset — rejecting")
         raise HTTPException(status_code=503, detail="Webhook not configured")
@@ -1936,7 +1936,7 @@ async def admin_tatum_test_webhook(
 
     # Derive deposit address same way the deposit endpoint does
     address = "test_address_unknown"
-    master_seed = os.getenv("MASTER_SEED", "").strip()
+    master_seed = os.getenv("MARTS_MASTER_SEED", "").strip()
     if master_seed:
         try:
             from src.users.hd_wallet import MultiAssetHDWallet
@@ -2835,7 +2835,7 @@ async def admin_health_check(db: Session = Depends(get_db)):
     try:
         import time as _time
         from src.utils.config import config as _cfg
-            _prom_url = _cfg.PROMETHEUS_URL.rstrip("/")
+        _prom_url = _cfg.PROMETHEUS_URL.rstrip("/")
         _t0 = _time.time()
         # Try /prom/-/healthy first (Replit reverse-proxy path), then bare /-/healthy
         async with httpx.AsyncClient(timeout=3.0) as _c:
@@ -2907,7 +2907,7 @@ async def admin_health_check(db: Session = Depends(get_db)):
 
     # ── HD Wallet ─────────────────────────────────────────────────────────────
     try:
-        master_seed = os.getenv("MASTER_SEED", "").strip()
+        master_seed = os.getenv("MARTS_MASTER_SEED", "").strip()
         if master_seed:
             from src.users.hd_wallet import MultiAssetHDWallet
             w = MultiAssetHDWallet()
@@ -2965,7 +2965,7 @@ async def admin_health_check(db: Session = Depends(get_db)):
 
     # ── CoinGecko key status ───────────────────────────────────────────────────
     try:
-        cg_key = os.getenv("COINGECKO_API_KEY", "").strip()
+        cg_key = os.getenv("MARTS_COINGECKO_API_KEY", "").strip()
         checks["coingecko"]["key_set"] = bool(cg_key)
         checks["coingecko"]["note"] = (
             "API key set — higher rate limits active"
@@ -2977,8 +2977,8 @@ async def admin_health_check(db: Session = Depends(get_db)):
 
     # ── Alpaca Trading ────────────────────────────────────────────────────────
     try:
-        alp_key    = os.getenv("ALPACA_API_KEY", "").strip()
-        alp_secret = os.getenv("ALPACA_SECRET_KEY", "").strip()
+        alp_key    = os.getenv("MARTS_ALPACA_API_KEY", "").strip()
+        alp_secret = os.getenv("MARTS_ALPACA_SECRET_KEY", "").strip()
         both_set   = bool(alp_key and alp_secret)
         if both_set:
             import httpx as _hx2
@@ -3010,7 +3010,7 @@ async def admin_health_check(db: Session = Depends(get_db)):
             checks["alpaca"] = {
                 "status":  "degraded",
                 "key_set": False,
-                "note":    "ALPACA_API_KEY / ALPACA_SECRET_KEY not set — platform bot runs in simulation mode",
+                "note":    "MARTS_ALPACA_API_KEY / MARTS_ALPACA_SECRET_KEY not set — platform bot runs in simulation mode",
             }
     except Exception as e:
         checks["alpaca"] = {"status": "error", "error": str(e)[:120]}
@@ -3018,10 +3018,10 @@ async def admin_health_check(db: Session = Depends(get_db)):
     # ── SMTP ──────────────────────────────────────────────────────────────────
     try:
         import smtplib as _smtp, time as _st
-        _smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
-        _smtp_port = int(os.getenv("SMTP_PORT", "587"))
-        _smtp_user = os.getenv("SMTP_USER", "").strip()
-        _smtp_pass = os.getenv("SMTP_PASSWORD", "").strip()
+        _smtp_host = os.getenv("MARTS_SMTP_HOST", "smtp.gmail.com")
+        _smtp_port = int(os.getenv("MARTS_SMTP_PORT", "587"))
+        _smtp_user = os.getenv("MARTS_SMTP_USER", "").strip()
+        _smtp_pass = os.getenv("MARTS_SMTP_PASSWORD", "").strip()
         _configured = bool(_smtp_user and _smtp_pass)
         _t0 = _st.time()
         with _smtp.SMTP(_smtp_host, _smtp_port, timeout=5) as _srv:
@@ -3041,7 +3041,7 @@ async def admin_health_check(db: Session = Depends(get_db)):
     except Exception as e:
         checks["smtp"] = {
             "status": "error",
-            "host":   f"{os.getenv('SMTP_HOST','smtp.gmail.com')}:{os.getenv('SMTP_PORT','587')}",
+            "host":   f"{os.getenv('MARTS_SMTP_HOST','smtp.gmail.com')}:{os.getenv('MARTS_SMTP_PORT','587')}",
             "error":  str(e)[:120],
         }
 
@@ -3078,12 +3078,12 @@ def _notify_user(user: "User", title: str, message: str, db: "Session") -> None:
     _wa_verified = getattr(user, "whatsapp_connected", False) or (dict(user.notification_preferences or {}).get("whatsapp_verified"))
 
     prefs       = dict(user.notification_preferences or {})
-    tg_token    = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
-    wa_sid      = os.getenv("TWILIO_ACCOUNT_SID", "").strip()
-    wa_token    = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
-    wa_from_num = os.getenv("TWILIO_WHATSAPP_NUMBER", "+14155238886").strip()
-    resend_key  = os.getenv("RESEND_API_KEY", "").strip()
-    from_email  = os.getenv("RESEND_FROM_EMAIL", "noreply@finai.com").strip()
+    tg_token    = os.getenv("MARTS_TELEGRAM_BOT_TOKEN", "").strip()
+    wa_sid      = os.getenv("MARTS_TWILIO_ACCOUNT_SID", "").strip()
+    wa_token    = os.getenv("MARTS_TWILIO_AUTH_TOKEN", "").strip()
+    wa_from_num = os.getenv("MARTS_TWILIO_WHATSAPP_NUMBER", "+14155238886").strip()
+    resend_key  = os.getenv("MARTS_RESEND_API_KEY", "").strip()
+    from_email  = os.getenv("MARTS_RESEND_FROM_EMAIL", "noreply@finai.com").strip()
     full_msg    = f"*{title}*\n\n{message}"
 
     # 2. Telegram (user's own linked chat)
@@ -3141,12 +3141,12 @@ def _notify_user(user: "User", title: str, message: str, db: "Session") -> None:
 async def _notify_external_only(user: "User", title: str, message: str) -> None:
     """Fire external channels only (no DB write). Runs in a plain thread event loop."""
     prefs       = dict(user.notification_preferences or {})
-    tg_token    = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
-    wa_sid      = os.getenv("TWILIO_ACCOUNT_SID", "").strip()
-    wa_token    = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
-    wa_from_num = os.getenv("TWILIO_WHATSAPP_NUMBER", "+14155238886").strip()
-    resend_key  = os.getenv("RESEND_API_KEY", "").strip()
-    from_email  = os.getenv("RESEND_FROM_EMAIL", "noreply@finai.com").strip()
+    tg_token    = os.getenv("MARTS_TELEGRAM_BOT_TOKEN", "").strip()
+    wa_sid      = os.getenv("MARTS_TWILIO_ACCOUNT_SID", "").strip()
+    wa_token    = os.getenv("MARTS_TWILIO_AUTH_TOKEN", "").strip()
+    wa_from_num = os.getenv("MARTS_TWILIO_WHATSAPP_NUMBER", "+14155238886").strip()
+    resend_key  = os.getenv("MARTS_RESEND_API_KEY", "").strip()
+    from_email  = os.getenv("MARTS_RESEND_FROM_EMAIL", "noreply@finai.com").strip()
     full_msg    = f"{title}\n\n{message}"
 
     tg_chat = getattr(user, "telegram_chat_id", None) or prefs.get("telegram_chat_id")
@@ -3754,7 +3754,7 @@ async def close_manual_trade(position_id: int, current_user=Depends(get_current_
     try:
         import os as _os, threading as _thr
         _prefs  = dict(user.notification_preferences or {})
-        _tg_tok = _os.getenv("TELEGRAM_BOT_TOKEN")
+        _tg_tok = _os.getenv("MARTS_TELEGRAM_BOT_TOKEN")
         _msg = (
             f"{'🔴 LIQUIDATED' if is_liquidated else '✅ CLOSED'} {pos.ticker} {pos.side}\n"
             f"Entry: ${entry_price:,.4f}  →  Close: ${close_price:,.4f}\n"
@@ -4098,7 +4098,7 @@ async def execute_trade(body: TradeExecuteRequest, current_user=Depends(get_curr
     try:
         import os as _os, threading as _thr
         _prefs    = dict(user.notification_preferences or {})
-        _tg_token = _os.getenv("TELEGRAM_BOT_TOKEN")
+        _tg_token = _os.getenv("MARTS_TELEGRAM_BOT_TOKEN")
         _dir      = "🟢 BUY (LONG)" if pos_side == "LONG" else "🔴 SELL (SHORT)"
         _msg = (
             f"{_dir} {body.pair}\n"
@@ -4124,9 +4124,9 @@ async def execute_trade(body: TradeExecuteRequest, current_user=Depends(get_curr
             def _wa(phone, txt):
                 try:
                     from twilio.rest import Client as _TC
-                    tc = _TC(_os.getenv("TWILIO_ACCOUNT_SID"), _os.getenv("TWILIO_AUTH_TOKEN"))
+                    tc = _TC(_os.getenv("MARTS_TWILIO_ACCOUNT_SID"), _os.getenv("MARTS_TWILIO_AUTH_TOKEN"))
                     tc.messages.create(
-                        from_=f"whatsapp:{_os.getenv('TWILIO_WHATSAPP_NUMBER', '+14155238886')}",
+                        from_=f"whatsapp:{_os.getenv('MARTS_TWILIO_WHATSAPP_NUMBER', '+14155238886')}",
                         body=txt, to=f"whatsapp:{phone}"
                     )
                 except Exception:
@@ -4190,7 +4190,7 @@ async def telegram_webhook(request: Request, db: Session = Depends(get_db)):
     configured on the Telegram bot side. Telegram sends it in the
     X-Telegram-Bot-Api-Secret-Token header on every webhook delivery.
     """
-    webhook_secret = os.getenv("TELEGRAM_WEBHOOK_SECRET", "").strip()
+    webhook_secret = os.getenv("MARTS_TELEGRAM_WEBHOOK_SECRET", "").strip()
     if not webhook_secret:
         logger.error("Telegram webhook hit but TELEGRAM_WEBHOOK_SECRET is unset — rejecting")
         raise HTTPException(status_code=503, detail="Webhook not configured")
@@ -4217,7 +4217,7 @@ async def telegram_webhook(request: Request, db: Session = Depends(get_db)):
 
     import httpx as _hx
 
-    bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    bot_token = os.getenv("MARTS_TELEGRAM_BOT_TOKEN", "")
     if not bot_token:
         return {"ok": True}
 
@@ -4549,13 +4549,13 @@ async def admin_get_evolution_config(db: Session = Depends(get_db)):
     db_inst = _cfg("evo_instance")
     db_key  = _cfg("evo_api_key")
 
-    actual_key = db_key or os.getenv("EVOLUTION_API_KEY", "")
+    actual_key = db_key or os.getenv("MARTS_EVOLUTION_API_KEY", "")
     return {
-        "api_url":      db_url  or os.getenv("EVOLUTION_API_URL",  "http://localhost:8080"),
-        "instance":     db_inst or os.getenv("EVOLUTION_INSTANCE", "FinAiEvobots"),
+        "api_url":      db_url  or os.getenv("MARTS_EVOLUTION_API_URL",  ""),
+        "instance":     db_inst or os.getenv("MARTS_EVOLUTION_INSTANCE", "MartsEvolutionBots"),
         "api_key_set":  bool(actual_key),
         "api_key_hint": (actual_key[:6] + "•••••") if actual_key else "",
-        "source":       "db" if db_key else ("env" if os.getenv("EVOLUTION_API_KEY") else "none"),
+        "source":       "db" if db_key else ("env" if os.getenv("MARTS_EVOLUTION_API_KEY") else "none"),
     }
 
 
@@ -4579,17 +4579,17 @@ async def admin_save_evolution_config(
     if data.api_url is not None:
         cleaned = data.api_url.strip().rstrip("/")
         _upsert("evo_api_url", cleaned, "Evolution API URL")
-        os.environ["EVOLUTION_API_URL"] = cleaned
+        os.environ["MARTS_EVOLUTION_API_URL"] = cleaned
 
     if data.api_key is not None and data.api_key.strip():
         cleaned_key = data.api_key.strip()
         _upsert("evo_api_key", cleaned_key, "Evolution API Key")
-        os.environ["EVOLUTION_API_KEY"] = cleaned_key
+        os.environ["MARTS_EVOLUTION_API_KEY"] = cleaned_key
 
     if data.instance is not None:
         cleaned_inst = data.instance.strip()
         _upsert("evo_instance", cleaned_inst, "Evolution Instance Name")
-        os.environ["EVOLUTION_INSTANCE"] = cleaned_inst
+        os.environ["MARTS_EVOLUTION_INSTANCE"] = cleaned_inst
 
     db.commit()
     return {"ok": True, "message": "Evolution API config saved and applied immediately."}
@@ -4611,9 +4611,9 @@ async def admin_whatsapp_pairing_code(data: WhatsAppPairingRequest):
     in WhatsApp → Linked Devices → Link with phone number.
     """
     import requests as _req
-    base     = os.getenv("EVOLUTION_API_URL", "http://localhost:8080").rstrip("/")
-    key      = os.getenv("EVOLUTION_API_KEY", "")
-    instance = os.getenv("EVOLUTION_INSTANCE", "FinAiEvobots")
+    base     = os.getenv("MARTS_EVOLUTION_API_URL", "").rstrip("/")
+    key      = os.getenv("MARTS_EVOLUTION_API_KEY", "")
+    instance = os.getenv("MARTS_EVOLUTION_INSTANCE", "MartsEvolutionBots")
 
     if not key:
         raise HTTPException(status_code=503, detail="Evolution API key not configured.")
@@ -4720,7 +4720,7 @@ async def generate_whatsapp_link_code(current_user=Depends(get_current_user), db
     import secrets as _sec
     code = f"WA-{_sec.randbelow(900000) + 100000}"
     _whatsapp_link_codes[code] = {"user_id": user.id, "email": user.email}
-    twilio_number = os.getenv("TWILIO_WHATSAPP_NUMBER", "+14155238886")
+    twilio_number = os.getenv("MARTS_TWILIO_WHATSAPP_NUMBER", "+14155238886")
     return {
         "code": code,
         "whatsapp_number": twilio_number,
@@ -4744,9 +4744,9 @@ async def whatsapp_webhook(request: Request, db: Session = Depends(get_db)):
         return {"status": "ok"}
 
     import httpx as _hx
-    account_sid = os.getenv("TWILIO_ACCOUNT_SID", "")
-    auth_token  = os.getenv("TWILIO_AUTH_TOKEN", "")
-    wa_number   = os.getenv("TWILIO_WHATSAPP_NUMBER", "+14155238886")
+    account_sid = os.getenv("MARTS_TWILIO_ACCOUNT_SID", "")
+    auth_token  = os.getenv("MARTS_TWILIO_AUTH_TOKEN", "")
+    wa_number   = os.getenv("MARTS_TWILIO_WHATSAPP_NUMBER", "+14155238886")
 
     async def send_wa(msg: str):
         if not account_sid or not auth_token:
@@ -5967,8 +5967,8 @@ def _get_visitor_geo(ip: str):
 def _telegram_admin_new_visitor(ip: str, country: str, city: str, page: str):
     """Notify admin Telegram chat when a brand-new visitor arrives."""
     import os as _os, threading as _thr
-    tok  = _os.getenv("TELEGRAM_BOT_TOKEN")
-    cid  = _os.getenv("TELEGRAM_ADMIN_CHAT_ID") or _os.getenv("TELEGRAM_CHAT_ID")
+    tok  = _os.getenv("MARTS_TELEGRAM_BOT_TOKEN")
+    cid  = _os.getenv("MARTS_TELEGRAM_ADMIN_CHAT_ID") or _os.getenv("MARTS_TELEGRAM_CHAT_ID")
     if not tok or not cid:
         return
     geo = ""
@@ -6257,7 +6257,7 @@ async def get_referral_stats(current_user=Depends(get_current_user), db: Session
         Transaction.note.like("%Referral bonus%"),
     ).all()
     total_earned = sum(t.amount_usdt for t in bonus_txns)
-    domain = os.getenv("APP_URL", "").rstrip("/")
+    domain = os.getenv("MARTS_APP_URL", "").rstrip("/")
     ref_link = f"{domain}/login?ref={user.referral_code}" if domain else f"/login?ref={user.referral_code}"
     return {
         "referral_code": user.referral_code,
@@ -6563,7 +6563,7 @@ class _ReferralCodeUpdate(BaseModel):
 async def admin_list_referrals(db: Session = Depends(get_db)):
     """List every user with their referral code, how many they referred, and a link."""
     import os as _os
-    domain = _os.environ.get("APP_URL", "").rstrip("/")
+    domain = _os.environ.get("MARTS_APP_URL", "").rstrip("/")
     users = db.query(User).filter(User.referral_code != None).order_by(User.id.asc()).all()
     result = []
     for u in users:
@@ -6603,7 +6603,7 @@ async def admin_update_referral_code(user_id: int, body: _ReferralCodeUpdate, db
         db.query(User).filter(User.referred_by == old_code).update({"referred_by": new_code})
     db.commit()
     import os as _os
-    domain = _os.environ.get("APP_URL", "").rstrip("/")
+    domain = _os.environ.get("MARTS_APP_URL", "").rstrip("/")
     referred_count = db.query(User).filter(User.referred_by == new_code).count()
     return {
         "id": u.id,
@@ -6832,7 +6832,7 @@ async def get_my_deposit_config(current_user=Depends(get_current_user), db: Sess
             pass
 
     # ── Priority 2: HD Wallet (MASTER_SEED env set) ──────────────────────────
-    master_seed = os.getenv("MASTER_SEED", "").strip()
+    master_seed = os.getenv("MARTS_MASTER_SEED", "").strip()
     if master_seed:
         try:
             from src.users.hd_wallet import MultiAssetHDWallet
@@ -6872,7 +6872,7 @@ async def admin_reset_referral_code(user_id: int, db: Session = Depends(get_db))
         db.query(User).filter(User.referred_by == old_code).update({"referred_by": _code})
     db.commit()
     import os as _os
-    domain = _os.environ.get("APP_URL", "").rstrip("/")
+    domain = _os.environ.get("MARTS_APP_URL", "").rstrip("/")
     return {
         "id": u.id,
         "email": u.email,

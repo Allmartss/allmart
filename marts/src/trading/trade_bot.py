@@ -795,7 +795,7 @@ class TradingBotInstance:
 
                 # 2. Telegram — use telegram_chat_id field first, then prefs fallback
                 telegram_chat_id = user.telegram_chat_id or prefs.get("telegram_chat_id")
-                bot_token        = os.environ.get("TELEGRAM_BOT_TOKEN")
+                bot_token        = os.environ.get("MARTS_TELEGRAM_BOT_TOKEN")
                 if telegram_chat_id and bot_token:
                     try:
                         requests.post(

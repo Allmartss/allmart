@@ -17,13 +17,13 @@ logger = logging.getLogger(__name__)
 # ──────────────────────────────────────────────────────────────────────────────
 
 def _ev_base() -> str:
-    return os.getenv("EVOLUTION_API_URL", "http://localhost:8080").rstrip("/")
+    return os.getenv("MARTS_EVOLUTION_API_URL", "").rstrip("/")
 
 def _ev_key() -> str:
-    return os.getenv("EVOLUTION_API_KEY", "")
+    return os.getenv("MARTS_EVOLUTION_API_KEY", "")
 
 def _ev_instance() -> str:
-    return os.getenv("EVOLUTION_INSTANCE", "FinAiEvobots")
+    return os.getenv("MARTS_EVOLUTION_INSTANCE", "MartsEvolutionBots")
 
 def _ev_headers() -> dict:
     return {"apikey": _ev_key(), "Content-Type": "application/json"}
@@ -41,7 +41,7 @@ def evolution_ensure_instance() -> dict:
     """
     base = _ev_base()
     if not _ev_configured():
-        return {"error": "Evolution API not configured (EVOLUTION_API_KEY missing)"}
+        return {"error": "Evolution API not configured (MARTS_EVOLUTION_API_KEY missing)"}
 
     instance_name = _ev_instance()
 
@@ -120,7 +120,7 @@ def evolution_qr() -> dict:
     """
     base = _ev_base()
     if not _ev_configured():
-        return {"error": "Evolution API not configured (EVOLUTION_API_KEY missing)"}
+        return {"error": "Evolution API not configured (MARTS_EVOLUTION_API_KEY missing)"}
 
     # Make sure the instance exists before asking for QR
     ensure = evolution_ensure_instance()
@@ -196,9 +196,9 @@ def evolution_status() -> dict:
 
 def twilio_send(phone: str, text: str) -> bool:
     """Send a WhatsApp message via Twilio. Returns True on success."""
-    sid   = os.getenv("TWILIO_ACCOUNT_SID", "").strip()
-    token = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
-    frm   = os.getenv("TWILIO_WHATSAPP_NUMBER", "+14155238886").strip()
+    sid   = os.getenv("MARTS_TWILIO_ACCOUNT_SID", "").strip()
+    token = os.getenv("MARTS_TWILIO_AUTH_TOKEN", "").strip()
+    frm   = os.getenv("MARTS_TWILIO_WHATSAPP_NUMBER", "+14155238886").strip()
     if not sid or not token:
         return False
     to = phone if phone.startswith("+") else f"+{_clean_phone(phone)}"

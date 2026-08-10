@@ -153,9 +153,9 @@ def check_stop_loss_take_profit():
                             def _send_wa(phone, text):
                                 try:
                                     from twilio.rest import Client as _TC
-                                    tc = _TC(os.getenv("TWILIO_ACCOUNT_SID"), os.getenv("TWILIO_AUTH_TOKEN"))
+                                    tc = _TC(os.getenv("MARTS_TWILIO_ACCOUNT_SID"), os.getenv("MARTS_TWILIO_AUTH_TOKEN"))
                                     tc.messages.create(
-                                        from_=f"whatsapp:{os.getenv('TWILIO_WHATSAPP_NUMBER','+14155238886')}",
+                                        from_=f"whatsapp:{os.getenv('MARTS_TWILIO_WHATSAPP_NUMBER','+14155238886')}",
                                         body=text, to=f"whatsapp:{phone}"
                                     )
                                 except Exception:
@@ -329,9 +329,9 @@ def _fire_alert_notifications(db, alert, user, current_price: float):
                     try:
                         from twilio.rest import Client as _TC
                         import os as _os
-                        tc = _TC(_os.getenv("TWILIO_ACCOUNT_SID"), _os.getenv("TWILIO_AUTH_TOKEN"))
+                        tc = _TC(_os.getenv("MARTS_TWILIO_ACCOUNT_SID"), _os.getenv("MARTS_TWILIO_AUTH_TOKEN"))
                         tc.messages.create(
-                            from_=f"whatsapp:{_os.getenv('TWILIO_WHATSAPP_NUMBER','+14155238886')}",
+                            from_=f"whatsapp:{_os.getenv('MARTS_TWILIO_WHATSAPP_NUMBER','+14155238886')}",
                             body=text,
                             to=f"whatsapp:{phone}"
                         )

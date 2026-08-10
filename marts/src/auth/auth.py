@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../../.env"), override=False)
 
 from src.database.session import SessionLocal
 from src.database.models import User

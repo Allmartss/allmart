@@ -549,7 +549,7 @@ class FinEventBot:
     def _notify_trade(self, ticker: str, action: str, price: float, qty: float, reason: str):
         import os, threading as _th
         from src.database.models import Notification
-        tok   = os.getenv("TELEGRAM_BOT_TOKEN")
+        tok   = os.getenv("MARTS_TELEGRAM_BOT_TOKEN")
         emoji = "🟢" if action == "BUY" else "🔴"
         mode  = "PAPER" if self.paper else "LIVE"
         notif_title = f"{emoji} FinEventAI — {ticker} {action}"

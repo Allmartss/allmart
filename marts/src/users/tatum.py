@@ -36,20 +36,20 @@ MIN_CONFIRMATIONS: dict[str, int] = {
 
 
 def is_configured() -> bool:
-    return bool(os.getenv("TATUM_API_KEY", "").strip())
+    return bool(os.getenv("MARTS_TATUM_API_KEY", "").strip())
 
 
 def _headers() -> dict:
-    key = os.getenv("TATUM_API_KEY", "").strip()
+    key = os.getenv("MARTS_TATUM_API_KEY", "").strip()
     if not key:
-        raise EnvironmentError("TATUM_API_KEY is not set")
+        raise EnvironmentError("MARTS_TATUM_API_KEY is not set")
     return {"x-api-key": key, "Content-Type": "application/json"}
 
 
 def ping() -> dict:
     """Verify the API key is valid — used in admin health check."""
     if not is_configured():
-        return {"status": "not_configured", "message": "TATUM_API_KEY not set"}
+        return {"status": "not_configured", "message": "MARTS_TATUM_API_KEY not set"}
     try:
         resp = httpx.get(
             f"{TATUM_BASE}/subscription?pageSize=1",
@@ -133,8 +133,8 @@ def build_webhook_url() -> str:
     """Build the publicly accessible webhook URL for this Replit deployment."""
     domain = os.getenv("REPLIT_DEV_DOMAIN", "").strip()
     if domain:
-        return f"https://{domain}/api/tatum/webhook"
-    app_url = os.getenv("APP_URL", "").strip().rstrip("/")
+        return f"https://{domain}/marts/api/tatum/webhook"
+    app_url = os.getenv("MARTS_APP_URL", "").strip().rstrip("/")
     if app_url:
-        return f"{app_url}/api/tatum/webhook"
+        return f"{app_url}/marts/api/tatum/webhook"
     return ""

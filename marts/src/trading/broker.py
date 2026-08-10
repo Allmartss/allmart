@@ -6,16 +6,16 @@ from alpaca.data import StockHistoricalDataClient, TimeFrame
 from loguru import logger
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../../.env"), override=False)
 
 class AlpacaBroker:
     def __init__(self, paper: bool = True):
         self.paper = paper
-        api_key = os.getenv("ALPACA_API_KEY")
-        secret_key = os.getenv("ALPACA_SECRET_KEY")
+        api_key = os.getenv("MARTS_ALPACA_API_KEY")
+        secret_key = os.getenv("MARTS_ALPACA_SECRET_KEY")
         
         if not api_key or not secret_key:
-            logger.warning("ALPACA_API_KEY or SECRET_KEY not set – using simulation fallback")
+            logger.warning("MARTS_ALPACA_API_KEY or MARTS_ALPACA_SECRET_KEY not set – using simulation fallback")
             self.client = None
             return
         

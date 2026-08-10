@@ -14,7 +14,7 @@ from src.notifications.notifier import Notifier
 
 notifier = Notifier()
 
-APP_URL = os.getenv("APP_URL", "")
+APP_URL = os.getenv("MARTS_APP_URL", "").rstrip("/")
 
 # ─── DB helpers ─────────────────────────────────────────────────────────────
 
@@ -465,7 +465,7 @@ def start_telegram_bot():
         logger.warning("python-telegram-bot not installed — Telegram bot skipped")
         return
 
-    token = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    token = os.getenv("MARTS_TELEGRAM_BOT_TOKEN", "")
     if not token:
         logger.info("TELEGRAM_BOT_TOKEN not set — Telegram polling bot skipped")
         return

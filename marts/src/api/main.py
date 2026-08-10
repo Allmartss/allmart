@@ -4,7 +4,11 @@ from pathlib import Path
 from collections import deque
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load only the Marts environment file.  In production the service should
+# provide environment variables directly; this explicit path prevents a
+# repository-root AllMart .env from being loaded when the process is started
+# from the parent directory.
+load_dotenv(dotenv_path=Path(__file__).parent.parent.parent / ".env", override=False)
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -70,7 +74,7 @@ app = FastAPI(
 )
 
 # ===================== Middleware =====================
-_cors_origins_env = os.getenv("CORS_ALLOW_ORIGINS", "").strip()
+_cors_origins_env = os.getenv("MARTS_CORS_ALLOW_ORIGINS", "").strip()
 if _cors_origins_env:
     _cors_origins = [o.strip() for o in _cors_origins_env.split(",") if o.strip()]
 else:
@@ -545,8 +549,8 @@ async def startup_event():
         pass
 
     # Seed admin — credentials MUST come from env. Refuse to boot without them.
-    _ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "").strip()
-    _ADMIN_PASS = os.getenv("ADMIN_PASSWORD", "").strip()
+    _ADMIN_EMAIL = os.getenv("MARTS_ADMIN_EMAIL", "").strip()
+    _ADMIN_PASS = os.getenv("MARTS_ADMIN_PASSWORD", "").strip()
     if _ADMIN_EMAIL and _ADMIN_PASS:
         try:
             from src.database.session import SessionLocal as _SL
@@ -631,9 +635,9 @@ async def startup_event():
 
         with _SL_EVO() as _ev_db:
             _EVO_MAP = [
-                ("evo_api_url", "EVOLUTION_API_URL", "Evolution API URL"),
-                ("evo_api_key", "EVOLUTION_API_KEY", "Evolution API Key"),
-                ("evo_instance", "EVOLUTION_INSTANCE", "Evolution Instance Name"),
+                ("evo_api_url", "MARTS_EVOLUTION_API_URL", "Evolution API URL"),
+                ("evo_api_key", "MARTS_EVOLUTION_API_KEY", "Evolution API Key"),
+                ("evo_instance", "MARTS_EVOLUTION_INSTANCE", "Evolution Instance Name"),
             ]
             _changed = False
             for _ev_db_key, _ev_env_key, _ev_label in _EVO_MAP:
@@ -666,12 +670,12 @@ async def startup_event():
             if _changed:
                 _ev_db.commit()
 
-            _has_evo = bool(os.environ.get("EVOLUTION_API_KEY"))
+            _has_evo = bool(os.environ.get("MARTS_EVOLUTION_API_KEY"))
             if _has_evo:
                 logger.success(" Evolution API config loaded from database")
             else:
                 logger.info(
-                    "  EVOLUTION_API_KEY not set — WhatsApp via Evolution disabled"
+                    "  MARTS_EVOLUTION_API_KEY not set — WhatsApp via Evolution disabled"
                 )
     except Exception as _ev_err:
         logger.warning(f"Evolution API config load skipped: {_ev_err}")
@@ -695,18 +699,22 @@ async def _deferred_init():
         import httpx as _hx
         import os
 
-        _bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
-        _wh_secret = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
+        _bot_token = os.getenv("MARTS_TELEGRAM_BOT_TOKEN", "")
+        _wh_secret = os.getenv("MARTS_TELEGRAM_WEBHOOK_SECRET", "")
 
         # Build a full HTTPS webhook URL — Telegram requires an absolute URL
-        _raw = os.getenv("WEBHOOK_URL", "").strip()
+        _raw = os.getenv("MARTS_WEBHOOK_URL", "").strip()
         if _raw and _raw.startswith("http"):
             # Caller supplied a full URL already
             WEBHOOK_URL = _raw.rstrip("/") + "/marts/api/telegram/webhook" if "/marts/api/telegram/webhook" not in _raw else _raw
         else:
             # Derive from REPLIT_DOMAINS or fall back to the known Replit domain
-            _domain = os.getenv("REPLIT_DOMAINS", "fin--aifin.replit.app").split(",")[0].strip()
-            WEBHOOK_URL = f"https://{_domain}/marts/api/telegram/webhook"
+            _app_url = os.getenv("MARTS_APP_URL", "").strip().rstrip("/")
+            if _app_url:
+                WEBHOOK_URL = f"{_app_url}/marts/api/telegram/webhook"
+            else:
+                _domain = os.getenv("REPLIT_DOMAINS", "").split(",")[0].strip()
+                WEBHOOK_URL = f"https://{_domain}/marts/api/telegram/webhook" if _domain else ""
         logger.info(f"Webhook URL: {WEBHOOK_URL}")
         if _bot_token:
             payload = {"url": WEBHOOK_URL}
@@ -723,7 +731,7 @@ async def _deferred_init():
                 else:
                     logger.warning(f"  Telegram webhook registration failed: {_data}")
         else:
-            logger.info("  TELEGRAM_BOT_TOKEN not set — webhook skipped")
+            logger.info("  MARTS_TELEGRAM_BOT_TOKEN not set — webhook skipped")
     except Exception as _tg_err:
         logger.warning(f"Telegram webhook init skipped: {_tg_err}")
 

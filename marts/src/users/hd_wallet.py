@@ -5,9 +5,9 @@ from hdwallet.cryptocurrencies import BitcoinMainnet, EthereumMainnet, TronMainn
 
 class MultiAssetHDWallet:
     def __init__(self):
-        mnemonic_phrase = os.getenv("MASTER_SEED")
+        mnemonic_phrase = os.getenv("MARTS_MASTER_SEED")
         if not mnemonic_phrase:
-            raise EnvironmentError("MASTER_SEED environment variable is missing!")
+            raise EnvironmentError("MARTS_MASTER_SEED environment variable is missing!")
         self.mnemonic = mnemonic_phrase.strip()
 
     def ping(self) -> dict:

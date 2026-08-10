@@ -22,6 +22,9 @@ The backend reads:
 
 Marts-specific session signing uses `MARTS_JWT_SECRET`. No AllMart session
 secret or Supabase client configuration is loaded by this extracted service.
+All optional AI, broker, storage, email, messaging, and public URL settings
+must use the `MARTS_*` names documented in `.env.example`; generic AllMart
+service keys are intentionally not read by Marts.
 
 Copy `.env.example` to `.env` inside this folder before starting the backend.
 Do not commit `.env`.
@@ -41,6 +44,9 @@ cd frontend
 npm install
 npm run dev
 ```
+
+The frontend development proxy targets `http://127.0.0.1:8090` by default.
+Set `MARTS_DEV_BACKEND_URL` when the backend uses another local port.
 
 The production frontend is built with `/marts/` as its base path and calls the
 backend through `/marts/api/...`.

@@ -20,8 +20,8 @@ def _redis_available(url: str) -> bool:
         return False
 
 
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-RESULT_BACKEND = os.getenv("REDIS_RESULT_BACKEND", "redis://localhost:6379/1")
+REDIS_URL = os.getenv("MARTS_REDIS_URL", "redis://localhost:6379/0")
+RESULT_BACKEND = os.getenv("MARTS_REDIS_RESULT_BACKEND", "redis://localhost:6379/1")
 
 REDIS_MODE = _redis_available(REDIS_URL)
 

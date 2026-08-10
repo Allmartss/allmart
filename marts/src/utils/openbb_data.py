@@ -94,7 +94,7 @@ def get_yield_curve() -> dict:
             curve[label] = {"value": None, "source": "yfinance"}
 
     # Supplement with FRED when key is available
-    fred_key = os.getenv("FRED_API_KEY", "")
+    fred_key = os.getenv("MARTS_FRED_API_KEY", "")
     if fred_key:
         for label, series_id in _FRED_YIELD_SERIES.items():
             if label in curve and curve[label]["value"] is not None:
@@ -253,7 +253,7 @@ _FRED_BASE = "https://api.stlouisfed.org/fred/series/observations"
 
 def _fred_fetch(series_id: str, limit: int = 24, api_key: str = "") -> list[dict]:
     if not api_key:
-        api_key = os.getenv("FRED_API_KEY", "")
+        api_key = os.getenv("MARTS_FRED_API_KEY", "")
     if not api_key:
         raise ValueError("FRED_API_KEY env var not set. Get a free key at https://fred.stlouisfed.org/docs/api/api_key.html")
     resp = requests.get(_FRED_BASE, params={
@@ -272,7 +272,7 @@ def _fred_fetch(series_id: str, limit: int = 24, api_key: str = "") -> list[dict
 
 
 def _fred_key_set() -> bool:
-    return bool(os.getenv("FRED_API_KEY", ""))
+    return bool(os.getenv("MARTS_FRED_API_KEY", ""))
 
 
 def get_macro_overview() -> dict:
