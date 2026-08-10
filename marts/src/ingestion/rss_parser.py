@@ -12,7 +12,7 @@ DATA_DIR = Path("data/raw_news")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 ARTICLE_DOWNLOAD_TIMEOUT = 10  # seconds — newspaper3k has no default cap
 _ARTICLE_MAX_BYTES = 2 * 1024 * 1024  # 2 MB cap per article HTML payload
-_RETENTION_DAYS = int(os.getenv("RAW_NEWS_RETENTION_DAYS", "7"))
+_RETENTION_DAYS = int(os.getenv("MARTS_RAW_NEWS_RETENTION_DAYS", "7"))
 
 
 def _is_safe_url(url: str) -> bool:

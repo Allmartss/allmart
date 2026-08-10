@@ -393,8 +393,6 @@ export default function AdminPage({ initialTab, embedded }: { initialTab?: Tab; 
   const [metricsLoading, setMetricsLoading] = useState(false)
   const [metricHistory, setMetricHistory] = useState<any[]>([])
   const metricsTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const [promStats, setPromStats] = useState<any>(null)
-  const [promLoading, setPromLoading] = useState(false)
 
   // API Console
   const [apiMethod, setApiMethod] = useState('GET')
@@ -608,32 +606,6 @@ export default function AdminPage({ initialTab, embedded }: { initialTab?: Tab; 
     return () => clearInterval(interval)
   }, [tab])
 
-  const fetchPromStats = async () => {
-    setPromLoading(true)
-    try {
-      const qs: Record<string, string> = {
-        req_rate:    'sum(rate(fastapi_requests_total[1m]))',
-        req_total:   'sum(fastapi_requests_total)',
-        err_rate:    'sum(rate(fastapi_requests_total{status_code=~"5.."}[1m]))',
-        p95_latency: 'histogram_quantile(0.95, sum(rate(fastapi_request_duration_seconds_bucket[1m])) by (le))',
-        mem_bytes:   'process_resident_memory_bytes',
-        open_fds:    'process_open_fds',
-      }
-      const res: any = {}
-      await Promise.all(
-        Object.entries(qs).map(async ([key, q]) => {
-          try {
-            const r = await fetch(`/prom/api/v1/query?query=${encodeURIComponent(q)}`)
-            const j = await r.json()
-            const v = j?.data?.result?.[0]?.value?.[1]
-            res[key] = v != null ? parseFloat(v) : null
-          } catch { res[key] = null }
-        })
-      )
-      setPromStats(res)
-    } catch { /* silent */ }
-    finally { setPromLoading(false) }
-  }
 
   const approve = async (txId: number) => {
     try {

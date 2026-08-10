@@ -25,7 +25,6 @@ pandas
 passlib[bcrypt]
 Pillow
 plotly
-prometheus-fastapi-instrumentator
 psycopg2-binary
 pydantic[email]
 python-dotenv
@@ -40,10 +39,10 @@ resend
 slack-sdk
 slowapi
 sqlalchemy
+psycopg2-binary
 supabase
 twilio
 uvicorn[standard]
 boto3
 hdwallet
 psutil
-prometheus-client

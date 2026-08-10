@@ -19,7 +19,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 7
 
 # auto_error=False so we can fall through to cookie auth when no header is present.
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/marts/api/auth/login", auto_error=False)
 
 
 def create_access_token(data: dict, token_version: int = 0) -> str:

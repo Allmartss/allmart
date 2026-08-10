@@ -9,27 +9,6 @@ import os
 from pathlib import Path
 from sqlalchemy.orm import Session
 from src.database.models import Event
-from prometheus_client import Counter, Histogram
-
-EVENTS_DETECTED = Counter(
-    "finevent_events_detected_total",
-    "Total number of financial events detected",
-    ["event_type", "sentiment"],
-)
-
-HIGH_IMPACT_EVENTS = Counter(
-    "finevent_high_impact_events_total",
-    "Number of high-impact events (score >= 7)",
-    ["event_type"],
-)
-
-EVENT_PROCESSING_TIME = Histogram(
-    "finevent_event_processing_seconds",
-    "Time spent processing and forecasting each event",
-    buckets=[0.1, 0.5, 1.0, 2.0, 5.0, 10.0],
-)
-
-
 class FinancialEvent(BaseModel):
     event_type: str = Field(..., description="earnings, merger_acquisition, fed_policy, geopolitical, etc.")
     title: str
@@ -83,16 +62,6 @@ class EventDetector:
 
             events = [result] if not isinstance(result, list) else result
 
-            for event in events:
-                EVENTS_DETECTED.labels(
-                    event_type=event.event_type,
-                    sentiment=event.sentiment,
-                ).inc()
-                if event.impact_score >= 7:
-                    HIGH_IMPACT_EVENTS.labels(event_type=event.event_type).inc()
-
-            processing_time = (datetime.now() - start_time).total_seconds()
-            EVENT_PROCESSING_TIME.observe(processing_time)
             logger.info(f"Detected {len(events)} events from '{article.get('title', '')[:60]}'")
             return events
         except Exception as e:

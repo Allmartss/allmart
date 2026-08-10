@@ -5,11 +5,11 @@ import AdminPage from './AdminPage'
 import AdminDashboardPage from './AdminDashboardPage'
 import {
   ShieldCheck, LogOut, User, BarChart2, Activity,
-  ChevronLeft, ChevronRight, Zap, Monitor,
+  ChevronLeft, ChevronRight, Zap,
   LayoutDashboard, Receipt, Bell, Wallet, MessageSquare,
   Gift, Share2, Megaphone, ShoppingBag, Star, Globe,
   Clock, MessageCircle, Server, Terminal, Key, Users,
-  CreditCard, ExternalLink, Menu, X,
+  CreditCard, Menu, X,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 
@@ -19,7 +19,7 @@ type AdminTab =
   | 'bonuses' | 'referrals' | 'ads' | 'products' | 'testimonials'
   | 'platform-stats' | 'whatsapp-bot' | 'server-monitor' | 'api-console'
 
-type View = 'overview' | 'grafana' | 'prometheus' | AdminTab
+type View = 'overview' | AdminTab
 
 interface NavItem {
   id: View
@@ -38,8 +38,6 @@ const NAV_SECTIONS: NavSection[] = [
     title: '',
     items: [
             { id: 'overview',       label: 'Overview',       icon: LayoutDashboard, color: '#f0b90b' },
-            { id: 'grafana',        label: 'Grafana',        icon: BarChart2,      color: '#f46800' },
-            { id: 'prometheus',     label: 'Prometheus',     icon: Activity,       color: '#e6522c' },
           ],
         },
         {
@@ -81,135 +79,6 @@ const NAV_SECTIONS: NavSection[] = [
 
 const ALL_ITEMS = NAV_SECTIONS.flatMap(s => s.items)
 
-function MonitorFrame({ title, storageKey, defaultUrl, accentColor, serviceInfo }: {
-  title: string
-  storageKey: string
-  defaultUrl: string
-  accentColor: string
-  serviceInfo?: { port: number; setupHint: string }
-}) {
-  const [url, setUrl] = useState(() => localStorage.getItem(storageKey) || defaultUrl)
-  const [inputUrl, setInputUrl] = useState(url)
-  const [editing, setEditing] = useState(false)
-  const [frameKey, setFrameKey] = useState(0)
-  const [availability, setAvailability] = useState<'checking' | 'available' | 'unavailable'>('checking')
-
-  useEffect(() => {
-    const isRelative = url.startsWith('/')
-    if (!isRelative) {
-      setAvailability('available')
-      return
-    }
-    setAvailability('checking')
-    const ctrl = new AbortController()
-    const timer = setTimeout(() => ctrl.abort(), 5000)
-    fetch(url, { signal: ctrl.signal })
-      .then(r => setAvailability(r.ok ? 'available' : 'unavailable'))
-      .catch(() => setAvailability('unavailable'))
-      .finally(() => clearTimeout(timer))
-  }, [url])
-
-  const applyUrl = () => {
-    const trimmed = inputUrl.trim()
-    setUrl(trimmed)
-    localStorage.setItem(storageKey, trimmed)
-    setEditing(false)
-    setFrameKey(k => k + 1)
-  }
-
-  const isDefaultUrl = url === defaultUrl
-
-  return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center gap-3 px-4 py-2.5 bg-[#161a1e] border-b border-[#2b3139] flex-shrink-0 flex-wrap gap-y-2">
-        <Monitor size={14} style={{ color: accentColor }} />
-        <span className="text-sm font-semibold text-[#eaecef]">{title}</span>
-        {availability === 'checking' && (
-          <span className="text-[10px] text-[#848e9c] bg-[#848e9c]/10 px-1.5 py-0.5 rounded">Checking…</span>
-        )}
-        {availability === 'available' && (
-          <span className="text-[10px] text-[#0ecb81] bg-[#0ecb81]/10 px-1.5 py-0.5 rounded">● Connected</span>
-        )}
-        {availability === 'unavailable' && (
-          <span className="text-[10px] text-[#f6465d] bg-[#f6465d]/10 px-1.5 py-0.5 rounded">● Unavailable</span>
-        )}
-        {!editing ? (
-          <>
-            <span className="text-xs text-[#848e9c] truncate max-w-xs hidden sm:block">{url}</span>
-            <div className="flex items-center gap-2 ml-auto">
-              <button
-                onClick={() => { setInputUrl(url); setEditing(true) }}
-                className="text-xs text-[#848e9c] hover:text-[#eaecef] transition px-2 py-1 rounded border border-[#2b3139] hover:border-[#3c4451]"
-              >
-                Change URL
-              </button>
-              <a href={url} target="_blank" rel="noopener noreferrer"
-                className="text-xs flex items-center gap-1 text-[#848e9c] hover:text-[#eaecef] transition px-2 py-1 rounded border border-[#2b3139] hover:border-[#3c4451]">
-                <ExternalLink size={11} /> Open
-              </a>
-            </div>
-          </>
-        ) : (
-          <form onSubmit={e => { e.preventDefault(); applyUrl() }} className="flex items-center gap-2 flex-1 min-w-0">
-            <input
-              type="text"
-              value={inputUrl}
-              onChange={e => setInputUrl(e.target.value)}
-              autoFocus
-              placeholder="http://..."
-              className="flex-1 min-w-0 bg-[#0b0e11] border border-[#2b3139] rounded-lg px-3 py-1.5 text-xs text-[#eaecef] focus:outline-none focus:border-[#f0b90b] transition"
-            />
-            <button type="submit"
-              className="flex-shrink-0 text-xs bg-[#f0b90b] hover:bg-[#d4a30a] text-black font-semibold px-3 py-1.5 rounded-lg transition">
-              Apply
-            </button>
-            <button type="button" onClick={() => setEditing(false)}
-              className="flex-shrink-0 text-xs text-[#848e9c] hover:text-[#eaecef] transition px-2 py-1.5">
-              Cancel
-            </button>
-          </form>
-        )}
-      </div>
-
-      <div className="flex-1 min-h-0 relative">
-        {availability === 'unavailable' ? (
-          <div className="flex flex-col items-center justify-center h-full gap-4 p-8 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-[#2b3139] flex items-center justify-center">
-              <Monitor size={24} className="text-[#848e9c]" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-[#eaecef] mb-1">{title} Not Reachable</p>
-              <p className="text-xs text-[#848e9c] max-w-sm">
-                {isDefaultUrl
-                  ? `${title} is expected at ${url} but is not running or not accessible through the current proxy.`
-                  : `Could not reach ${url}. The service may be offline or the URL may be incorrect.`}
-              </p>
-              {serviceInfo && isDefaultUrl && (
-                <p className="text-xs text-[#848e9c] mt-2 max-w-sm">{serviceInfo.setupHint}</p>
-              )}
-            </div>
-            <button
-              onClick={() => { setInputUrl(url); setEditing(true) }}
-              className="text-xs font-semibold px-4 py-2 rounded-lg transition"
-              style={{ background: accentColor + '22', color: accentColor, border: `1px solid ${accentColor}44` }}
-            >
-              Configure URL
-            </button>
-          </div>
-        ) : (
-          <iframe
-            key={frameKey}
-            src={url}
-            className="w-full h-full border-0"
-            title={title}
-            allow="fullscreen"
-          />
-        )}
-      </div>
-    </div>
-  )
-}
-
 export default function AdminFullDashboard() {
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
@@ -242,8 +111,7 @@ export default function AdminFullDashboard() {
   }
 
   const activeItem = ALL_ITEMS.find(i => i.id === view)
-  const isMonitor = view === 'grafana' || view === 'prometheus'
-  const isAdminTab = !['overview', 'grafana', 'prometheus'].includes(view)
+  const isAdminTab = view !== 'overview'
 
   const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
     <>
@@ -429,37 +297,14 @@ export default function AdminFullDashboard() {
 
         {/* Page body */}
         <div className="flex-1 overflow-hidden">
-          {isMonitor ? (
-            <div className="h-full">
-              {view === 'grafana' && (
-                <MonitorFrame
-                  title="Grafana"
-                  storageKey="finai-grafana-url"
-                  defaultUrl="/graf/"
-                  accentColor="#f46800"
-                  serviceInfo={{ port: 3001, setupHint: 'Start Grafana (default port 3001) and ensure it is proxied at /graf/ or enter a direct URL.' }}
-                />
-              )}
-              {view === 'prometheus' && (
-                <MonitorFrame
-                  title="Prometheus"
-                  storageKey="finai-prometheus-url"
-                  defaultUrl="/prom/"
-                  accentColor="#e6522c"
-                  serviceInfo={{ port: 9090, setupHint: 'Start Prometheus (default port 9090) and ensure it is proxied at /prom/ or enter a direct URL.' }}
-                />
-              )}
-            </div>
-          ) : (
-            <div className="h-full overflow-y-auto">
+          <div className="h-full overflow-y-auto">
               <div className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-6 py-5">
                 {view === 'overview' && <AdminDashboardPage onNavigate={(tab) => setView(tab as View)} />}
                 {isAdminTab && (
                   <AdminPage key={view} initialTab={view as AdminTab} embedded />
                 )}
               </div>
-            </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

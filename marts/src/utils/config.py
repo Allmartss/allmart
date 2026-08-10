@@ -13,10 +13,6 @@ class Config:
     )
     REDIS_URL = os.getenv("MARTS_REDIS_URL", "redis://localhost:6379/0")
 
-    # Monitoring services
-    PROMETHEUS_URL = os.getenv("MARTS_PROMETHEUS_URL", "http://localhost:9090")
-    GRAFANA_URL = os.getenv("MARTS_GRAFANA_URL", "http://localhost:3001")
-
     # Default user settings
     DEFAULT_CAPITAL = 10000.0
     DEFAULT_RISK_PERCENT = 9.0

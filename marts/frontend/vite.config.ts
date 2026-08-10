@@ -29,35 +29,6 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/marts\/ws/, '/api/ws'),
       },
-      '/__mockup': {
-        target: 'http://localhost:800',
-        changeOrigin: true,
-        ws: true,
-      },
-      '/graf': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-        configure: (proxy) => {
-          proxy.on('proxyRes', (proxyRes) => {
-            const loc = proxyRes.headers['location']
-            if (loc) {
-              proxyRes.headers['location'] = loc.replace(/^https?:\/\/[^/]+(\/graf)/, '$1')
-            }
-          })
-        },
-      },
-      '/prom': {
-        target: 'http://localhost:9090',
-        changeOrigin: true,
-        configure: (proxy) => {
-          proxy.on('proxyRes', (proxyRes) => {
-            const loc = proxyRes.headers['location']
-            if (loc) {
-              proxyRes.headers['location'] = loc.replace(/^https?:\/\/[^/]+(\/prom)/, '$1')
-            }
-          })
-        },
-      },
     },
   },
 })

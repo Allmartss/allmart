@@ -1,167 +1,101 @@
 Marts Extraction Status
 =======================
 
-This file explains what has been done inside the root-level `marts/` folder
-and what still needs to be completed.
+This file records the current state of the isolated Marts application inside
+the root-level `marts/` folder.
 
 WHAT HAS BEEN DONE
 ------------------
 
-1. A separate `marts/` folder was created at the AllMart project root.
-   The existing AllMart ecommerce folders and application code were not
-   intentionally merged with Marts.
+1. Marts was extracted into its own folder beside AllMart. It has an
+   independent FastAPI backend, React/Vite frontend, database configuration,
+   authentication, environment namespace, logs, and service workflow.
 
-2. The public FinAi repository was inspected and the main web application was
-   extracted into Marts:
+2. The extracted application includes:
 
-   - FastAPI backend source under `marts/src/`
-   - React/Vite web frontend under `marts/frontend/`
-   - SQLAlchemy/Alembic database files under `marts/migrations/`
-   - Python dependency list in `marts/requirements.txt`
-   - Admin setup script in `marts/setup_admin.py`
+   - FastAPI backend under `marts/src/`
+   - React/Vite frontend under `marts/frontend/`
+   - SQLAlchemy models and Alembic files
+   - Authentication, market data, AI, wallet, positions, paper trading,
+     notifications, and admin features
+   - Marts operational scripts and documentation
 
-3. Unrelated source was not copied into Marts:
+3. Unrelated mobile, Evolution/WhatsApp service source, Git history, backups,
+   monitoring deployment files, and the original Streamlit UI were not copied.
 
-   - Mobile/Expo application
-   - Evolution/WhatsApp service
-   - Git history
-   - Backup data
-   - Monitoring deployment files and separate monitoring services
-   - The source repository's local Streamlit UI
-
-4. Marts database selection was separated from the AllMart application:
+4. Database isolation is configured as:
 
    - First choice: `MARTS_DATABASE_URL`
-   - Fallback: `DATABASE_URL`
-   - Marts fails clearly if neither database variable is available
+   - Approved fallback: `DATABASE_URL`
+   - `SUPABASE_DB_URL` is not read by Marts
+   - Startup fails clearly when no approved database URL exists
 
-5. Marts JWT signing was renamed to use `MARTS_JWT_SECRET`.
-   The extracted backend does not intentionally use the AllMart session secret.
+5. Marts JWT signing uses `MARTS_JWT_SECRET` and does not use AllMart's session
+   secret. Optional AI, broker, storage, email, messaging, and public URL
+   settings use `MARTS_*` names.
 
-6. The frontend was changed to use the `/marts/` base path:
+6. The frontend uses `/marts/` as its base path:
 
-   - Web pages: `/marts/...`
-   - API calls: `/marts/api/...`
-   - WebSocket calls: `/marts/ws/...`
+   - Pages: `/marts/...`
+   - REST API: `/marts/api/...`
+   - WebSockets: `/marts/ws/...`
 
-7. Marts-specific operational files were added:
+7. The production frontend was installed and built successfully from
+   `marts/frontend/`. FastAPI serves the resulting `frontend/dist` output.
 
-   - `.env.example`
-   - `.gitignore`
-   - `README.md`
-   - `nginx.conf.example`
-   - `scripts/check-env.sh`
-   - `scripts/start.sh`
-   - `scripts/build-frontend.sh`
-   - `scripts/health-check.sh`
+8. Reverse-proxy routing was added without changing AllMart's existing paths:
 
-8. Python and shell syntax checks have passed.
+   - `/` remains AllMart
+   - `/api/...` remains AllMart API
+   - `/marts` redirects to `/marts/`
+   - `/marts/` serves Marts
+   - `/marts/api/...` reaches the private Marts REST API
+   - `/marts/ws/...` reaches the private Marts WebSocket API
 
-9. The Marts isolation audit was completed:
+9. A separate `marts: FastAPI` workflow was configured on private port `8090`.
+   It is independently restartable from AllMart.
 
-   - Route-level notifications, broker, market-data, wallet, monitoring,
-     webhook, and public URL settings use `MARTS_*` names.
-   - Marts loads its local `marts/.env`.
-   - The only approved database fallback remains `DATABASE_URL`.
-   - The frontend development proxy defaults to the private backend port `8090`.
-   - No remaining generic AllMart environment references were found in
-     `marts/src/`.
+10. Runtime issues found during verification were fixed:
 
-10. The Marts environment template and README were updated with the names and
-    routing rules required by the isolated service.
+    - Added the PostgreSQL `psycopg2-binary` driver.
+    - Added the missing `Response` import used by logout.
+    - Replaced remaining legacy optional integration names with `MARTS_*`.
+    - Confirmed FastAPI imports and startup schema initialization against the
+      dedicated Marts database.
 
-11. This setup phase is now authorized to install the declared dependencies,
-    use only `DATABASE_URL` or an explicitly configured `MARTS_DATABASE_URL`,
-    run the Marts Alembic migration, and configure the `/marts` serving path.
-    `SUPABASE_DB_URL` is explicitly excluded from the Marts setup.
+11. Prometheus and Grafana are being removed from Marts to keep the deployment
+    image small. They are not required for the initial authentication, market,
+    and paper-trading release.
 
-12. The declared Python dependencies were installed in the Replit Python
-    environment. The existing Marts `requirements.txt` remains the source list;
-    no AllMart pnpm dependency was changed.
-
-13. The Alembic environment was repaired to:
-
-    - Resolve `MARTS_DATABASE_URL` first and `DATABASE_URL` second.
-    - Load the extracted Marts models as migration metadata.
-    - Use synchronous PostgreSQL SQLAlchemy connections consistently.
-    - Fail clearly when neither database URL is available.
-
-14. A read-only probe using only `DATABASE_URL` reached the managed PostgreSQL
-    database and found no public tables. `SUPABASE_DB_URL` was not read or
-    modified.
+12. A separate Alembic run is intentionally skipped. FastAPI performs the
+    existing non-destructive schema creation and incremental startup changes.
 
 WHAT STILL NEEDS TO BE DONE
 ---------------------------
 
-1. Finish the import and route audit:
+1. Finish removing the Prometheus/Grafana admin dashboard screens and confirm
+   no runtime code or frontend route references remain.
 
-   - Replace any remaining old root `/api` frontend calls.
-   - Replace remaining legacy secret-name references in copied diagnostics.
-   - Confirm that every frontend API request stays under `/marts/api`.
+2. Rebuild the frontend after the monitoring UI cleanup.
 
-   The environment namespace audit is complete; this item now covers only
-   frontend route behavior and any runtime import issues discovered during
-   startup.
+3. Restart the Marts FastAPI workflow and verify:
 
-2. Finish the backend isolation audit:
+   - The process listens on port `8090`.
+   - `/api/health` responds.
+   - `/marts/` serves the built frontend through the proxy.
+   - Protected requests reject unauthenticated callers.
+   - Login and logout work with the Marts JWT secret.
 
-   - Confirm that optional storage, notifications, and AI integrations use
-     Marts-specific settings or remain disabled unless explicitly configured.
-   - Remove any copied admin or monitoring functionality that is not required
-     for the first two-page Marts release.
+4. Verify the existing AllMart storefront and API remain unaffected.
 
-3. Configure the Marts environment outside Git:
-
-   - Set `MARTS_DATABASE_URL` when a dedicated Marts database is available.
-   - For the current setup, use the approved Supabase `DATABASE_URL` fallback
-     if no dedicated Marts database URL is configured.
-   - Set a strong `MARTS_JWT_SECRET`.
-   - Add only the optional Marts AI, market-data, broker, email, or Telegram
-     settings that are actually needed.
-
-4. Install the Python and frontend dependencies in the deployment
-   environment, then build the frontend from `marts/frontend/`.
-
-   Python dependencies are installed. Frontend dependencies and the production
-   build remain pending.
-
-5. Use `MARTS_DATABASE_URL` when it is explicitly configured; otherwise use
-   `DATABASE_URL`. Do not read or use `SUPABASE_DB_URL` for Marts.
-
-6. Create and apply a non-destructive initial Marts migration against the
-   selected Marts database. Record the migration revision and verify the
-   resulting tables.
-
-7. Configure the reverse proxy/workflow so:
-
-   - `/` continues to serve AllMart ecommerce.
-   - `/api/...` continues to serve the AllMart API.
-   - `/marts/` serves Marts.
-   - `/marts/api/...` reaches the private Marts FastAPI service.
-   - `/marts/ws/...` reaches the private Marts WebSocket service.
-
-8. Add or update a separate service/process for Marts, using private local
-   port `8090`. The Marts service must be restartable without restarting
-   AllMart.
-
-9. Verify before public access:
-
-   - Marts backend starts with the intended database.
-   - AllMart still works at `/`.
-   - Login and logout work.
-   - Unauthenticated dashboard requests are rejected.
-   - Authenticated data is user-scoped.
-   - Paper trading is the default.
-   - Broker and AI secrets never reach frontend code.
-    - `/marts`, `/marts/api`, and `/marts/ws` route correctly.
-   - HTTPS, secure cookies, rate limiting, and security headers are enabled.
+5. Before production deployment, configure the final Nginx/systemd service,
+   HTTPS, secure cookies, rate limiting, security headers, backups, and
+   production health checks.
 
 CURRENT LIMITATION
 ------------------
 
-The extracted files are now ready for migration and frontend setup, but they
-are not yet a finished production deployment. Python dependencies and the
-migration runner are ready; the current phase must still complete the selected
-`DATABASE_URL`/`MARTS_DATABASE_URL` migration, frontend dependency
-installation/build, backend service configuration, `/marts` reverse-proxy
-wiring, and runtime verification.
+Marts is configured and has passed import, syntax, database-startup, routing,
+and frontend-build checks, but the monitoring UI cleanup and final runtime
+verification still need to complete before calling the deployment production
+ready.

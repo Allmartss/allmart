@@ -5,7 +5,7 @@ import os
 
 class NewsAPIClient:
     def __init__(self):
-        self.api_key = os.getenv("NEWSAPI_KEY")
+        self.api_key = os.getenv("MARTS_NEWSAPI_KEY")
         self.base_url = "https://newsapi.org/v2"
 
     def fetch_financial_news(self, q: str = "finance OR stock OR market", limit: int = 20) -> List[Dict]:
@@ -40,7 +40,7 @@ class NewsAPIClient:
 
 class AlphaVantageClient:
     def __init__(self):
-        self.api_key = os.getenv("ALPHA_VANTAGE_KEY")
+        self.api_key = os.getenv("MARTS_ALPHA_VANTAGE_KEY")
         self.base_url = "https://www.alphavantage.co/query"
 
     def fetch_news_sentiment(self, tickers: str = "AAPL,MSFT,GOOGL", limit: int = 20) -> List[Dict]:

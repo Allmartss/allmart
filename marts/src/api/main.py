@@ -10,11 +10,10 @@ from dotenv import load_dotenv
 # from the parent directory.
 load_dotenv(dotenv_path=Path(__file__).parent.parent.parent / ".env", override=False)
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response
-import httpx
 from loguru import logger
 
 # ── In-memory circular log buffer (last 500 lines) ──────────────────────────
@@ -88,94 +87,8 @@ app.add_middleware(
 )
 app.add_middleware(APIRateLimitMiddleware)
 
-# ===================== Prometheus Metrics =====================
-try:
-    from prometheus_fastapi_instrumentator import Instrumentator
-
-    Instrumentator(
-        should_group_status_codes=True,
-        should_ignore_untemplated=True,
-        should_respect_env_var=False,
-        should_instrument_requests_inprogress=True,
-        excluded_handlers=["/metrics", "/docs", "/redoc", "/openapi.json"],
-        inprogress_name="finai_inprogress",
-        inprogress_labels=True,
-    ).instrument(app).expose(
-        app, endpoint="/metrics", include_in_schema=True, tags=["monitoring"]
-    )
-    logger.info("Prometheus metrics exposed at /metrics")
-except Exception as _prom_err:
-    logger.warning(f"Prometheus instrumentation skipped: {_prom_err}")
-
-
 # Include API routes
 app.include_router(router, prefix="/api")
-
-
-# ===================== Monitoring Proxies =====================
-@app.api_route("/prom/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
-async def proxy_prometheus(path: str, request: Request):
-    from src.utils.config import config
-
-    base = config.PROMETHEUS_URL.rstrip("/")
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        try:
-            resp = await client.request(
-                method=request.method,
-                url=f"{base}/prom/{path}",
-                params=request.query_params,
-                content=await request.body(),
-                headers={
-                    k: v
-                    for k, v in request.headers.items()
-                    if k.lower() not in ("host", "content-length", "transfer-encoding")
-                },
-                follow_redirects=True,
-            )
-            return Response(
-                content=resp.content,
-                status_code=resp.status_code,
-                media_type=resp.headers.get("content-type", "text/plain"),
-            )
-        except Exception:
-            return Response(
-                content=b"<h2>Prometheus is starting up...</h2>",
-                status_code=503,
-                media_type="text/html",
-            )
-
-
-@app.api_route("/graf/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
-async def proxy_grafana(path: str, request: Request):
-    from src.utils.config import config
-
-    base = config.GRAFANA_URL.rstrip("/")
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        try:
-            resp = await client.request(
-                method=request.method,
-                url=f"{base}/{path}",
-                params=request.query_params,
-                content=await request.body(),
-                headers={
-                    k: v
-                    for k, v in request.headers.items()
-                    if k.lower() not in ("host", "content-length", "transfer-encoding")
-                },
-                follow_redirects=True,
-            )
-            return Response(
-                content=resp.content,
-                status_code=resp.status_code,
-                media_type=resp.headers.get("content-type", "text/plain"),
-            )
-        except Exception:
-            return Response(
-                content=b"<h2>Grafana is starting up...</h2>",
-                status_code=503,
-                media_type="text/html",
-            )
-
 
 # ===================== Mobile App Page =====================
 @app.get("/mobile", include_in_schema=False)
@@ -294,11 +207,6 @@ if FRONTEND_DIST.exists():
                 "docs",
                 "redoc",
                 "openapi.json",
-                "metrics",
-                "prom/",
-                "prom",
-                "graf/",
-                "graf",
                 "assets/",
                 "app/",
                 "uploads/",
@@ -325,7 +233,6 @@ else:
             "version": "1.0.0",
             "status": "healthy",
             "docs": "/docs",
-            "metrics": "/metrics",
             "api_prefix": "/api",
             "mobile_app": "/app",
         }
@@ -576,7 +483,7 @@ async def startup_event():
         except Exception as _seed_err:
             logger.warning(f"Admin seed skipped: {_seed_err}")
     else:
-        logger.warning("ADMIN_EMAIL / ADMIN_PASSWORD not set — skipping admin seed")
+        logger.warning("MARTS_ADMIN_EMAIL / MARTS_ADMIN_PASSWORD not set — skipping admin seed")
 
     # Seed default BTC deposit address
     try:
