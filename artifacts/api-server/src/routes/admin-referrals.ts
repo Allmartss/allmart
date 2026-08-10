@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, referralsTable, usersTable, settingsTable, adminBonusGiftsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { requireRole } from "../lib/auth";
 
 const router: IRouter = Router();
@@ -67,9 +67,8 @@ router.get("/admin/referrals", requireRole("admin"), async (_req: Request, res: 
 
 /**
  * Grant a manual bonus to a specific user.
- * The bonus is created as UNCLAIMED — the user must visit their referral page
- * and click "Claim" to add it to their spendable balance.
- * An optional expiresAt date can be set; expired gifts cannot be claimed.
+ * Admin gifts are credited immediately so the user can use them at checkout.
+ * An optional expiresAt date is retained for the gift record and audit history.
  */
 router.post("/admin/grant-bonus", requireRole("admin"), async (req: Request, res: Response) => {
   const { userId, amount, reason, expiresAt } = req.body as {
@@ -91,22 +90,27 @@ router.post("/admin/grant-bonus", requireRole("admin"), async (req: Request, res
     res.status(400).json({ error: "Invalid expiresAt date" }); return;
   }
 
-  // Insert as unclaimed — balance is NOT credited yet. User must claim it.
-  const [gift] = await db.insert(adminBonusGiftsTable)
-    .values({
-      userId,
-      amount,
-      reason: reason ?? null,
-      claimed: false,
-      expiresAt: expiryDate,
-    })
-    .returning();
+  const gift = await db.transaction(async (tx) => {
+    const [created] = await tx.insert(adminBonusGiftsTable)
+      .values({
+        userId,
+        amount,
+        reason: reason ?? null,
+        claimed: true,
+        expiresAt: expiryDate,
+      })
+      .returning();
+    await tx.update(usersTable)
+      .set({ bonusBalance: sql`${usersTable.bonusBalance} + ${amount}` })
+      .where(eq(usersTable.id, userId));
+    return created!;
+  });
 
   res.json({
     ok: true,
     userId: user.id,
     name: user.name,
-    giftId: gift!.id,
+    giftId: gift.id,
     granted: amount,
     reason: reason ?? null,
     expiresAt: expiryDate?.toISOString() ?? null,

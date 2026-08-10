@@ -24,6 +24,8 @@ import type {
   Category,
   ChatMessage,
   ChatTurnResponse,
+  CheckoutQuote,
+  CheckoutQuoteRequest,
   CreateCashbackCodeRequest,
   CreateLandingPageRequest,
   CreateProductRequest,
@@ -1937,6 +1939,92 @@ export function useListUsers<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Calculate the current checkout total including available discounts
+ */
+export const getGetCheckoutQuoteUrl = () => {
+  return `/api/checkout/quote`;
+};
+
+export const getCheckoutQuote = async (
+  checkoutQuoteRequest: CheckoutQuoteRequest,
+  options?: RequestInit,
+): Promise<CheckoutQuote> => {
+  return customFetch<CheckoutQuote>(getGetCheckoutQuoteUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(checkoutQuoteRequest),
+  });
+};
+
+export const getGetCheckoutQuoteMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getCheckoutQuote>>,
+    TError,
+    { data: BodyType<CheckoutQuoteRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof getCheckoutQuote>>,
+  TError,
+  { data: BodyType<CheckoutQuoteRequest> },
+  TContext
+> => {
+  const mutationKey = ["getCheckoutQuote"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof getCheckoutQuote>>,
+    { data: BodyType<CheckoutQuoteRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return getCheckoutQuote(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GetCheckoutQuoteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof getCheckoutQuote>>
+>;
+export type GetCheckoutQuoteMutationBody = BodyType<CheckoutQuoteRequest>;
+export type GetCheckoutQuoteMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Calculate the current checkout total including available discounts
+ */
+export const useGetCheckoutQuote = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getCheckoutQuote>>,
+    TError,
+    { data: BodyType<CheckoutQuoteRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof getCheckoutQuote>>,
+  TError,
+  { data: BodyType<CheckoutQuoteRequest> },
+  TContext
+> => {
+  return useMutation(getGetCheckoutQuoteMutationOptions(options));
+};
 
 /**
  * @summary Update a user's role (admin only)

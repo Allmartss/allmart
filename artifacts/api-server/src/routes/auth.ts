@@ -49,6 +49,7 @@ function publicUser(u: typeof usersTable.$inferSelect) {
     emailVerified: u.emailVerified,
     referralCode: u.referralCode ?? null,
     bonusBalance: u.bonusBalance,
+    banned: u.banned ?? false,
   };
 }
 

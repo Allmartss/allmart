@@ -38,6 +38,7 @@ export function serializeOrder(o: Order) {
     paymentMethod: (o as { paymentMethod?: string | null }).paymentMethod ?? null,
     cashbackCode: o.cashbackCode ?? null,
     cashbackDiscount: o.cashbackDiscount ?? null,
+    shippingFee: o.shippingFee ?? 0,
     placedBy: o.placedBy,
     paymentScreenshotUrl: o.paymentScreenshotUrl ?? null,
     paymentNote: o.paymentNote ?? null,

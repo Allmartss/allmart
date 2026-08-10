@@ -12,4 +12,10 @@ export interface AuthUser {
   email: string;
   name: string;
   role: AuthUserRole;
+  tier: number;
+  emailVerified: boolean;
+  profileComplete: boolean;
+  address?: string | null;
+  bonusBalance: number;
+  banned: boolean;
 }

@@ -20,5 +20,7 @@ export interface PlaceOrderRequest {
   /** @maxLength 2000 */
   paymentNote?: string;
   bonusApplied?: boolean;
+  expectedTotal?: number;
+  expectedBonusDiscount?: number;
   placedBy?: PlaceOrderRequestPlacedBy;
 }

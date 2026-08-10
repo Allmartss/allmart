@@ -17,6 +17,8 @@ export * from "./chatBankDetails";
 export * from "./chatMessage";
 export * from "./chatMessageRole";
 export * from "./chatTurnResponse";
+export * from "./checkoutQuote";
+export * from "./checkoutQuoteRequest";
 export * from "./createCashbackCodeRequest";
 export * from "./createLandingPageRequest";
 export * from "./createProductRequest";

@@ -49,6 +49,12 @@ export const RedeemResetCodeResponse = zod.object({
   email: zod.string(),
   name: zod.string(),
   role: zod.enum(["buyer", "admin", "pm"]),
+  tier: zod.number(),
+  emailVerified: zod.boolean(),
+  profileComplete: zod.boolean(),
+  address: zod.string().nullish(),
+  bonusBalance: zod.number(),
+  banned: zod.boolean(),
 });
 
 /**
@@ -86,6 +92,12 @@ export const SignUpResponse = zod.object({
   email: zod.string(),
   name: zod.string(),
   role: zod.enum(["buyer", "admin", "pm"]),
+  tier: zod.number(),
+  emailVerified: zod.boolean(),
+  profileComplete: zod.boolean(),
+  address: zod.string().nullish(),
+  bonusBalance: zod.number(),
+  banned: zod.boolean(),
 });
 
 export const SignInBody = zod.object({
@@ -98,6 +110,12 @@ export const SignInResponse = zod.object({
   email: zod.string(),
   name: zod.string(),
   role: zod.enum(["buyer", "admin", "pm"]),
+  tier: zod.number(),
+  emailVerified: zod.boolean(),
+  profileComplete: zod.boolean(),
+  address: zod.string().nullish(),
+  bonusBalance: zod.number(),
+  banned: zod.boolean(),
 });
 
 export const GetCurrentUserResponse = zod.object({
@@ -108,6 +126,12 @@ export const GetCurrentUserResponse = zod.object({
         email: zod.string(),
         name: zod.string(),
         role: zod.enum(["buyer", "admin", "pm"]),
+        tier: zod.number(),
+        emailVerified: zod.boolean(),
+        profileComplete: zod.boolean(),
+        address: zod.string().nullish(),
+        bonusBalance: zod.number(),
+        banned: zod.boolean(),
       }),
       zod.null(),
     ])
@@ -354,6 +378,7 @@ export const ListOrdersResponseItem = zod.object({
   cashbackCode: zod.string().nullish(),
   cashbackDiscount: zod.number().nullish(),
   bonusDiscount: zod.number().nullish(),
+  shippingFee: zod.number(),
   placedBy: zod.enum(["user", "ai"]),
   createdAt: zod.string(),
   items: zod.array(
@@ -384,6 +409,8 @@ export const PlaceOrderBody = zod.object({
   paymentScreenshotUrl: zod.string().optional(),
   paymentNote: zod.string().max(placeOrderBodyPaymentNoteMax).optional(),
   bonusApplied: zod.boolean().optional(),
+  expectedTotal: zod.number().optional(),
+  expectedBonusDiscount: zod.number().optional(),
   placedBy: zod.enum(["user", "ai"]).optional(),
 });
 
@@ -415,6 +442,7 @@ export const GetOrderResponse = zod.object({
   cashbackCode: zod.string().nullish(),
   cashbackDiscount: zod.number().nullish(),
   bonusDiscount: zod.number().nullish(),
+  shippingFee: zod.number(),
   placedBy: zod.enum(["user", "ai"]),
   createdAt: zod.string(),
   items: zod.array(
@@ -469,6 +497,7 @@ export const UpdateOrderStatusResponse = zod.object({
   cashbackCode: zod.string().nullish(),
   cashbackDiscount: zod.number().nullish(),
   bonusDiscount: zod.number().nullish(),
+  shippingFee: zod.number(),
   placedBy: zod.enum(["user", "ai"]),
   createdAt: zod.string(),
   items: zod.array(
@@ -490,8 +519,32 @@ export const ListUsersResponseItem = zod.object({
   email: zod.string(),
   name: zod.string(),
   role: zod.enum(["buyer", "admin", "pm"]),
+  tier: zod.number(),
+  emailVerified: zod.boolean(),
+  profileComplete: zod.boolean(),
+  address: zod.string().nullish(),
+  bonusBalance: zod.number(),
+  banned: zod.boolean(),
 });
 export const ListUsersResponse = zod.array(ListUsersResponseItem);
+
+/**
+ * @summary Calculate the current checkout total including available discounts
+ */
+export const GetCheckoutQuoteBody = zod.object({
+  cashbackCode: zod.string().optional(),
+  bonusApplied: zod.boolean().optional(),
+});
+
+export const GetCheckoutQuoteResponse = zod.object({
+  subtotal: zod.number(),
+  shippingFee: zod.number(),
+  cashbackDiscount: zod.number(),
+  bonusDiscount: zod.number(),
+  total: zod.number(),
+  currency: zod.string(),
+  bonusBalance: zod.number(),
+});
 
 /**
  * @summary Update a user's role (admin only)
@@ -509,6 +562,12 @@ export const UpdateUserRoleResponse = zod.object({
   email: zod.string(),
   name: zod.string(),
   role: zod.enum(["buyer", "admin", "pm"]),
+  tier: zod.number(),
+  emailVerified: zod.boolean(),
+  profileComplete: zod.boolean(),
+  address: zod.string().nullish(),
+  bonusBalance: zod.number(),
+  banned: zod.boolean(),
 });
 
 /**
@@ -545,6 +604,7 @@ export const ListAllOrdersResponseItem = zod.object({
   cashbackCode: zod.string().nullish(),
   cashbackDiscount: zod.number().nullish(),
   bonusDiscount: zod.number().nullish(),
+  shippingFee: zod.number(),
   placedBy: zod.enum(["user", "ai"]),
   createdAt: zod.string(),
   items: zod.array(
@@ -950,6 +1010,7 @@ export const SendChatMessageResponse = zod.object({
       cashbackCode: zod.string().nullish(),
       cashbackDiscount: zod.number().nullish(),
       bonusDiscount: zod.number().nullish(),
+      shippingFee: zod.number(),
       placedBy: zod.enum(["user", "ai"]),
       createdAt: zod.string(),
       items: zod.array(

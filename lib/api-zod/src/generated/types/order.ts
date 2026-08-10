@@ -26,6 +26,7 @@ export interface Order {
   cashbackCode?: string | null;
   cashbackDiscount?: number | null;
   bonusDiscount?: number | null;
+  shippingFee: number;
   placedBy: OrderPlacedBy;
   createdAt: string;
   items: OrderItem[];

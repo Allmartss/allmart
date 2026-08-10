@@ -17,6 +17,15 @@ const BONUS_KEY = "nb_checkout_bonus";
 
 type Contact = { name: string; email: string; phone: string };
 type CashbackState = { code: string; amount: number } | null;
+type CheckoutQuote = {
+  subtotal: number;
+  shippingFee: number;
+  cashbackDiscount: number;
+  bonusDiscount: number;
+  total: number;
+  currency: string;
+  bonusBalance: number;
+};
 
 export default function Checkout() {
   const [, setLocation] = useLocation();
@@ -42,6 +51,8 @@ export default function Checkout() {
     try { return JSON.parse(sessionStorage.getItem(BONUS_KEY) ?? "false"); }
     catch { return false; }
   });
+  const [quote, setQuote] = useState<CheckoutQuote | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
 
   const bonusBalance = (me as { bonusBalance?: number } | null)?.bonusBalance ?? 0;
   const profileAddress = (me as { address?: string | null } | null)?.address ?? null;
@@ -69,6 +80,36 @@ export default function Checkout() {
   useEffect(() => {
     if (!isLoading && cart && cart.items.length === 0) setLocation("/cart");
   }, [isLoading, cart, setLocation]);
+
+  useEffect(() => {
+    if (!cart || cart.items.length === 0 || !me) {
+      setQuote(null);
+      return;
+    }
+    const controller = new AbortController();
+    setQuoteLoading(true);
+    fetch("/api/checkout/quote", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        cashbackCode: cashback?.code || undefined,
+        bonusApplied: useBonus,
+      }),
+      signal: controller.signal,
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Quote unavailable");
+        return await res.json() as CheckoutQuote;
+      })
+      .then(setQuote)
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setQuote(null);
+      })
+      .finally(() => setQuoteLoading(false));
+    return () => controller.abort();
+  }, [cart, me, cashback?.code, useBonus]);
 
   // Guests must sign in; signed-in users must verify email before checkout
   useEffect(() => {
@@ -140,24 +181,18 @@ export default function Checkout() {
   const fmt = (n: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: cart.currency }).format(n);
 
-  const totalShipping = cart.items.reduce((sum, item) => {
-    const fee = (item.product as { shippingFee?: number | null }).shippingFee ?? 0;
-    return sum + fee * item.quantity;
-  }, 0);
-
-  const discountedSubtotal = cashback
-    ? Math.max(0, cart.subtotal - cashback.amount)
-    : cart.subtotal;
-
-  const bonusApplied = useBonus && bonusBalance > 0;
-  const bonusDeduction = bonusApplied ? Math.min(bonusBalance, discountedSubtotal + totalShipping) : 0;
-  const grandTotal = Math.max(0, discountedSubtotal + totalShipping - bonusDeduction);
+  const totalShipping = quote?.shippingFee ?? 0;
+  const bonusApplied = useBonus;
+  const bonusDeduction = quote?.bonusDiscount ?? 0;
+  const grandTotal = quote?.total ?? 0;
 
   const canContinue =
     shippingAddress.trim().length >= 3 &&
     contact.name.trim().length >= 2 &&
     contact.phone.trim().length >= 7 &&
-    (!contact.email.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email.trim()));
+    (!contact.email.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email.trim())) &&
+    !!quote &&
+    !quoteLoading;
 
   return (
     <div className="container max-w-screen-lg mx-auto py-12 px-6">
@@ -281,7 +316,7 @@ export default function Checkout() {
             disabled={!canContinue}
             onClick={continueToPayment}
           >
-            Continue to payment <ArrowRight className="h-4 w-4" />
+            {quoteLoading ? "Calculating total…" : "Continue to payment"} <ArrowRight className="h-4 w-4" />
           </Button>
         </div>
 
@@ -304,15 +339,15 @@ export default function Checkout() {
               </div>
             ))}
           </div>
-          <div className="border-t border-border/50 pt-4 space-y-2">
-            <div className="flex justify-between text-sm text-muted-foreground">
+           <div className="border-t border-border/50 pt-4 space-y-2">
+             <div className="flex justify-between text-sm text-muted-foreground">
               <span>Subtotal</span>
-              <span>{fmt(cart.subtotal)}</span>
+               <span>{fmt(quote?.subtotal ?? cart.subtotal)}</span>
             </div>
-            {cashback && (
+             {(quote?.cashbackDiscount ?? 0) > 0 && cashback && (
               <div className="flex justify-between text-sm text-primary font-medium">
                 <span>Cashback ({cashback.code})</span>
-                <span>-{fmt(cashback.amount)}</span>
+                 <span>-{fmt(quote?.cashbackDiscount ?? 0)}</span>
               </div>
             )}
             <div className="flex justify-between text-sm">
@@ -349,9 +384,9 @@ export default function Checkout() {
               </div>
             )}
 
-            <div className="flex justify-between font-bold text-lg pt-2 border-t border-border/30">
+             <div className="flex justify-between font-bold text-lg pt-2 border-t border-border/30">
               <span>Total</span>
-              <span>{fmt(grandTotal)}</span>
+               <span>{quoteLoading ? "Calculating…" : fmt(grandTotal)}</span>
             </div>
           </div>
         </Card>

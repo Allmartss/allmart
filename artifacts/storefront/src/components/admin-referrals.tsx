@@ -221,7 +221,7 @@ export function AdminReferrals() {
       if (!res.ok) { toast({ title: "Error", description: data.error, variant: "destructive" }); return; }
       toast({
         title: "Bonus gift sent!",
-        description: `${grantTarget.name} will see the gift on their referral page and must claim it.`,
+        description: `${grantTarget.name} can use ${fmt(amount)} at checkout immediately.`,
       });
       await queryClient.invalidateQueries({ queryKey: ["/api/admin/bonus-grants"] });
       setGrantTarget(null);
@@ -347,7 +347,7 @@ export function AdminReferrals() {
               <span className="text-violet-700">
                 <span className="font-semibold">{fmt(Number(grantAmount))}</span> gift will appear on{" "}
                 <span className="font-semibold">{grantTarget.name}</span>'s referral page.
-                They must click <strong>Claim</strong> to add it to their balance.
+                It will be added to their bonus balance immediately and can be used at checkout.
                 {grantExpiry && (
                   <span className="block text-xs mt-1 text-violet-500">
                     Expires {new Date(grantExpiry).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}.

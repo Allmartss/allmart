@@ -386,6 +386,24 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/AuthUser"
+  /checkout/quote:
+    post:
+      operationId: getCheckoutQuote
+      tags: [orders]
+      summary: Calculate the current checkout total including available discounts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckoutQuoteRequest"
+      responses:
+        "200":
+          description: Current checkout quote
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutQuote"
   /admin/users/{id}:
     patch:
       operationId: updateUserRole
@@ -674,7 +692,13 @@ components:
         email: { type: string }
         name: { type: string }
         role: { type: string, enum: [buyer, admin, pm] }
-      required: [id, email, name, role]
+        tier: { type: integer }
+        emailVerified: { type: boolean }
+        profileComplete: { type: boolean }
+        address: { type: string, nullable: true }
+        bonusBalance: { type: number }
+        banned: { type: boolean }
+      required: [id, email, name, role, tier, emailVerified, profileComplete, bonusBalance, banned]
 
     CurrentUserResponse:
       type: object
@@ -887,12 +911,13 @@ components:
         bonusDiscount:
           type: number
           nullable: true
+        shippingFee: { type: number }
         placedBy: { type: string, enum: [user, ai] }
         createdAt: { type: string }
         items:
           type: array
           items: { $ref: "#/components/schemas/OrderItem" }
-      required: [id, status, total, currency, trackingCode, shippingAddress, placedBy, createdAt, items]
+      required: [id, status, total, currency, trackingCode, shippingAddress, shippingFee, placedBy, createdAt, items]
 
     PlaceOrderRequest:
       type: object
@@ -908,10 +933,30 @@ components:
         paymentScreenshotUrl: { type: string }
         paymentNote: { type: string, maxLength: 2000 }
         bonusApplied: { type: boolean }
+        expectedTotal: { type: number }
+        expectedBonusDiscount: { type: number }
         placedBy:
           type: string
           enum: [user, ai]
       required: [shippingAddress]
+
+    CheckoutQuoteRequest:
+      type: object
+      properties:
+        cashbackCode: { type: string }
+        bonusApplied: { type: boolean }
+
+    CheckoutQuote:
+      type: object
+      properties:
+        subtotal: { type: number }
+        shippingFee: { type: number }
+        cashbackDiscount: { type: number }
+        bonusDiscount: { type: number }
+        total: { type: number }
+        currency: { type: string }
+        bonusBalance: { type: number }
+      required: [subtotal, shippingFee, cashbackDiscount, bonusDiscount, total, currency, bonusBalance]
 
     SalesSummary:
       type: object

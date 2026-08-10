@@ -155,8 +155,16 @@ export default function OrderDetail() {
               )}
               <div className="flex justify-between text-muted-foreground">
                 <span>Shipping</span>
-                <span>Free</span>
+                <span>{(order.shippingFee ?? 0) > 0
+                  ? new Intl.NumberFormat('en-US', { style: 'currency', currency: order.currency }).format(order.shippingFee ?? 0)
+                  : "Free"}</span>
               </div>
+              {order.paymentMethod && (
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Paid with</span>
+                  <span className="capitalize">{order.paymentMethod.replace("_", " ")}</span>
+                </div>
+              )}
               <div className="border-t border-border/50 pt-4 flex justify-between font-bold text-xl">
                 <span>Total</span>
                 <span>{new Intl.NumberFormat('en-US', { style: 'currency', currency: order.currency }).format(order.total)}</span>

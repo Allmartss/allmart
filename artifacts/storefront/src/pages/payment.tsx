@@ -51,6 +51,15 @@ const ALL_METHODS: { id: Method; label: string; icon: React.ReactNode; hint: str
 type BankDetails = { bankName: string; accountName: string; accountNumber: string; routingNumber?: string; bankLogo?: string; email?: string };
 type Contact = { name: string; email: string; phone: string };
 type CashbackState = { code: string; amount: number } | null;
+type CheckoutQuote = {
+  subtotal: number;
+  shippingFee: number;
+  cashbackDiscount: number;
+  bonusDiscount: number;
+  total: number;
+  currency: string;
+  bonusBalance: number;
+};
 
 export default function Payment() {
   const [, setLocation] = useLocation();
@@ -60,6 +69,8 @@ export default function Payment() {
   const { data: authData } = useGetCurrentUser();
   const user = authData?.user as ({ tier?: number; bonusBalance?: number } & Record<string, unknown>) | null | undefined;
   const [method, setMethod] = useState<Method>("stripe");
+  const [quote, setQuote] = useState<CheckoutQuote | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(true);
   const [bankDetails, setBankDetails] = useState<BankDetails | null>(null);
   const [bankLoaded, setBankLoaded] = useState(false);
   const [cautionNote, setCautionNote] = useState<string>("");
@@ -103,6 +114,33 @@ export default function Payment() {
   useEffect(() => {
     if (!address) setLocation("/checkout");
   }, [address, setLocation]);
+
+  useEffect(() => {
+    if (!cart || cart.items.length === 0 || !authData?.user) return;
+    const controller = new AbortController();
+    setQuoteLoading(true);
+    fetch("/api/checkout/quote", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        cashbackCode: cashback?.code || undefined,
+        bonusApplied,
+      }),
+      signal: controller.signal,
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Quote unavailable");
+        return await res.json() as CheckoutQuote;
+      })
+      .then(setQuote)
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setQuote(null);
+      })
+      .finally(() => setQuoteLoading(false));
+    return () => controller.abort();
+  }, [cart, authData?.user, cashback?.code, bonusApplied]);
 
   useEffect(() => {
     if (!isLoading && cart && cart.items.length === 0) setLocation("/cart");
@@ -184,6 +222,8 @@ export default function Payment() {
         paymentScreenshotUrl: screenshotUrl || undefined,
         paymentNote: paymentNote.trim() || undefined,
         bonusApplied: bonusApplied || undefined,
+        expectedTotal: quote?.total,
+        expectedBonusDiscount: quote?.bonusDiscount,
         deferCartClear: true,
       } as Parameters<typeof placeOrder.mutate>[0]["data"],
     });
@@ -200,7 +240,10 @@ export default function Payment() {
   }
 
   async function openStripeCheckout() {
-    if (!cart) return;
+    if (!cart || !quote || quoteLoading) {
+      toast({ title: "Calculating total", description: "Please wait while we refresh the checkout total." });
+      return;
+    }
     setProviderLoading(true);
     const email = authData?.user?.email ?? contact.email ?? "guest@allmart.com";
 
@@ -240,18 +283,9 @@ export default function Payment() {
     );
   }
 
-  const totalShipping = cart.items.reduce((sum, item) => {
-    const fee = (item.product as { shippingFee?: number | null }).shippingFee ?? 0;
-    return sum + fee * item.quantity;
-  }, 0);
-
-  const discountedSubtotal = cashback
-    ? Math.max(0, cart.subtotal - cashback.amount)
-    : cart.subtotal;
-
-  const userBonusBalance = user?.bonusBalance ?? 0;
-  const bonusDeduction = bonusApplied ? Math.min(userBonusBalance, discountedSubtotal + totalShipping) : 0;
-  const grandTotal = Math.max(0, discountedSubtotal + totalShipping - bonusDeduction);
+  const totalShipping = quote?.shippingFee ?? 0;
+  const bonusDeduction = quote?.bonusDiscount ?? 0;
+  const grandTotal = quote?.total ?? 0;
 
   return (
     <div className="container max-w-screen-lg mx-auto py-12 px-6">
@@ -321,8 +355,8 @@ export default function Payment() {
           {method === "stripe" && (
             <ProviderCard
               title="Pay securely with Stripe"
-              description={<>Opens Stripe's checkout in a new tab. Pay <strong className="text-foreground">{fmt(grandTotal)}</strong> via Visa, Mastercard, or other cards. After payment, you'll be redirected back automatically.</>}
-              buttonLabel={`Pay ${fmt(grandTotal)} with Stripe`}
+               description={<>Opens Stripe's checkout in a new tab. Pay <strong className="text-foreground">{quoteLoading ? "the calculated total" : fmt(grandTotal)}</strong> via Visa, Mastercard, or other cards. After payment, you'll be redirected back automatically.</>}
+               buttonLabel={`Pay ${quoteLoading ? "…" : fmt(grandTotal)} with Stripe`}
               loading={providerLoading}
               onClick={openStripeCheckout}
             />
@@ -353,7 +387,7 @@ export default function Payment() {
                   {(bankDetails as BankDetails).email && (
                     <PayRow label="Contact email" value={(bankDetails as BankDetails).email!} onCopy={copyToClipboard} />
                   )}
-                  <PayRow label="Amount" value={fmt(grandTotal)} onCopy={copyToClipboard} />
+                   <PayRow label="Amount" value={quoteLoading ? "Calculating…" : fmt(grandTotal)} onCopy={copyToClipboard} />
                   <PayRow label="Reference" value={reference} onCopy={copyToClipboard} highlight />
                 </dl>
               ) : (
@@ -459,6 +493,8 @@ export default function Payment() {
                 disabled={
                   placeOrder.isPending ||
                   isUploading ||
+                  quoteLoading ||
+                  !quote ||
                   (method === "transfer" && !screenshotUrl)
                 }
                 onClick={confirmDeliveryOrTransfer}
@@ -499,12 +535,12 @@ export default function Payment() {
           <div className="border-t border-border/50 pt-4 space-y-2">
             <div className="flex justify-between text-sm text-muted-foreground">
               <span>Subtotal</span>
-              <span>{fmt(cart.subtotal)}</span>
+              <span>{fmt(quote?.subtotal ?? cart.subtotal)}</span>
             </div>
-            {cashback && (
+            {(quote?.cashbackDiscount ?? 0) > 0 && cashback && (
               <div className="flex justify-between text-sm text-primary font-medium">
                 <span>Cashback ({cashback.code})</span>
-                <span>-{fmt(cashback.amount)}</span>
+                <span>-{fmt(quote?.cashbackDiscount ?? 0)}</span>
               </div>
             )}
             <div className="flex justify-between text-sm">
@@ -521,7 +557,7 @@ export default function Payment() {
             )}
             <div className="flex justify-between font-bold text-lg pt-2 border-t border-border/30">
               <span>Total</span>
-              <span>{fmt(grandTotal)}</span>
+              <span>{quoteLoading || !quote ? "Calculating…" : fmt(grandTotal)}</span>
             </div>
           </div>
           {contact.name && (

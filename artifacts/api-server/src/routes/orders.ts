@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, ordersTable, cartItemsTable, productsTable, usersTable, notificationsTable, cashbackCodesTable } from "@workspace/db";
-import { and, eq, desc, inArray } from "drizzle-orm";
+import { and, eq, desc, inArray, gte, sql } from "drizzle-orm";
 import { PlaceOrderBody, UpdateOrderStatusBody } from "@workspace/api-zod";
 import { serializeOrder } from "../lib/serializers";
 import { generateTrackingCode } from "../lib/tracking";
@@ -8,6 +8,7 @@ import { requireRole, getUserFromCookie } from "../lib/auth";
 import { sendOrderEmail } from "./email";
 import { logger } from "../lib/logger";
 import { isSafeMediaUrl } from "../lib/url-validation";
+import { buildCart } from "./cart";
 
 const router: IRouter = Router();
 
@@ -31,6 +32,8 @@ export async function placeOrderForSession(
     bonusApplied?: boolean;
     deferCartClear?: boolean;
     stripeSessionId?: string;
+    expectedTotal?: number;
+    expectedBonusDiscount?: number;
   },
 ) {
   const items = await db
@@ -48,10 +51,12 @@ export async function placeOrderForSession(
     .where(inArray(productsTable.id, items.map((i) => i.productId)));
   const byId = new Map(products.map((p) => [p.id, p]));
 
-  let total = 0;
+  let subtotal = 0;
+  let shippingFee = 0;
   const orderItems = items.map((i) => {
     const p = byId.get(i.productId)!;
-    total += i.quantity * p.price;
+    subtotal += i.quantity * p.price;
+    shippingFee += i.quantity * (p.shippingFee ?? 0);
     return {
       productId: p.id,
       productName: p.name,
@@ -60,70 +65,88 @@ export async function placeOrderForSession(
       imageUrl: p.imageUrl,
     };
   });
-  total = Math.round(total * 100) / 100;
+  subtotal = Math.round(subtotal * 100) / 100;
+  shippingFee = Math.round(shippingFee * 100) / 100;
 
-  const discounts = await calculateOrderDiscounts(total, userId, {
+  const discounts = await calculateOrderDiscounts(subtotal + shippingFee, userId, {
     cashbackCode: extras?.cashbackCode,
     bonusApplied: extras?.bonusApplied,
-  });
-  total = discounts.total;
+  }, shippingFee);
 
-  if (discounts.cashbackCodeId) {
-    await db.update(cashbackCodesTable)
-      .set({ usedCount: discounts.cashbackUsedCount + 1 })
-      .where(eq(cashbackCodesTable.id, discounts.cashbackCodeId));
+  if (extras?.expectedTotal !== undefined && Math.abs(discounts.total - extras.expectedTotal) > 0.01) {
+    return { error: "The checkout total changed. Please return to checkout and try again." as const };
+  }
+  if (extras?.expectedBonusDiscount !== undefined && Math.abs((discounts.bonusDiscount ?? 0) - extras.expectedBonusDiscount) > 0.01) {
+    return { error: "Your bonus balance changed. Please return to checkout and try again." as const };
   }
 
-  if (discounts.bonusDiscount && userId) {
-    const [updatedUser] = await db
-      .update(usersTable)
-      .set({
-        bonusBalance: discounts.remainingBonusBalance,
-      })
-      .where(eq(usersTable.id, userId))
-      .returning({ id: usersTable.id });
-    if (!updatedUser) {
-      return { error: "Bonus balance changed. Please retry checkout." as const };
+  const order = await db.transaction(async (tx) => {
+    if (discounts.cashbackCodeId) {
+      await tx.update(cashbackCodesTable)
+        .set({ usedCount: discounts.cashbackUsedCount + 1 })
+        .where(eq(cashbackCodesTable.id, discounts.cashbackCodeId));
     }
-  }
 
-  const [order] = await db
-    .insert(ordersTable)
-    .values({
-      sessionId,
-      userId: userId ?? null,
-      status: "placed",
-      total,
-      currency: "USD",
-      trackingCode: generateTrackingCode(),
-      shippingAddress,
-      receiverName: extras?.receiverName ?? null,
-      receiverEmail: extras?.receiverEmail ?? null,
-      receiverPhone: extras?.receiverPhone ?? null,
-      cashbackCode: discounts.cashbackCode,
-      cashbackDiscount: discounts.cashbackDiscount,
-      placedBy,
-      items: orderItems,
-      paymentMethod: extras?.paymentMethod ?? null,
-      paymentScreenshotUrl: extras?.paymentScreenshotUrl ?? null,
-      paymentNote: extras?.paymentNote ?? null,
-      paymentVerified: "pending",
-      stripeSessionId: extras?.stripeSessionId ?? null,
-      bonusDiscount: discounts.bonusDiscount,
-    })
-    .returning();
+    if (discounts.bonusDiscount && userId) {
+      const [updatedUser] = await tx
+        .update(usersTable)
+        .set({ bonusBalance: sql`${usersTable.bonusBalance} - ${discounts.bonusDiscount}` })
+        .where(and(
+          eq(usersTable.id, userId),
+          gte(usersTable.bonusBalance, discounts.bonusDiscount),
+        ))
+        .returning({ id: usersTable.id });
+      if (!updatedUser) throw new Error("Bonus balance changed. Please retry checkout.");
+    }
 
-  if (!extras?.deferCartClear) {
-    await db.delete(cartItemsTable).where(eq(cartItemsTable.sessionId, sessionId));
-  }
+    const [created] = await tx
+      .insert(ordersTable)
+      .values({
+        sessionId,
+        userId: userId ?? null,
+        status: "placed",
+        total: discounts.total,
+        currency: "USD",
+        trackingCode: generateTrackingCode(),
+        shippingAddress,
+        receiverName: extras?.receiverName ?? null,
+        receiverEmail: extras?.receiverEmail ?? null,
+        receiverPhone: extras?.receiverPhone ?? null,
+        shippingFee,
+        cashbackCode: discounts.cashbackCode,
+        cashbackDiscount: discounts.cashbackDiscount,
+        placedBy,
+        items: orderItems,
+        paymentMethod: extras?.paymentMethod ?? null,
+        paymentScreenshotUrl: extras?.paymentScreenshotUrl ?? null,
+        paymentNote: extras?.paymentNote ?? null,
+        paymentVerified: "pending",
+        stripeSessionId: extras?.stripeSessionId ?? null,
+        bonusDiscount: discounts.bonusDiscount,
+      })
+      .returning();
 
-  return { order: order! };
+    if (!extras?.deferCartClear) {
+      await tx.delete(cartItemsTable).where(eq(cartItemsTable.sessionId, sessionId));
+    }
+    return created!;
+  }).catch((err) => {
+    if (err instanceof Error && err.message === "Bonus balance changed. Please retry checkout.") {
+      return null;
+    }
+    throw err;
+  });
+
+  if (!order) return { error: "Bonus balance changed. Please retry checkout." as const };
+
+  return { order };
 }
 
 export async function calculateOrderDiscounts(
   baseTotal: number,
   userId: number | undefined,
   options: { cashbackCode?: string; bonusApplied?: boolean },
+  shippingFee = 0,
 ) {
   let total = Math.round(baseTotal * 100) / 100;
   let cashbackCode: string | null = null;
@@ -140,7 +163,7 @@ export async function calculateOrderDiscounts(
       cashbackCode = cb.code;
       cashbackCodeId = cb.id;
       cashbackUsedCount = cb.usedCount;
-      cashbackDiscount = Math.min(cb.amount, total);
+      cashbackDiscount = Math.min(cb.amount, Math.max(0, total - shippingFee));
       total = Math.max(0, Math.round((total - cashbackDiscount) * 100) / 100);
     }
   }
@@ -169,6 +192,34 @@ export async function calculateOrderDiscounts(
     remainingBonusBalance,
   };
 }
+
+router.post("/checkout/quote", requireRole("buyer", "pm", "admin"), async (req: Request, res: Response) => {
+  const cart = await buildCart(req.sessionId);
+  if (cart.items.length === 0) {
+    res.status(400).json({ error: "Cart is empty" });
+    return;
+  }
+  const userId = (req as Request & { authUser?: { id: number } }).authUser?.id;
+  const shippingFee = Math.round(cart.items.reduce(
+    (sum, item) => sum + item.quantity * (item.product.shippingFee ?? 0), 0,
+  ) * 100) / 100;
+  const discounts = await calculateOrderDiscounts(cart.subtotal + shippingFee, userId, {
+    cashbackCode: (req.body as { cashbackCode?: string }).cashbackCode,
+    bonusApplied: (req.body as { bonusApplied?: boolean }).bonusApplied === true,
+  }, shippingFee);
+  const [user] = userId
+    ? await db.select({ bonusBalance: usersTable.bonusBalance }).from(usersTable).where(eq(usersTable.id, userId))
+    : [];
+  res.json({
+    subtotal: cart.subtotal,
+    shippingFee,
+    cashbackDiscount: discounts.cashbackDiscount ?? 0,
+    bonusDiscount: discounts.bonusDiscount ?? 0,
+    total: discounts.total,
+    currency: cart.currency,
+    bonusBalance: user?.bonusBalance ?? 0,
+  });
+});
 
 const ORDER_STATUS_COPY: Record<string, { title: string; message: (trackingCode: string, total?: number, currency?: string) => string }> = {
   placed: {
@@ -264,6 +315,8 @@ router.post("/orders", async (req: Request, res: Response) => {
     paymentNote?: string;
     bonusApplied?: boolean;
     deferCartClear?: boolean;
+    expectedTotal?: number;
+    expectedBonusDiscount?: number;
   };
   if (body.receiverEmail && !EMAIL_RE.test(body.receiverEmail.trim())) {
     res.status(400).json({ error: "receiverEmail must be a valid email address" });
@@ -291,6 +344,8 @@ router.post("/orders", async (req: Request, res: Response) => {
     paymentNote: body.paymentNote,
     bonusApplied: body.bonusApplied,
     deferCartClear: body.deferCartClear,
+    expectedTotal: body.expectedTotal,
+    expectedBonusDiscount: body.expectedBonusDiscount,
   });
   if ("error" in result) {
     res.status(400).json({ error: result.error });

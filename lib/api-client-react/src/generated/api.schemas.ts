@@ -22,6 +22,12 @@ export interface AuthUser {
   email: string;
   name: string;
   role: AuthUserRole;
+  tier: number;
+  emailVerified: boolean;
+  profileComplete: boolean;
+  address?: string | null;
+  bonusBalance: number;
+  banned: boolean;
 }
 
 export interface CurrentUserResponse {
@@ -227,6 +233,7 @@ export interface Order {
   cashbackCode?: string | null;
   cashbackDiscount?: number | null;
   bonusDiscount?: number | null;
+  shippingFee: number;
   placedBy: OrderPlacedBy;
   createdAt: string;
   items: OrderItem[];
@@ -261,7 +268,24 @@ export interface PlaceOrderRequest {
   /** @maxLength 2000 */
   paymentNote?: string;
   bonusApplied?: boolean;
+  expectedTotal?: number;
+  expectedBonusDiscount?: number;
   placedBy?: PlaceOrderRequestPlacedBy;
+}
+
+export interface CheckoutQuoteRequest {
+  cashbackCode?: string;
+  bonusApplied?: boolean;
+}
+
+export interface CheckoutQuote {
+  subtotal: number;
+  shippingFee: number;
+  cashbackDiscount: number;
+  bonusDiscount: number;
+  total: number;
+  currency: string;
+  bonusBalance: number;
 }
 
 export type SalesSummaryDailyChartItem = {

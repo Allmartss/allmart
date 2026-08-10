@@ -39,10 +39,13 @@ router.post("/stripe/initialize", requireRole("buyer", "pm", "admin"), async (re
       return;
     }
     const userId = (req as Request & { authUser?: { id: number } }).authUser?.id;
-    const discounts = await calculateOrderDiscounts(cart.subtotal, userId, {
+    const shippingFee = Math.round(cart.items.reduce(
+      (sum, item) => sum + item.quantity * (item.product.shippingFee ?? 0), 0,
+    ) * 100) / 100;
+    const discounts = await calculateOrderDiscounts(cart.subtotal + shippingFee, userId, {
       cashbackCode,
       bonusApplied: bonusApplied === true,
-    });
+    }, shippingFee);
     if (discounts.total <= 0) {
       res.status(400).json({ error: "The order total must be greater than zero for Stripe payment" });
       return;
@@ -75,6 +78,8 @@ router.post("/stripe/initialize", requireRole("buyer", "pm", "admin"), async (re
         cashbackCode: discounts.cashbackCode ?? "",
         cashbackDiscount: String(discounts.cashbackDiscount ?? 0),
         bonusDiscount: String(discounts.bonusDiscount ?? 0),
+        shippingFee: String(shippingFee),
+        expectedTotal: String(discounts.total),
       },
     });
 
@@ -135,6 +140,12 @@ router.post("/stripe/verify", requireRole("buyer", "pm", "admin"), async (req: R
     const orderSessionId = metaSessionId ?? req.sessionId;
     const expectedCashbackCode = session.metadata?.["cashbackCode"] || undefined;
     const expectedBonusApplied = Number(session.metadata?.["bonusDiscount"] ?? 0) > 0;
+    const expectedTotal = Number(session.metadata?.["expectedTotal"] ?? "");
+    const expectedBonusDiscount = Number(session.metadata?.["bonusDiscount"] ?? 0);
+    if (!Number.isFinite(expectedTotal) || !session.amount_total || Math.round(expectedTotal * 100) !== session.amount_total) {
+      res.status(409).json({ error: "The Stripe payment total does not match the current checkout. Please contact support." });
+      return;
+    }
 
     const placed = await placeOrderForSession(orderSessionId, shippingAddress, "user", user.id, {
       paymentMethod: "stripe",
@@ -142,6 +153,8 @@ router.post("/stripe/verify", requireRole("buyer", "pm", "admin"), async (req: R
       bonusApplied: expectedBonusApplied,
       deferCartClear: true,
       stripeSessionId: sessionId,
+       expectedTotal,
+       expectedBonusDiscount,
     });
     if ("error" in placed) {
       res.status(400).json({ error: placed.error });
