@@ -56,8 +56,39 @@ WHAT HAS BEEN DONE
    - `scripts/health-check.sh`
 
 8. Python and shell syntax checks have passed.
-   No database connection, migration, dependency installation, or production
-   deployment has been run.
+
+9. The Marts isolation audit was completed:
+
+   - Route-level notifications, broker, market-data, wallet, monitoring,
+     webhook, and public URL settings use `MARTS_*` names.
+   - Marts loads its local `marts/.env`.
+   - The only approved database fallback remains `DATABASE_URL`.
+   - The frontend development proxy defaults to the private backend port `8090`.
+   - No remaining generic AllMart environment references were found in
+     `marts/src/`.
+
+10. The Marts environment template and README were updated with the names and
+    routing rules required by the isolated service.
+
+11. This setup phase is now authorized to install the declared dependencies,
+    use only `DATABASE_URL` or an explicitly configured `MARTS_DATABASE_URL`,
+    run the Marts Alembic migration, and configure the `/marts` serving path.
+    `SUPABASE_DB_URL` is explicitly excluded from the Marts setup.
+
+12. The declared Python dependencies were installed in the Replit Python
+    environment. The existing Marts `requirements.txt` remains the source list;
+    no AllMart pnpm dependency was changed.
+
+13. The Alembic environment was repaired to:
+
+    - Resolve `MARTS_DATABASE_URL` first and `DATABASE_URL` second.
+    - Load the extracted Marts models as migration metadata.
+    - Use synchronous PostgreSQL SQLAlchemy connections consistently.
+    - Fail clearly when neither database URL is available.
+
+14. A read-only probe using only `DATABASE_URL` reached the managed PostgreSQL
+    database and found no public tables. `SUPABASE_DB_URL` was not read or
+    modified.
 
 WHAT STILL NEEDS TO BE DONE
 ---------------------------
@@ -67,6 +98,10 @@ WHAT STILL NEEDS TO BE DONE
    - Replace any remaining old root `/api` frontend calls.
    - Replace remaining legacy secret-name references in copied diagnostics.
    - Confirm that every frontend API request stays under `/marts/api`.
+
+   The environment namespace audit is complete; this item now covers only
+   frontend route behavior and any runtime import issues discovered during
+   startup.
 
 2. Finish the backend isolation audit:
 
@@ -78,7 +113,8 @@ WHAT STILL NEEDS TO BE DONE
 3. Configure the Marts environment outside Git:
 
    - Set `MARTS_DATABASE_URL` when a dedicated Marts database is available.
-   - Otherwise explicitly use the approved `DATABASE_URL` fallback.
+   - For the current setup, use the approved Supabase `DATABASE_URL` fallback
+     if no dedicated Marts database URL is configured.
    - Set a strong `MARTS_JWT_SECRET`.
    - Add only the optional Marts AI, market-data, broker, email, or Telegram
      settings that are actually needed.
@@ -86,11 +122,17 @@ WHAT STILL NEEDS TO BE DONE
 4. Install the Python and frontend dependencies in the deployment
    environment, then build the frontend from `marts/frontend/`.
 
-5. Run database migrations only after the correct database URL has been
-   reviewed. Migrations must never be run against the AllMart database by
-   accident.
+   Python dependencies are installed. Frontend dependencies and the production
+   build remain pending.
 
-6. Configure the reverse proxy so:
+5. Use `MARTS_DATABASE_URL` when it is explicitly configured; otherwise use
+   `DATABASE_URL`. Do not read or use `SUPABASE_DB_URL` for Marts.
+
+6. Create and apply a non-destructive initial Marts migration against the
+   selected Marts database. Record the migration revision and verify the
+   resulting tables.
+
+7. Configure the reverse proxy/workflow so:
 
    - `/` continues to serve AllMart ecommerce.
    - `/api/...` continues to serve the AllMart API.
@@ -98,10 +140,11 @@ WHAT STILL NEEDS TO BE DONE
    - `/marts/api/...` reaches the private Marts FastAPI service.
    - `/marts/ws/...` reaches the private Marts WebSocket service.
 
-7. Add a separate service/process for Marts, using a private local port such
-   as `8090`. The Marts service must be restartable without restarting AllMart.
+8. Add or update a separate service/process for Marts, using private local
+   port `8090`. The Marts service must be restartable without restarting
+   AllMart.
 
-8. Verify before public access:
+9. Verify before public access:
 
    - Marts backend starts with the intended database.
    - AllMart still works at `/`.
@@ -110,12 +153,15 @@ WHAT STILL NEEDS TO BE DONE
    - Authenticated data is user-scoped.
    - Paper trading is the default.
    - Broker and AI secrets never reach frontend code.
-   - `/marts`, `/marts/api`, and `/marts/ws` route correctly.
+    - `/marts`, `/marts/api`, and `/marts/ws` route correctly.
    - HTTPS, secure cookies, rate limiting, and security headers are enabled.
 
 CURRENT LIMITATION
 ------------------
 
-The extracted files are a source-level handoff. They are not yet a finished
-production deployment. The database and external services were deliberately
-not contacted while creating this explanation and extraction.
+The extracted files are now ready for migration and frontend setup, but they
+are not yet a finished production deployment. Python dependencies and the
+migration runner are ready; the current phase must still complete the selected
+`DATABASE_URL`/`MARTS_DATABASE_URL` migration, frontend dependency
+installation/build, backend service configuration, `/marts` reverse-proxy
+wiring, and runtime verification.
