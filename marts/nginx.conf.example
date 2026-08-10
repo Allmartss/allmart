@@ -1,0 +1,17 @@
+# Include this in the AllMart reverse-proxy configuration after adapting the
+# upstream host/port to the deployment.
+location /marts/api/ {
+    proxy_pass http://127.0.0.1:8090/api/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+location /marts/ {
+    proxy_pass http://127.0.0.1:8090/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}

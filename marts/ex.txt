@@ -1,0 +1,121 @@
+Marts Extraction Status
+=======================
+
+This file explains what has been done inside the root-level `marts/` folder
+and what still needs to be completed.
+
+WHAT HAS BEEN DONE
+------------------
+
+1. A separate `marts/` folder was created at the AllMart project root.
+   The existing AllMart ecommerce folders and application code were not
+   intentionally merged with Marts.
+
+2. The public FinAi repository was inspected and the main web application was
+   extracted into Marts:
+
+   - FastAPI backend source under `marts/src/`
+   - React/Vite web frontend under `marts/frontend/`
+   - SQLAlchemy/Alembic database files under `marts/migrations/`
+   - Python dependency list in `marts/requirements.txt`
+   - Admin setup script in `marts/setup_admin.py`
+
+3. Unrelated source was not copied into Marts:
+
+   - Mobile/Expo application
+   - Evolution/WhatsApp service
+   - Git history
+   - Backup data
+   - Monitoring deployment files and separate monitoring services
+   - The source repository's local Streamlit UI
+
+4. Marts database selection was separated from the AllMart application:
+
+   - First choice: `MARTS_DATABASE_URL`
+   - Fallback: `DATABASE_URL`
+   - Marts fails clearly if neither database variable is available
+
+5. Marts JWT signing was renamed to use `MARTS_JWT_SECRET`.
+   The extracted backend does not intentionally use the AllMart session secret.
+
+6. The frontend was changed to use the `/marts/` base path:
+
+   - Web pages: `/marts/...`
+   - API calls: `/marts/api/...`
+   - WebSocket calls: `/marts/ws/...`
+
+7. Marts-specific operational files were added:
+
+   - `.env.example`
+   - `.gitignore`
+   - `README.md`
+   - `nginx.conf.example`
+   - `scripts/check-env.sh`
+   - `scripts/start.sh`
+   - `scripts/build-frontend.sh`
+   - `scripts/health-check.sh`
+
+8. Python and shell syntax checks have passed.
+   No database connection, migration, dependency installation, or production
+   deployment has been run.
+
+WHAT STILL NEEDS TO BE DONE
+---------------------------
+
+1. Finish the import and route audit:
+
+   - Replace any remaining old root `/api` frontend calls.
+   - Replace remaining legacy secret-name references in copied diagnostics.
+   - Confirm that every frontend API request stays under `/marts/api`.
+
+2. Finish the backend isolation audit:
+
+   - Confirm that optional storage, notifications, and AI integrations use
+     Marts-specific settings or remain disabled unless explicitly configured.
+   - Remove any copied admin or monitoring functionality that is not required
+     for the first two-page Marts release.
+
+3. Configure the Marts environment outside Git:
+
+   - Set `MARTS_DATABASE_URL` when a dedicated Marts database is available.
+   - Otherwise explicitly use the approved `DATABASE_URL` fallback.
+   - Set a strong `MARTS_JWT_SECRET`.
+   - Add only the optional Marts AI, market-data, broker, email, or Telegram
+     settings that are actually needed.
+
+4. Install the Python and frontend dependencies in the deployment
+   environment, then build the frontend from `marts/frontend/`.
+
+5. Run database migrations only after the correct database URL has been
+   reviewed. Migrations must never be run against the AllMart database by
+   accident.
+
+6. Configure the reverse proxy so:
+
+   - `/` continues to serve AllMart ecommerce.
+   - `/api/...` continues to serve the AllMart API.
+   - `/marts/` serves Marts.
+   - `/marts/api/...` reaches the private Marts FastAPI service.
+   - `/marts/ws/...` reaches the private Marts WebSocket service.
+
+7. Add a separate service/process for Marts, using a private local port such
+   as `8090`. The Marts service must be restartable without restarting AllMart.
+
+8. Verify before public access:
+
+   - Marts backend starts with the intended database.
+   - AllMart still works at `/`.
+   - Login and logout work.
+   - Unauthenticated dashboard requests are rejected.
+   - Authenticated data is user-scoped.
+   - Paper trading is the default.
+   - Broker and AI secrets never reach frontend code.
+   - `/marts`, `/marts/api`, and `/marts/ws` route correctly.
+   - HTTPS, secure cookies, rate limiting, and security headers are enabled.
+
+CURRENT LIMITATION
+------------------
+
+The extracted files are a source-level handoff. They are not yet a finished
+production deployment. The database and external services were deliberately
+not contacted while creating this explanation and extraction.
