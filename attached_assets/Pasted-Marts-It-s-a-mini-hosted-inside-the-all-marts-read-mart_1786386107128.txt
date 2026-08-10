@@ -1,0 +1,254 @@
+Marts It's a mini hosted inside the all marts read marts.txt Okay just write the explanation how you will do it read explanation.txt allmarts is running on a vos it's personal e commerce with a do main I've this project I want to extract the backend fastapi and this that will start it and I want to build like 2page Ui for the frontend separate db marts_database="'" and other keys so in the allmart root folder we will put the extracted backends in a folder marts So this site has nothing to do with the allmart just borrowing hosting so the Ui will be reachable via allmarts.t/marts and anybody that know the link can acess it but we are going to secure it. So and we are going to extract those components in root that start the backend and fronted so this is the git link it a financial trading system with Ai https://github.com/Darkroa/fin.git
+Understood. I won’t modify the project yet. I’ll read explanation.txt alongside marts.txt and then give you the exact extraction, folder, database, security, and /marts routing plan in plain language.
+I read both marts.txt and explanation.txt. The implementation will be done as a separate mini application inside the AllMart VPS, without mixing it with the AllMart ecommerce system.
+Proposed structure
+Inside the existing AllMart root:
+allmart/
+├── artifacts/
+├── lib/
+├── scripts/
+├── existing AllMart files
+├── marts/
+│ ├── backend/
+│ ├── frontend/
+│ ├── scripts/
+│ ├── migrations/
+│ ├── .env.example
+│ ├── README.md
+│ └── .gitignore
+└── ...
+
+The existing AllMart files will remain untouched except for the minimum Nginx and service configuration needed to expose /marts.
+Backend
+I will inspect the GitHub project:
+https://github.com/Darkroa/fin.git
+
+The repository contains a FastAPI/PostgreSQL financial system, but it also contains unrelated services, dashboards, WhatsApp components, Streamlit pages, and other utilities. I will not copy the repository blindly.
+I will extract only the required parts:
+* FastAPI application startup
+* Authentication
+* User/session handling
+* Database models and migrations
+* Market and portfolio data
+* Positions and trade history
+* AI analysis endpoints
+* Paper-trading controls
+* Health endpoint
+* Required service configuration
+The backend will run independently, for example:
+127.0.0.1:8090
+
+It will have its own process and service:
+marts.service
+
+Restarting Marts will not restart AllMart:
+sudo systemctl restart marts
+sudo systemctl restart allmart
+
+Separate database
+Marts will not use the AllMart database.
+Its configuration will use a Marts-specific variable:
+MARTS_DATABASE_URL=
+
+The backend will fail clearly if MARTS_DATABASE_URL is missing. It will never silently fall back to:
+DATABASE_URL
+SUPABASE_DB_URL
+
+The Marts database will contain only Marts data, such as:
+* Marts users
+* Sessions
+* Watchlists
+* Portfolios
+* Positions
+* Trading orders
+* Trade activity
+* AI analysis history
+* Audit logs
+All AI, broker, encryption, and session keys will also have Marts-specific names, for example:
+MARTS_SESSION_SECRET=
+MARTS_JWT_SECRET=
+MARTS_AI_API_KEY=
+MARTS_BROKER_API_KEY=
+MARTS_BROKER_API_SECRET=
+MARTS_ENCRYPTION_KEY=
+MARTS_ENVIRONMENT=production
+
+No AllMart secret will be loaded by the Marts backend.
+Important Replit database limitation
+Replit provides one built-in PostgreSQL database per Replit App. A folder named marts inside the AllMart App cannot automatically receive a second independent Replit Postgres database.
+To use a truly separate Replit Postgres database, Marts must be created as its own Replit App. That separate App will receive its own database connection, which can be configured as:
+MARTS_DATABASE_URL=<separate Marts Replit Postgres connection>
+
+The code can still be developed under:
+allmart/marts/
+
+and deployed to the VPS as an independent service. The important part is that the connection string points to the Marts database, never the AllMart database.
+If the Marts service is eventually hosted only on the VPS, the separate database could also be a dedicated PostgreSQL database or a separate managed PostgreSQL project. The application interface will remain MARTS_DATABASE_URLeither way.
+Frontend
+The first frontend version will contain two main pages.
+Page 1: Secure access
+The login page will include:
+* Email and password login
+* Validation messages
+* Failed-login handling
+* Session creation
+* Logout support
+* Optional invite or allowlist protection
+* Redirect to the dashboard after login
+The page will use a separate financial trading design and will not reuse AllMart’s ecommerce branding.
+Page 2: Trading dashboard
+The dashboard will include:
+* Paper/live trading indicator
+* Account balance
+* Portfolio summary
+* Market overview
+* Watchlist
+* Open positions
+* Recent trading activity
+* AI-generated market analysis
+* Trading controls where enabled
+Paper trading will be enabled by default. Live trading will require separate backend configuration and explicit confirmation.
+The frontend will use relative Marts paths:
+/marts/api/...
+
+It will not call:
+localhost
+
+the VPS IP directly, or the AllMart API.
+The frontend will be built with:
+/marts/
+
+as its base path so the assets load correctly:
+/marts/assets/app.js
+/marts/assets/app.css
+
+Public routing
+The existing AllMart routes will continue working:
+/ → AllMart frontend
+/api/... → AllMart API
+
+Marts will be routed separately:
+/marts → Marts frontend
+/marts/api/... → Marts FastAPI backend
+
+Nginx will proxy Marts internally to its private backend port:
+location /marts/api/ {
+proxy_pass http://127.0.0.1:8090/api/;
+}
+
+location /marts/ {
+proxy_pass http://127.0.0.1:8090/;
+}
+
+The exact Nginx configuration will be adjusted to match the final frontend build and FastAPI paths.
+Port 8090 will not be opened publicly. Only Nginx will access it.
+Security
+The public /marts URL will not be treated as authentication. Anyone who knows the link can reach the login page, but protected data will require a valid session.
+The backend will enforce:
+* HTTP-only secure cookies or short-lived tokens
+* Password hashing
+* Login rate limiting
+* Temporary throttling after repeated failures
+* Server-side authorization on every protected endpoint
+* Strict request validation
+* CSRF protection for cookie-based sessions
+* Strict CORS rules
+* Security headers
+* Audit logging for trading actions
+* No public database port
+* No public FastAPI port
+* No secrets in frontend code
+* Paper trading by default
+* Explicit live-trading safeguards
+Broker API keys will remain on the backend and will never be returned through frontend JavaScript or public API responses.
+Deployment files
+The marts folder will include its own operational files:
+marts/
+├── backend/
+├── frontend/
+├── scripts/
+│ ├── check-env.sh
+│ ├── migrate.sh
+│ ├── build.sh
+│ └── health-check.sh
+├── migrations/
+├── .env.example
+├── README.md
+└── .gitignore
+
+The production environment file will be outside Git:
+/opt/allmart/marts/.env
+
+It will contain only Marts settings and will be protected:
+chmod 600 /opt/allmart/marts/.env
+chown allmart:allmart /opt/allmart/marts/.env
+
+The service will be configured separately from AllMart:
+[Unit]
+Description=Marts financial trading application
+After=network.target
+
+[Service]
+User=allmart
+WorkingDirectory=/opt/allmart/marts
+EnvironmentFile=/opt/allmart/marts/.env
+ExecStart=/opt/allmart/marts/scripts/start.sh
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+
+Database migration safety
+Marts migrations will use only:
+MARTS_DATABASE_URL
+
+Before migrations run, the script will verify that the connection exists and is a PostgreSQL connection. It will not use AllMart’s DATABASE_URL.
+The migration process will:
+1. Confirm MARTS_DATABASE_URL exists.
+2. Connect to the Marts database.
+3. Run only Marts migrations.
+4. Confirm the expected Marts tables exist.
+5. Fail clearly if the connection is missing or incorrect.
+Verification before public access
+Before enabling /marts, I will verify:
+* FastAPI starts successfully.
+* The Marts database connection works.
+* AllMart’s database is not used.
+* AllMart remains operational.
+* The frontend builds with /marts/ as the base path.
+* Login works.
+* Unauthenticated dashboard requests are rejected.
+* Authenticated users can only access their own data.
+* AI and broker keys remain server-side.
+* Paper trading works.
+* Marts and AllMart can be restarted independently.
+* Nginx routes / and /marts correctly.
+* HTTPS and secure cookies work through the domain.
+The final arrangement will be:
+https://your-domain.com/
+AllMart ecommerce
+
+https://your-domain.com/marts
+Marts financial trading application
+
+The two applications will share only:
+* The VPS
+* The domain
+* Nginx
+* HTTPS hosting
+They will not share:
+* Database
+* Users
+* Sessions
+* Secrets
+* Business logic
+* Backend process
+* Authentication system
+* Logs
+* Trading or ecommerce data
+Understood. No files or database configuration were changed.
+The Marts implementation is currently paused because a truly separate Replit Postgres database cannot be created inside the existing AllMart App. The valid isolated options are:
+1. Create Marts as a separate Replit App with its own PostgreSQL database, then deploy its backend under /opt/allmart/marts.
+2. Use a separate external/VPS PostgreSQL database configured through MARTS_DATABASE_URL.
+I will not use AllMart’s existing database unless you explicitly approve that compromise.
