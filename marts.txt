@@ -1,0 +1,353 @@
+Marts — Separate Financial Trading Application Plan
+====================================================
+
+This document describes how the financial trading system from:
+
+  https://github.com/Darkroa/fin
+
+will be extracted and hosted separately from AllMart.
+
+The application will borrow the existing VPS and domain hosting only. It
+will not become part of the AllMart ecommerce system, and it must not share
+AllMart's database, secrets, users, business logic, or application process.
+
+
+1. Separation from AllMart
+--------------------------
+
+The existing AllMart application will remain unchanged.
+
+Inside the AllMart root directory, the new application will be placed in a
+separate folder:
+
+  allmart/
+  ├── existing AllMart files
+  ├── marts/
+  │   ├── backend/
+  │   ├── frontend/
+  │   ├── scripts/
+  │   ├── .env.example
+  │   └── README.md
+  └── ...
+
+The Marts application will have its own:
+
+  - Backend
+  - Frontend
+  - Database connection
+  - Environment variables
+  - Authentication
+  - Logs
+  - Service/process
+  - Deployment commands
+  - Security configuration
+
+Only the VPS, Nginx, HTTPS, and domain hosting will be shared.
+
+
+2. Inspecting and Extracting the GitHub Project
+-----------------------------------------------
+
+Before copying or changing code, inspect the repository to identify:
+
+  - Whether the backend already uses FastAPI
+  - The backend startup command
+  - Existing API routes
+  - Database models and migrations
+  - AI integrations
+  - Trading or broker integrations
+  - Authentication and user management
+  - Existing frontend structure
+  - Required environment variables
+  - Background workers and scheduled jobs
+  - Development-only code and unrelated examples
+
+Only the components needed for the Marts application will be extracted into
+the `marts` folder. The whole repository will not be copied blindly if it
+contains unrelated deployment files, demos, or services.
+
+The extracted project will be organized so that the backend and frontend can
+be started independently during development and together in production.
+
+
+3. Separate Database
+--------------------
+
+Marts will use a database that is completely separate from the AllMart
+database.
+
+The Marts connection variable will use a distinct name, such as:
+
+  MARTS_DATABASE_URL=
+
+If the extracted backend specifically requires another name, it will be
+adapted to a clearly Marts-specific variable, for example:
+
+  MARTS_DATABASE=
+
+The Marts database will contain only Marts-related data, such as:
+
+  - Users and sessions
+  - Trading accounts
+  - Watchlists
+  - Portfolios
+  - Positions
+  - Orders
+  - AI analysis history
+  - Trading activity
+  - Application audit logs
+
+The AllMart database will not be reused, and Marts migrations must never run
+against the AllMart database.
+
+The deployment will include a database connection check and a controlled
+migration process. The service must fail clearly if the Marts database is
+missing or incorrectly configured rather than silently using another
+database.
+
+
+4. Separate Environment Variables and Keys
+------------------------------------------
+
+Marts will have its own production environment file, for example:
+
+  allmart/marts/.env
+
+This file must not contain AllMart secrets and must not be committed to Git.
+It must be readable only by the deployment user or service account.
+
+Possible Marts variables include:
+
+  MARTS_DATABASE_URL=
+  MARTS_SESSION_SECRET=
+  MARTS_JWT_SECRET=
+  MARTS_AI_API_KEY=
+  MARTS_BROKER_API_KEY=
+  MARTS_BROKER_API_SECRET=
+  MARTS_ENCRYPTION_KEY=
+  MARTS_ALLOWED_ORIGINS=
+  MARTS_ENVIRONMENT=production
+
+The actual list will be taken from the extracted project after inspection.
+
+All AI, broker, exchange, and encryption keys will remain on the backend.
+They must never be included in frontend JavaScript, HTML, browser storage, or
+public API responses.
+
+
+5. Two-Page Frontend
+--------------------
+
+The initial Marts frontend will be a small, independent two-page interface.
+It will use its own financial/trading design rather than AllMart branding.
+
+Page 1: Secure access/login
+
+  - Login form
+  - Session creation
+  - Logout support
+  - Validation and error messages
+  - Optional invite or allowlist restriction
+  - Redirect to the dashboard after successful login
+
+Page 2: Trading dashboard
+
+  - Market overview
+  - Watchlist
+  - Portfolio summary
+  - Open positions
+  - Recent trading activity
+  - AI-generated market analysis
+  - Trading controls, if enabled
+  - Clear indication of simulated versus live trading
+
+The frontend will call the Marts backend using relative URLs, for example:
+
+  /marts/api/...
+
+It will not call localhost, the VPS IP, or the AllMart API directly.
+
+The frontend build must use `/marts/` as its base path so assets resolve as:
+
+  /marts/assets/app.js
+
+instead of incorrectly resolving to:
+
+  /assets/app.js
+
+
+6. FastAPI Backend Service
+--------------------------
+
+The FastAPI backend will run as its own service, separate from AllMart.
+
+Example service name:
+
+  marts.service
+
+Example internal listening address:
+
+  127.0.0.1:8090
+
+The Marts port will remain private and will not be opened in the VPS
+firewall. Nginx will proxy requests to it internally.
+
+The service will:
+
+  - Start automatically after a reboot
+  - Load only Marts environment variables
+  - Run as the non-root `allmart` user
+  - Restart automatically after a crash
+  - Write logs to the system journal
+  - Expose a health endpoint
+  - Use a controlled database migration step
+  - Reject unauthenticated access to protected routes
+
+AllMart and Marts will remain independently restartable:
+
+  sudo systemctl status allmart
+  sudo systemctl restart allmart
+
+  sudo systemctl status marts
+  sudo systemctl restart marts
+
+Restarting Marts must not restart or interrupt AllMart.
+
+
+7. Domain and Nginx Routing
+---------------------------
+
+The public URL will be:
+
+  https://your-domain.com/marts
+
+Nginx will route the existing AllMart and new Marts application separately:
+
+  /                    -> existing AllMart frontend
+  /api/...             -> existing AllMart API
+  /marts               -> Marts frontend
+  /marts/api/...       -> Marts FastAPI backend
+
+The Marts frontend will be built for the `/marts/` base path.
+
+FastAPI will be configured to operate behind the `/marts` proxy prefix so
+that redirects, generated URLs, API documentation, cookies, and OpenAPI
+links use the correct path.
+
+The public URL being known is not considered authentication. Anyone who
+knows or discovers `/marts` will be able to reach the entry point, but
+protected pages and API data will require a valid authenticated session.
+
+
+8. Authentication and Security
+------------------------------
+
+The application will be protected with:
+
+  - HTTPS through the existing Cloudflare/Nginx setup
+  - Backend-enforced authentication
+  - Secure HTTP-only cookies or short-lived access tokens
+  - CSRF protection when cookie sessions are used
+  - Password hashing with a modern password-hashing library
+  - Login rate limiting
+  - Temporary throttling or lockout after repeated failures
+  - Server-side authorization on every protected route
+  - Strict CORS configuration
+  - Input validation with FastAPI/Pydantic
+  - Security headers through Nginx
+  - Audit logging for sensitive and trading actions
+  - No public database port
+  - No public FastAPI port
+  - No secrets in frontend code
+
+Every request must be authorized on the server. Hiding buttons in the
+frontend is not a security control.
+
+If the application can execute real trades, it will include an additional
+safety layer:
+
+  - Paper/simulation mode enabled by default
+  - Separate configuration required to enable live trading
+  - Visible paper/live account indicator
+  - Confirmation before live orders
+  - Audit record containing user, timestamp, symbol, quantity, request, and
+    result
+  - A quick way to disable live trading
+
+
+9. Deployment Scripts and Operations
+------------------------------------
+
+The `marts` directory will include clear instructions or scripts for:
+
+  - Installing backend dependencies
+  - Installing frontend dependencies
+  - Running the backend locally
+  - Running the frontend locally
+  - Validating environment variables
+  - Running database migrations
+  - Building the frontend
+  - Starting or restarting the Marts service
+  - Checking Marts health
+  - Viewing Marts logs
+
+Useful production commands will include:
+
+  sudo systemctl status marts
+  sudo systemctl restart marts
+  journalctl -u marts -f
+
+AllMart commands will remain separate and unchanged.
+
+
+10. Testing Before Public Access
+--------------------------------
+
+Before enabling the public `/marts` route, verify:
+
+  1. The FastAPI backend starts successfully.
+  2. The backend connects only to the Marts database.
+  3. No AllMart tables or AllMart API routes are used.
+  4. The frontend builds with `/marts/` as its base path.
+  5. Login works.
+  6. Unauthenticated API requests return an authorization error.
+  7. Authenticated requests return only authorized data.
+  8. Invalid users cannot access protected data.
+  9. AI and trading keys remain server-side.
+  10. Marts does not affect the AllMart process.
+  11. Nginx routes frontend and API paths correctly.
+  12. HTTPS and authentication cookies work through the real domain.
+  13. The service restarts correctly after failure and reboot.
+  14. Paper trading works before live trading is considered.
+
+
+11. Final Structure and Result
+-----------------------------
+
+The final public setup will be:
+
+  AllMart:
+    https://your-domain.com/
+
+  Marts:
+    https://your-domain.com/marts
+
+The directory layout will be:
+
+  allmart/
+  ├── existing AllMart application
+  ├── marts/
+  │   ├── backend/
+  │   ├── frontend/
+  │   ├── scripts/
+  │   ├── .env.example
+  │   └── README.md
+  └── ...
+
+Both applications will share the VPS, domain, Nginx, and HTTPS hosting only.
+They will not share application data, databases, secrets, processes, or
+business logic.
+
+The `/marts` URL is only the public entry point. Authentication, database
+authorization, secret protection, and trading safety will be enforced by the
+Marts backend.
