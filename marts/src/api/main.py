@@ -13,7 +13,7 @@ load_dotenv(dotenv_path=Path(__file__).parent.parent.parent / ".env", override=F
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, Response, RedirectResponse
 from loguru import logger
 
 # ── In-memory circular log buffer (last 500 lines) ──────────────────────────
@@ -89,6 +89,9 @@ app.add_middleware(APIRateLimitMiddleware)
 
 # Include API routes
 app.include_router(router, prefix="/api")
+# Keep the prefixed surface available when the standalone Marts service is
+# opened directly on its private port, rather than through the outer proxy.
+app.include_router(router, prefix="/marts/api")
 
 # ===================== Mobile App Page =====================
 @app.get("/mobile", include_in_schema=False)
@@ -176,9 +179,22 @@ if FRONTEND_DIST.exists():
     app.mount(
         "/assets", StaticFiles(directory=str(FRONTEND_DIST / "assets")), name="assets"
     )
+    app.mount(
+        "/marts/assets",
+        StaticFiles(directory=str(FRONTEND_DIST / "assets")),
+        name="marts_assets",
+    )
 
     @app.get("/")
     async def serve_root():
+        return FileResponse(str(FRONTEND_DIST / "index.html"))
+
+    @app.get("/marts", include_in_schema=False)
+    async def serve_marts_redirect():
+        return RedirectResponse(url="/marts/")
+
+    @app.get("/marts/", include_in_schema=False)
+    async def serve_marts_root():
         return FileResponse(str(FRONTEND_DIST / "index.html"))
 
     @app.get("/robots.txt", include_in_schema=False)
@@ -198,6 +214,17 @@ if FRONTEND_DIST.exists():
         from fastapi import HTTPException
 
         raise HTTPException(status_code=404)
+
+    @app.get("/marts/{full_path:path}", include_in_schema=False)
+    async def serve_marts_spa(full_path: str):
+        if full_path.startswith(("api/", "assets/", "ws/")):
+            from fastapi import HTTPException
+
+            raise HTTPException(status_code=404)
+        candidate = FRONTEND_DIST / full_path
+        if candidate.exists() and candidate.is_file():
+            return FileResponse(str(candidate))
+        return FileResponse(str(FRONTEND_DIST / "index.html"))
 
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):

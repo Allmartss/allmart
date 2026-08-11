@@ -63,22 +63,18 @@ WHAT HAS BEEN DONE
     - Confirmed FastAPI imports and startup schema initialization against the
       dedicated Marts database.
 
-11. Prometheus and Grafana are being removed from Marts to keep the deployment
-    image small. They are not required for the initial authentication, market,
-    and paper-trading release.
+11. Prometheus and Grafana have been removed from Marts to keep the deployment
+    image small. They are not part of the Marts application or workflow.
 
 12. A separate Alembic run is intentionally skipped. FastAPI performs the
     existing non-destructive schema creation and incremental startup changes.
 
-WHAT STILL NEEDS TO BE DONE
----------------------------
+RUNTIME VERIFICATION
+--------------------
 
-1. Finish removing the Prometheus/Grafana admin dashboard screens and confirm
-   no runtime code or frontend route references remain.
+1. The Marts frontend was rebuilt after the monitoring UI cleanup.
 
-2. Rebuild the frontend after the monitoring UI cleanup.
-
-3. Restart the Marts FastAPI workflow and verify:
+2. The Marts FastAPI workflow was restarted independently and verified:
 
    - The process listens on port `8090`.
    - `/api/health` responds.
@@ -86,9 +82,7 @@ WHAT STILL NEEDS TO BE DONE
    - Protected requests reject unauthenticated callers.
    - Login and logout work with the Marts JWT secret.
 
-4. Verify the existing AllMart storefront and API remain unaffected.
-
-5. Before production deployment, configure the final Nginx/systemd service,
+3. Before production deployment, configure the final Marts Nginx/systemd service,
    HTTPS, secure cookies, rate limiting, security headers, backups, and
    production health checks.
 
@@ -96,6 +90,5 @@ CURRENT LIMITATION
 ------------------
 
 Marts is configured and has passed import, syntax, database-startup, routing,
-and frontend-build checks, but the monitoring UI cleanup and final runtime
-verification still need to complete before calling the deployment production
-ready.
+frontend-build, health, and protected-request checks. Final production HTTPS,
+reverse-proxy, service-manager, and security-hardening checks remain.

@@ -2836,8 +2836,6 @@ export default function AdminPage({ initialTab, embedded }: { initialTab?: Tab; 
               binance:      { label: 'Binance API',        emoji: '🔶' },
               ai_providers: { label: 'AI Providers',       emoji: '🤖' },
               storage:      { label: 'File Storage',       emoji: '🗂️' },
-              prometheus:   { label: 'Prometheus',         emoji: '🔥' },
-              grafana:      { label: 'Grafana',            emoji: '📊' },
               tatum:        { label: 'Tatum (Blockchain)',  emoji: '⛓️' },
               hd_wallet:    { label: 'HD Wallet',          emoji: '🔑' },
               newsapi:      { label: 'NewsAPI',            emoji: '📰' },
@@ -2935,39 +2933,6 @@ export default function AdminPage({ initialTab, embedded }: { initialTab?: Tab; 
                                   <span className="text-[#eaecef] font-mono truncate max-w-[55%] text-right">{String(v)}</span>
                                 </div>
                               ))}
-                          </div>
-                        ) : (name === 'prometheus' || name === 'grafana') && check.url ? (
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-[#848e9c]">URL</span>
-                              <span className="text-[#eaecef] font-mono text-[10px] truncate max-w-[60%] text-right">{check.url}</span>
-                            </div>
-                            {check.latency_ms != null && (
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="text-[#848e9c]">Latency</span>
-                                <span className={`font-mono font-semibold ${check.latency_ms < 100 ? 'text-[#0ecb81]' : check.latency_ms < 500 ? 'text-[#f0b90b]' : 'text-[#f6465d]'}`}>{check.latency_ms} ms</span>
-                              </div>
-                            )}
-                            {name === 'grafana' && check.version && check.version !== '—' && (
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="text-[#848e9c]">Version</span>
-                                <span className="text-[#eaecef] font-mono">{check.version}</span>
-                              </div>
-                            )}
-                            {check.error && (
-                              <p className="text-[10px] text-[#f6465d] bg-[#f6465d]/5 rounded px-2 py-1 break-all">{check.error}</p>
-                            )}
-                            <a
-                              href={name === 'grafana' ? '/graf' : '/prom'}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className={`flex items-center justify-center gap-1.5 text-[10px] w-full mt-1 px-3 py-1.5 rounded-lg border font-medium transition
-                                ${isHealthy
-                                  ? 'bg-[#f0b90b]/5 border-[#f0b90b]/20 text-[#f0b90b] hover:bg-[#f0b90b]/10'
-                                  : 'bg-[#2b3139]/30 border-[#2b3139] text-[#848e9c] cursor-not-allowed pointer-events-none'}`}
-                            >
-                              {name === 'grafana' ? '📊 Open Grafana Dashboard' : '🔥 Open Prometheus'}
-                            </a>
                           </div>
                         ) : name === 'ai_providers' && check.providers ? (
                           <div className="space-y-1.5">
@@ -3700,7 +3665,6 @@ export default function AdminPage({ initialTab, embedded }: { initialTab?: Tab; 
             <div className="bg-[#161a1e] border border-[#2b3139] rounded-2xl p-8 text-center">
               <Cpu size={32} className="text-[#2b3139] mx-auto mb-3" />
               <p className="text-sm text-[#848e9c]">Click Refresh to load server metrics</p>
-              <button onClick={() => { fetchPromStats() }} className="mt-3 text-xs text-[#e6522c] hover:underline">Load Prometheus metrics only</button>
             </div>
           )}
 
@@ -3775,84 +3739,6 @@ export default function AdminPage({ initialTab, embedded }: { initialTab?: Tab; 
             )
           })()}
 
-          {/* ── Prometheus Live Metrics ── */}
-          <div className="bg-[#161a1e] border border-[#2b3139] rounded-2xl p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-[#e6522c]/10 flex items-center justify-center">
-                  <Activity size={12} className="text-[#e6522c]" />
-                </div>
-                <p className="text-[10px] font-semibold text-[#848e9c] uppercase tracking-wide">Prometheus Live Metrics</p>
-              </div>
-              <button
-                onClick={fetchPromStats}
-                disabled={promLoading}
-                className="flex items-center gap-1.5 text-xs text-[#e6522c] hover:underline disabled:opacity-50"
-              >
-                <RefreshCw size={11} className={promLoading ? 'animate-spin' : ''} />
-                {promLoading ? 'Querying…' : 'Fetch'}
-              </button>
-            </div>
-
-            {!promStats && !promLoading && (
-              <p className="text-xs text-[#848e9c] text-center py-4">Click Fetch to query Prometheus</p>
-            )}
-
-            {promStats && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {[
-                  {
-                    label: 'Req/s (1m rate)',
-                    value: promStats.req_rate != null ? promStats.req_rate.toFixed(3) : 'N/A',
-                    color: '#0ecb81',
-                    icon: Zap,
-                  },
-                  {
-                    label: 'Total Requests',
-                    value: promStats.req_total != null ? Math.round(promStats.req_total).toLocaleString() : 'N/A',
-                    color: '#60a5fa',
-                    icon: Activity,
-                  },
-                  {
-                    label: 'Error Rate/s',
-                    value: promStats.err_rate != null ? promStats.err_rate.toFixed(4) : 'N/A',
-                    color: promStats.err_rate > 0.01 ? '#f6465d' : '#0ecb81',
-                    icon: AlertTriangle,
-                  },
-                  {
-                    label: 'P95 Latency',
-                    value: promStats.p95_latency != null
-                      ? `${(promStats.p95_latency * 1000).toFixed(1)}ms`
-                      : 'N/A',
-                    color: promStats.p95_latency > 0.5 ? '#f0b90b' : '#0ecb81',
-                    icon: Clock,
-                  },
-                  {
-                    label: 'Process Memory',
-                    value: promStats.mem_bytes != null
-                      ? `${(promStats.mem_bytes / 1024 / 1024).toFixed(1)} MB`
-                      : 'N/A',
-                    color: '#a78bfa',
-                    icon: HardDrive,
-                  },
-                  {
-                    label: 'Open FDs',
-                    value: promStats.open_fds != null ? Math.round(promStats.open_fds) : 'N/A',
-                    color: '#22d3ee',
-                    icon: Server,
-                  },
-                ].map(c => (
-                  <div key={c.label} className="bg-[#0b0e11] border border-[#2b3139] rounded-xl p-3">
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <c.icon size={11} style={{ color: c.color }} />
-                      <span className="text-[9px] text-[#848e9c] uppercase tracking-wide">{c.label}</span>
-                    </div>
-                    <p className="text-base font-bold font-mono" style={{ color: c.color }}>{c.value}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
       )}
 
