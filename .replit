@@ -106,7 +106,6 @@ outputType = "console"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd marts && bash scripts/start.sh"
-waitForPort = 8090
 
 [agent]
 stack = "BEST_EFFORT_FALLBACK"

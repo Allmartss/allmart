@@ -52,8 +52,9 @@ WHAT HAS BEEN DONE
    - `/marts/api/...` reaches the private Marts REST API
    - `/marts/ws/...` reaches the private Marts WebSocket API
 
-9. A separate `marts: FastAPI` workflow was configured on private port `8090`.
-   It is independently restartable from AllMart.
+9. A separate `marts: FastAPI` workflow was configured for the isolated service.
+   Production keeps the private service port at `8090`; the Replit development
+   workflow uses the same startup script without changing the production port.
 
 10. Runtime issues found during verification were fixed:
 
@@ -74,9 +75,9 @@ RUNTIME VERIFICATION
 
 1. The Marts frontend was rebuilt after the monitoring UI cleanup.
 
-2. The Marts FastAPI workflow was restarted independently and verified:
+2. The exact Marts FastAPI startup command was run independently and verified:
 
-   - The process listens on port `8090`.
+   - The process listens on the configured port.
    - `/api/health` responds.
    - `/marts/` serves the built frontend through the proxy.
    - Protected requests reject unauthenticated callers.
@@ -92,3 +93,9 @@ CURRENT LIMITATION
 Marts is configured and has passed import, syntax, database-startup, routing,
 frontend-build, health, and protected-request checks. Final production HTTPS,
 reverse-proxy, service-manager, and security-hardening checks remain.
+
+In this Replit development environment, the managed console workflow's
+`waitForPort` readiness state reported failure even though its logs showed a
+healthy FastAPI process listening on the requested `0.0.0.0` port. The service
+was therefore verified with the exact startup command and direct HTTP checks;
+this does not change the production `8090` service contract.
