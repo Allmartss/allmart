@@ -1,4 +1,5 @@
 - [Managed API workflow restarts](managed-api-workflow-restarts.md) — a stale prior API process can hold the assigned port after a failed restart; verify logs and health together.
+- [Marts preview routing](marts-preview-routing.md) — the shared Replit preview domain fronts the storefront port, so `/marts` must proxy to the separate FastAPI service.
 - [Database schema CLI prompt](database-schema-cli-prompt.md) — the schema push may pause interactively; additive DDL can be applied safely against the configured database when needed.
 - [Checkout total authority](checkout-total-authority.md) — quote, payment, bonus deduction, and receipt must all use the same server-calculated total.
 - [Marts isolation](marts-isolation.md) — Marts uses MARTS_* settings and explicit /marts routing, with DATABASE_URL as the only approved fallback.
