@@ -351,3 +351,55 @@ business logic.
 The `/marts` URL is only the public entry point. Authentication, database
 authorization, secret protection, and trading safety will be enforced by the
 Marts backend.
+
+
+12. Deletion and Reversion
+--------------------------
+Status: DELETED from the AllMart project on 2026-08-18.
+The following Marts project files and configuration were removed:
+  - `marts/`
+      The complete Marts directory was deleted from the project root,
+      including the FastAPI backend, frontend, migrations, scripts,
+      configuration files, deployment examples, and Marts documentation.
+  - `.replit`
+      The `marts: FastAPI` workflow was removed.
+      Its trigger was also removed from the main `Project` workflow.
+  - `artifacts/storefront/vite.config.ts`
+      The `/marts` development proxy and `MARTS_BACKEND_URL` configuration
+      were removed.
+  - Replit configured workflows
+      The running `marts: FastAPI` workflow was stopped and removed.
+  - `.agents/memory/`
+      The obsolete Marts preview-routing memory entry and topic file were
+      removed.
+AllMart remains active in:
+  - `artifacts/storefront/`
+  - `artifacts/api-server/`
+  - `artifacts/mobile/`
+  - `artifacts/mockup-sandbox/`
+The following historical files were intentionally left untouched:
+  - `marts.txt`
+  - `explanation.txt`
+  - `screenshots/marts-final.jpg`
+The Marts database, server/VPS deployment, and environment secrets were not
+deleted by this project cleanup.
+Reversion procedure:
+  1. Restore a project checkpoint from before the deletion. This is preferred
+     over recreating the Marts files manually or restoring only part of them.
+  2. Confirm that the complete `marts/` directory has returned, including its
+     backend, frontend, scripts, migrations, and configuration files.
+  3. Restore the Marts workflow in `.replit` and restore its trigger inside the
+     main `Project` workflow.
+  4. Restore the `/marts` proxy and `MARTS_BACKEND_URL` configuration in
+     `artifacts/storefront/vite.config.ts`.
+  5. Confirm the Marts-specific database URL, JWT secret, and other required
+     environment variables before starting the service.
+  6. Start the Marts workflow and verify `/marts/`, its frontend assets,
+     `/marts/api/health`, and an unauthenticated protected API request.
+  7. For VPS recovery, separately verify the Marts systemd service, Nginx
+     `/marts` routing, database connection, and production environment file.
+Do not restore only the frontend, only the workflow, or only the proxy.
+Marts must be restored as a complete isolated application so it does not
+share AllMart's database, secrets, users, or process.
+
+
