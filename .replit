@@ -9,7 +9,6 @@ args = ["pnpm", "store", "prune"]
 env = { "CI" = "true" }
 
 [workflows]
-runButton = "Project"
 
 [[workflows.workflow]]
 name = "artifacts/storefront: web"
@@ -86,26 +85,6 @@ router = "expo-domain"
 [workflows.workflow.tasks.env]
 PORT = "18115"
 BASE_PATH = "/mobile/"
-
-[[workflows.workflow]]
-name = "Project"
-mode = "parallel"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "marts: FastAPI"
-
-[[workflows.workflow]]
-name = "marts: FastAPI"
-author = "agent"
-
-[workflows.workflow.metadata]
-outputType = "console"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd marts && bash scripts/start.sh"
 
 [agent]
 stack = "BEST_EFFORT_FALLBACK"

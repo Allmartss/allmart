@@ -26,9 +26,6 @@ if (!basePath) {
   );
 }
 
-const martsBackendTarget =
-  process.env.MARTS_BACKEND_URL ?? "http://127.0.0.1:8090";
-
 export default defineConfig({
   base: basePath,
   plugins: [
@@ -68,11 +65,6 @@ export default defineConfig({
     allowedHosts: true,
     proxy: {
       "/api": "http://localhost:8080",
-      "/marts": {
-        target: martsBackendTarget,
-        changeOrigin: true,
-        ws: true,
-      },
     },
     fs: {
       strict: true,
